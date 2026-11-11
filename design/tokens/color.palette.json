@@ -1,53 +1,59 @@
 {
   "neutral": {
     "$type": "color",
+    "$description": "Otok neutrals: warm paper and ink (DESIGN.md v2 §2).",
     "light": {
-      "50": {
+      "0": {
         "$value": "#FFFFFF"
       },
-      "100": {
-        "$value": "#F7F8FA"
+      "50": {
+        "$value": "#F3F1EC"
       },
-      "150": {
-        "$value": "#F1F2F5"
+      "100": {
+        "$value": "#EEEBE5"
       },
       "200": {
-        "$value": "#E9EBEF"
+        "$value": "#DAD6CD"
       },
       "500": {
-        "$value": "#626777"
+        "$value": "#66645F"
       },
       "600": {
-        "$value": "#545866"
+        "$value": "#5B5A57"
       },
-      "950": {
-        "$value": "#111216"
+      "700": {
+        "$value": "#2A2A2E"
+      },
+      "900": {
+        "$value": "#121214"
       }
     },
     "dark": {
+      "0": {
+        "$value": "#0D0D0F"
+      },
       "50": {
-        "$value": "#F2F3F5"
+        "$value": "#F1EEE7"
+      },
+      "100": {
+        "$value": "#1A1A1D"
+      },
+      "150": {
+        "$value": "#1F1F23"
       },
       "300": {
-        "$value": "#A3A7B3"
+        "$value": "#A6A39C"
       },
       "400": {
-        "$value": "#9398A6"
+        "$value": "#8E8B84"
       },
-      "700": {
-        "$value": "#2A2C35"
+      "600": {
+        "$value": "#5B5A57"
       },
-      "750": {
-        "$value": "#23252D"
-      },
-      "800": {
-        "$value": "#1C1D24"
-      },
-      "850": {
-        "$value": "#17181E"
+      "900": {
+        "$value": "#121214"
       }
-    },
-    "$description": "Primitive colours. Components never use these directly: they go through theme.* and accent.* (DESIGN.md §2)."
+    }
   },
   "aura": {
     "$type": "color",
@@ -125,6 +131,14 @@
     },
     "danger-dark": {
       "$value": "#FF8A7A"
+    },
+    "shield-bright": {
+      "$value": "#3DDC97",
+      "$description": "Shield green on a dark island / dark paper"
+    },
+    "shield-deep": {
+      "$value": "#0B5E33",
+      "$description": "Shield green on the paper island (dark theme)"
     }
   },
   "white": {
@@ -136,7 +150,7 @@
       "$type": "x-conic-gradient",
       "$description": "Icon, logo and Shield bloom moment.",
       "$value": {
-        "from": "210deg",
+        "from": "90deg",
         "stops": [
           "{ember.300}",
           "{ember.400}",
@@ -144,6 +158,16 @@
           "{ember.300}"
         ]
       }
+    }
+  },
+  "brand": {
+    "$type": "color",
+    "$description": "Owner's mark (brand/icon/scyde.svg). Lime is a fill colour only: never text on paper.",
+    "lime": {
+      "$value": "#C4F014"
+    },
+    "ink": {
+      "$value": "#0A0A0A"
     }
   }
 }

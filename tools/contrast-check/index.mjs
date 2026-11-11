@@ -56,6 +56,14 @@ for (const mode of ['light', 'dark']) {
     }
   }
   for (const a of accents) add(`${mode}: on-fill on accent.${a}.fill`, v(`accent.${a}.${mode}.on-fill`), v(`accent.${a}.${mode}.fill`));
+  // The island (DESIGN.md v2 §2.3): inverse surface that carries all chrome.
+  for (const bg of ['bg', 'raised']) {
+    const isl = v(`theme.${mode}.island.${bg}`);
+    add(`${mode}: island.text on island.${bg}`, v(`theme.${mode}.island.text`), isl);
+    add(`${mode}: island.text-secondary on island.${bg}`, v(`theme.${mode}.island.text-secondary`), isl);
+    add(`${mode}: island.shield on island.${bg}`, v(`theme.${mode}.island.shield`), isl);
+    for (const a of accents) add(`${mode}: accent.${a}.island on island.${bg}`, v(`accent.${a}.${mode}.island`), isl, AA_LARGE);
+  }
   add(`${mode}: cta.text on cta.fill`, v(`theme.${mode}.cta.text`), v(`theme.${mode}.cta.fill`));
   add(`${mode}: cta.text on cta.fill-hover`, v(`theme.${mode}.cta.text`), v(`theme.${mode}.cta.fill-hover`));
 }

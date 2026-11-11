@@ -9,19 +9,15 @@
   "publisher": "SCYDE",
   "website": "https://github.com/scyde-browser/scyde",
   "colors": {
-    "brand": "{ember.700}",
-    "iconGradient": [
-      "#FFB27A",
-      "#FF8E5C",
-      "#F2603F"
-    ],
-    "iconTileLight": "#FFFFFF",
-    "iconTileDark": "#17181E"
+    "brand": "#C4F014",
+    "iconTileLight": "#C4F014",
+    "iconTileDark": "#0A0A0A",
+    "brandInk": "#0A0A0A"
   },
   "icon": {
-    "concept": "aura-s",
+    "concept": "owner-s",
     "master": "brand/icon/scyde.svg",
     "chosen": "2026-11-11",
-    "note": "Owner asked Claude to generate the icon after rounds 1-2; refined from Fold S via taste-skill + impeccable critique."
+    "note": "Vlasnikov znak (lime #C4F014 + ink #0A0A0A), rekonstruiran kao vektor iz konstrukcijskog crteža. Zamjenjuje Aura S."
   }
 }

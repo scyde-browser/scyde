@@ -77,8 +77,9 @@ function exportConcept(id, outRoot) {
   };
 
   // Windows: squircle tile, all sizes in one .ico
-  put('windows/scyde.ico', ico(ICO_SIZES.map((size) => ({ size, data: render(c.light, size) }))));
-  put('windows/scyde-256.png', render(c.light, 256));
+  const win = c.windows ?? c.light; // unplated glyph when the concept defines one
+  put('windows/scyde.ico', ico(ICO_SIZES.map((size) => ({ size, data: render(win, size) }))));
+  put('windows/scyde-256.png', render(win, 256));
 
   // Android: adaptive (foreground + background colour + monochrome) and legacy fallbacks.
   // Foreground is 108 dp with a 66 dp safe zone; marks are drawn within ~62 %, scaled to 0.92 for margin.
@@ -100,7 +101,7 @@ function exportConcept(id, outRoot) {
   put('android/res/mipmap-anydpi-v26/ic_launcher_round.xml', adaptive);
   put(
     'android/res/values/ic_launcher_background.xml',
-    `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${brand.colors.iconTileLight}</color>\n</resources>\n`,
+    `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${c.androidBackground ?? brand.colors.iconTileLight}</color>\n</resources>\n`,
   );
   put('android/playstore-512.png', render(c.fullBleedLight, 512));
 

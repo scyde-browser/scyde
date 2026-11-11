@@ -58,11 +58,11 @@
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${I[name] || ''}</svg>`;
   window.icon = svg;
 
-  // Brand mark "Aura S" as a CSS mask so the Ember gradient comes from the token (--gradient-ember).
+  // Brand mark: the owner's S (brand/icon/scyde.svg), used as a CSS mask so colours come from tokens.
+  const half = 'M400 82 L251 82 C110 82 68 101 68 241 C68 328 160 382 160 382 L243 308.5 L214 242 Z';
   const S =
-    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='313 197 398 630'><g fill='none' stroke='black' stroke-width='118'>" +
-    "<path d='M500 256A128 128 0 0 0 500 512'/><path d='M524 512A128 128 0 0 1 524 768'/></g>" +
-    "<circle cx='500' cy='256' r='59'/><circle cx='524' cy='768' r='59'/></svg>";
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='68 82 391 404'>" +
+    `<path d='${half}'/><path d='${half}' transform='rotate(180 263.5 284)'/></svg>`;
   window.SCYDE_MARK_MASK = `url("data:image/svg+xml,${encodeURIComponent(S)}")`;
   root.style.setProperty('--brand-mark-mask', window.SCYDE_MARK_MASK);
 
@@ -89,7 +89,7 @@
       `<label>${t(label)} <select data-k="${key}">${opts.map((o) => `<option ${root.dataset[key] === o ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
     box.innerHTML =
       sel('proto.theme', 'theme', ['light', 'dark']) +
-      sel('proto.accent', 'accent', ['sky', 'periwinkle', 'lavender', 'mint', 'ember', 'onyx']) +
+      sel('proto.accent', 'accent', ['ember', 'sky', 'periwinkle', 'lavender', 'mint', 'onyx']) +
       sel('proto.density', 'density', ['comfortable', 'compact']) +
       sel('proto.motion', 'motion', ['full', 'reduced']) +
       `<label>${t('proto.lang')} <select data-k="lang"><option ${lang === 'hr' ? 'selected' : ''}>hr</option><option ${lang === 'en' ? 'selected' : ''}>en</option></select></label>`;

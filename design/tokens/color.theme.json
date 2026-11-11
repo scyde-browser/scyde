@@ -3,34 +3,33 @@
     "light": {
       "surface": {
         "$type": "color",
+        "$description": "Otok has no chrome bar: the page and the paper are the surfaces.",
         "canvas": {
-          "$value": "{neutral.light.150}"
+          "$value": "{neutral.light.50}"
         },
         "chrome": {
-          "$value": "{neutral.light.100}"
+          "$value": "{neutral.light.50}"
         },
         "sunken": {
-          "$value": "{neutral.light.200}"
+          "$value": "{neutral.light.100}"
         },
         "raised": {
-          "$value": "{neutral.light.50}"
+          "$value": "{neutral.light.0}"
         }
       },
       "border": {
         "$type": "color",
         "hairline": {
-          "$value": "#11121614",
-          "$description": "rgba(17,18,22,.08)"
+          "$value": "#1212141A"
         },
         "strong": {
-          "$value": "#11121633",
-          "$description": "Increase Contrast hairline, rgba(17,18,22,.20)"
+          "$value": "#12121440"
         }
       },
       "text": {
         "$type": "color",
         "primary": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "secondary": {
           "$value": "{neutral.light.600}"
@@ -117,6 +116,17 @@
               "color": "#11121647"
             }
           ]
+        },
+        "island": {
+          "$value": [
+            {
+              "offsetX": "0px",
+              "offsetY": "18px",
+              "blur": "50px",
+              "spread": "-18px",
+              "color": "#00000073"
+            }
+          ]
         }
       },
       "aura-mesh": {
@@ -186,32 +196,53 @@
             }
           ]
         }
+      },
+      "island": {
+        "$type": "color",
+        "$description": "The island is the inverse of the paper: ink in light theme, paper in dark theme.",
+        "bg": {
+          "$value": "{neutral.light.900}"
+        },
+        "raised": {
+          "$value": "{neutral.light.700}"
+        },
+        "text": {
+          "$value": "{neutral.light.50}"
+        },
+        "text-secondary": {
+          "$value": "#A8A6A0"
+        },
+        "hairline": {
+          "$value": "#F3F1EC2E"
+        },
+        "shield": {
+          "$value": "{status-raw.shield-bright}"
+        }
       }
     },
     "dark": {
       "surface": {
         "$type": "color",
         "canvas": {
-          "$value": "{neutral.dark.800}"
+          "$value": "{neutral.dark.0}"
         },
         "chrome": {
-          "$value": "{neutral.dark.850}"
+          "$value": "{neutral.dark.0}"
         },
         "sunken": {
-          "$value": "{neutral.dark.750}"
+          "$value": "{neutral.dark.100}"
         },
         "raised": {
-          "$value": "{neutral.dark.700}"
+          "$value": "{neutral.dark.150}"
         }
       },
       "border": {
         "$type": "color",
         "hairline": {
-          "$value": "#FFFFFF12",
-          "$description": "rgba(255,255,255,.07)"
+          "$value": "#F1EEE71A"
         },
         "strong": {
-          "$value": "#FFFFFF33"
+          "$value": "#F1EEE740"
         }
       },
       "text": {
@@ -232,10 +263,10 @@
       "status": {
         "$type": "color",
         "shield": {
-          "$value": "{aura.mint.fill}"
+          "$value": "{status-raw.shield-bright}"
         },
         "success": {
-          "$value": "{aura.mint.fill}"
+          "$value": "{status-raw.shield-bright}"
         },
         "warning": {
           "$value": "{status-raw.warning-dark}"
@@ -293,7 +324,7 @@
               "offsetY": "0px",
               "blur": "0px",
               "spread": "1px",
-              "color": "#FFFFFF12"
+              "color": "#F1EEE71A"
             }
           ]
         },
@@ -313,6 +344,17 @@
               "blur": "0px",
               "spread": "1px",
               "color": "#FFFFFF12"
+            }
+          ]
+        },
+        "island": {
+          "$value": [
+            {
+              "offsetX": "0px",
+              "offsetY": "18px",
+              "blur": "50px",
+              "spread": "-18px",
+              "color": "#00000099"
             }
           ]
         }
@@ -382,6 +424,27 @@
               "size": "45%"
             }
           ]
+        }
+      },
+      "island": {
+        "$type": "color",
+        "bg": {
+          "$value": "{neutral.dark.50}"
+        },
+        "raised": {
+          "$value": "#DAD6CD"
+        },
+        "text": {
+          "$value": "{neutral.dark.900}"
+        },
+        "text-secondary": {
+          "$value": "{neutral.dark.600}"
+        },
+        "hairline": {
+          "$value": "#1212142E"
+        },
+        "shield": {
+          "$value": "{status-raw.shield-deep}"
         }
       }
     },

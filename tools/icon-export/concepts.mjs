@@ -18,7 +18,7 @@ const brand = JSON.parse(readFileSync(path.join(root, 'brand/brand.json'), 'utf8
 
 export const SIZE = 1024;
 const C = SIZE / 2;
-const [E300, E400, E500] = brand.colors.iconGradient;
+const [E300, E400, E500] = ['#FFB27A', '#FF8E5C', '#F2603F']; // Ember (older concepts)
 const TILE_LIGHT = brand.colors.iconTileLight;
 const TILE_DARK = brand.colors.iconTileDark;
 const MONO = '#111216';
@@ -238,6 +238,33 @@ const concepts = {
       };
     },
   },
+  // ---------- round 4: the owner's own mark (2026-11-11), rebuilt as vectors from the construction drawing ----------
+  'owner-s': {
+    round: 4,
+    name: 'SCYDE S',
+    blurb: 'Vlasnikov znak: S od dva zrcalna dijela s dijagonalnim rezom (munja). Limun-zelena pločica s crnim znakom; tamna varijanta s limun znakom.',
+    palette: { tileLight: '#C4F014', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#C4F014', darkStroke: '#D4D4D4', radius: 230 },
+    draw() {
+      // Points read from the owner's construction drawing (539 x 584 artboard). The lower half is the upper
+      // half rotated 180 degrees about the centre of the mark, so the S is exactly point-symmetric.
+      const cx = 263.5;
+      const cy = 284;
+      const half = 'M400 82 L251 82 C110 82 68 101 68 241 C68 328 160 382 160 382 L243 308.5 L214 242 Z';
+      const at = (height) => `translate(${C} ${C}) scale(${(height / 404).toFixed(4)}) translate(${-cx} ${-cy})`;
+      const shapesAt = (fill, height) =>
+        `<g transform="${at(height)}" fill="${fill}"><path d="${half}"/><path d="${half}" transform="rotate(180 ${cx} ${cy})"/></g>`;
+      const shapes = (fill) => shapesAt(fill, 590); // mark height = 590 / 1024 of the tile
+      return {
+        defs: '',
+        colour: shapes(this.palette.markOnLight),
+        colourDark: shapes(this.palette.markOnDark),
+        mono: shapes(MONO),
+        // Windows taskbar style: no plate, no border, transparent; the glyph fills the icon (owner, 2026-11-11).
+        unplated: shapesAt(this.palette.markOnDark, 940),
+        shapes,
+      };
+    },
+  },
 };
 
 const svg = (defs, body) =>
@@ -245,8 +272,28 @@ const svg = (defs, body) =>
 
 export function buildConcept(id) {
   const c = concepts[id];
-  const { defs, colour, mono } = c.draw();
+  const { defs, colour, mono, colourDark, unplated } = c.draw();
   const tile = (fill) => `<path d="${squircle(0)}" fill="${fill}"/>`;
+  if (c.palette) {
+    // Concepts with their own tile colours (owner's mark): rounded-square tile, solid colours, no gradient.
+    const p = c.palette;
+    const rr = (fill, stroke) =>
+      `<rect x="${stroke ? 5 : 0}" y="${stroke ? 5 : 0}" width="${SIZE - (stroke ? 10 : 0)}" height="${SIZE - (stroke ? 10 : 0)}" rx="${p.radius}" fill="${fill}"${stroke ? ` stroke="${stroke}" stroke-width="10"` : ''}/>`;
+    return {
+      id,
+      name: c.name,
+      blurb: c.blurb,
+      mark: svg(defs, colour),
+      mono: svg(defs, mono),
+      light: svg(defs, rr(p.tileLight) + colour),
+      dark: svg(defs, rr(p.tileDark, p.darkStroke) + colourDark),
+      fullBleedLight: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="${p.tileLight}"/>` + colour),
+      fullBleedDark: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="${p.tileDark}"/>` + colourDark),
+      tinted: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="#000"/>` + mono.replaceAll(MONO, '#FFFFFF')),
+      androidBackground: p.tileLight,
+      windows: svg(defs, unplated),
+    };
+  }
   return {
     id,
     name: c.name,

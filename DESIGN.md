@@ -1,314 +1,207 @@
-# DESIGN.md: "Aura", vizualni jezik SCYDE Browsera
+# DESIGN.md: "Otok", vizualni jezik SCYDE Browsera
 
-> **v1.0, finalizirano u Fazi 0.2** (2026-11-11). Od sada je ovo **jedini izvor istine** za izgled i kretanje.
-> Svaka vrijednost ovdje postoji kao token u `design/tokens/*.json` (DTCG). Kod nikad ne hardkodira vrijednosti.
-> Svi kontrasti u ovom dokumentu su izračunati (WCAG 2.x) i provjerava ih CI: `pnpm tokens && pnpm contrast` (168 parova).
-> Skill `impeccable` nije bio dostupan pri finalizaciji; dokument je finaliziran ručno, a svaka brojka provjerena alatom (vidi §12, changelog).
+> **v2.0 (2026-11-11).** Zamjenjuje v1 "Aura" (ADR-0008). Ovo je **jedini izvor istine** za izgled i kretanje.
+> Svaka vrijednost postoji kao token u `design/tokens/*.json` (DTCG). Kod nikad ne hardkodira vrijednosti.
+> Kontraste provjerava CI (`pnpm tokens && pnpm contrast`, 204 para, svi ≥ AA). Fontovi (OFL) su u `design/fonts/`.
 
 ---
 
 ## 1. Esencija
 
-**"Tihi premium."** Sadržaj je u prvom planu. Sučelje je mirno, mekano i precizno, a energija se pojavljuje samo tamo gdje je radnja.
+**Sadržaj od ruba do ruba, sučelje kao jedan predmet.** SCYDE nema traku s tabovima ni toolbar na vrhu. Cijelo sučelje je **otok**: jedan plutajući objekt na dnu prozora koji nosi znak, navigaciju, adresu, Shield i tabove, a širi se kad ga trebaš.
 
-- **Aura** (pastelne boje) je *atmosfera*: accenti, odabrana stanja, pozadine New Taba.
-- **Ember** (topli narančasto-crveni gradijent iz ikone) je *energija*: glavni CTA, brend i Shield trenuci.
-- Jedan fokus po ekranu. Na New Tabu je to pretraga.
-- Brojke su stvarne. Shield statistika dolazi iz enginea, ne iz marketinga.
+- **Papir i tinta.** Stranica počiva na toplom papiru (light) ili gotovo crnoj tinti (dark). **Otok je uvijek inverz:** tinta na papiru, papir na tinti. Zato ga se uvijek odmah nađe.
+- **Ember je energija.** Narančasto-crveni Ember pojavljuje se samo tamo gdje je radnja: kursor, aktivni tab, glavni gumb, znak.
+- **Riječi umjesto pločica.** New Tab ne počinje mrežom ikona nego pitanjem "Kamo danas?", u koje se izravno tipka.
+- **Stvarne brojke.** Shield statistika dolazi iz enginea i stoji uz otok, mono fontom.
+- **Tišina dok čitaš.** Kad se skrola, otok se smanjuje na sitni "kamenčić" i vraća se pri skrolu prema gore ili kad mu se kursor približi.
 
-### Što uzimamo iz referenci, a što ne
-
-| Uzimamo | Ne uzimamo |
+### Po čemu nije kao drugi preglednici
+| Uobičajeno | SCYDE Otok |
 |---|---|
-| Light/Dark kao ravnopravne teme (split prikaz iz reference 01) | Crveni "Santa" logo i "Ho-ho-ho" (tuđi rad) |
-| Meke "sunken" tileove, pill CTA, velik razmak | macOS semafor gumbe na Windowsu |
-| Lijevi rail s web panelima | Emoji kao ikone kategorija |
-| Pastelnu paletu iz reference 02 kao Aura accente | Ikone novčanika i poklona (crypto/rewards izvan opsega) |
-| Osjećaj ikone iz reference 03 (bijela squircle pločica, meki conic gradijent) | Oblik "dva preklopljena kruga" (blizak poznatom zaštitnom znaku) |
+| Tab strip + toolbar na vrhu | Nema ničega na vrhu osim sitnih Windows caption gumba |
+| Adresna traka cijelom širinom | Adresa živi u otoku; domena je naglašena, put je mono i gasi se fade maskom |
+| Tabovi kao kartice u retku | Tabovi kao složeni krugovi (stack) u otoku; klik ih rasklapa u policu iznad otoka |
+| New Tab = logo + polje + mreža pločica | New Tab = jedno pitanje u koje se tipka + popis "nedavno" s vremenima |
+| Ad blocker kao ikona i broj | Shield je kontrolna lampica u otoku + mono rečenica na New Tabu |
 
 ---
 
 ## 2. Boje
 
-### 2.1 Neutralne (površine i tekst)
+### 2.1 Papir i tinta (površine i tekst)
 
 | Token | Light | Dark | Upotreba |
 |---|---|---|---|
-| `surface.canvas` | `#F1F2F5` | `#1C1D24` | pozadina stranica (New Tab, postavke) |
-| `surface.chrome` | `#F7F8FA` | `#17181E` | tab strip i toolbar (na Windowsu ispod je Mica) |
-| `surface.sunken` | `#E9EBEF` | `#23252D` | tileovi, polje pretrage, omnibox, chipovi |
-| `surface.raised` | `#FFFFFF` | `#2A2C35` | popoveri, meniji, sheetovi, kartice vijesti |
-| `border.hairline` | `rgba(17,18,22,.08)` | `rgba(255,255,255,.07)` | 1 px rubovi |
-| `border.strong` | `rgba(17,18,22,.20)` | `rgba(255,255,255,.20)` | hairline kad je uključen Increase Contrast (`prefers-contrast: more`) |
-| `scrim` | `rgba(17,18,22,.40)` | `rgba(0,0,0,.50)` | ispod sheetova i dijaloga |
-| `text.primary` | `#111216` | `#F2F3F5` | naslovi, tekst |
-| `text.secondary` | `#545866` | `#A3A7B3` | opisi, meta |
-| `text.tertiary` | `#626777` | `#9398A6` | placeholder, hintovi |
+| `surface.canvas` | `#F3F1EC` papir | `#0D0D0F` tinta | pozadina New Taba i internih stranica |
+| `surface.sunken` | `#EEEBE5` | `#1A1A1D` | polja i retci unutar panela |
+| `surface.raised` | `#FFFFFF` | `#1F1F23` | paneli koji izlaze iz otoka |
+| `border.hairline` | ink 10 % | papir 10 % | 1 px linije |
+| `text.primary` | `#121214` | `#F1EEE7` | naslovi i tekst |
+| `text.secondary` | `#5B5A57` | `#A6A39C` | opisi, meta |
+| `text.tertiary` | `#66645F` | `#8E8B84` | hintovi, vremena |
 
-Izmjereni kontrasti (najgori slučaj po površini):
-- Light: primary ≥ 15,68:1, secondary ≥ 5,93:1, tertiary ≥ 4,72:1 (sve na `sunken`).
-- Dark: primary ≥ 12,52:1, secondary ≥ 5,78:1, tertiary ≥ 4,82:1 (sve na `raised`).
+### 2.2 Otok (inverzna površina)
 
-Sve je **AA i za normalni tekst**.
-
-### 2.2 Aura accenti (korisnik bira, default **Sky**)
-
-Pastelne boje imaju nizak kontrast na svijetloj pozadini (Sky na `#F1F2F5` je samo 1,4:1). Zato vrijedi:
-
-> **Light mod:** pastel je **ispuna** (fill) s tamnim tekstom, a za tekst i ikone u accent boji koristi se **ink** varijanta.
-> **Dark mod:** pastel se koristi direktno kao tekst i ikona (8–13:1) i kao ispuna s tamnim tekstom.
-
-| Accent | Fill (pastel) | Ink (light: tekst i ikone) | Ink na `sunken` (light) | Pastel na `raised` (dark) | `#111216` na fillu |
-|---|---|---|---|---|---|
-| **Sky** (default) | `#ABD5E9` | `#236F93` | 4,67:1 | 8,89:1 | 11,97:1 |
-| **Periwinkle** | `#A6C0F1` | `#1E60DE` | 4,65:1 | 7,57:1 | 10,19:1 |
-| **Lavender** | `#C6A5F1` | `#853BE5` | 4,69:1 | 6,66:1 | 8,96:1 |
-| **Mint** | `#A6F1C9` | `#107640` | 4,77:1 | 10,63:1 | 14,30:1 |
-| **Ember** | `#FF9F7E` | `#B8322C` | 4,98:1 | 6,96:1 | 9,37:1 |
-| **Onyx** (#000 iz palete) | light `#111216`, dark `#F2F3F5` | isto | 15,68:1 | 12,52:1 | obrnuto: `#F2F3F5` na `#111216` |
-
-Token po accentu i modu: `accent.<ime>.<light|dark>.{fill, ink, on-fill, ring}`. `ring` je boja fokus prstena: ink u lightu, fill u darku (§10); provjerava se na 3:1 (WCAG 1.4.11).
-
-**Vlastita boja:** `core/theme` iz korisničkog hexa izvodi fill i ink (OKLCH, mijenja se lightness uz očuvan hue) i odbija kombinacije ispod 4,5:1. UI tada pokazuje najbližu prihvatljivu nijansu.
-
-### 2.3 Brend: Ember
-
-| Token | Hex | Napomena |
+| Token | Light (tinta) | Dark (papir) |
 |---|---|---|
-| `ember.300` | `#FFB27A` | početak gradijenta ikone |
-| `ember.400` | `#FF8E5C` | |
-| `ember.500` | `#F2603F` | hover sjaj, ilustracije (ne za tekst na svijetlom) |
-| `ember.600` | `#D9433A` | bijeli tekst = 4,36:1, **samo za velik/bold tekst**; nikad kao hover CTA-a |
-| `ember.700` | `#C93A33` | **CTA ispuna** (bijeli tekst 5,08:1), `cta.fill` u obje teme |
-| `ember.800` | `#B8322C` | ink, danger tekst (light), **CTA hover** u obje teme (bijeli tekst 5,95:1) |
+| `island.bg` | `#121214` | `#F1EEE7` |
+| `island.raised` | `#2A2A2E` | `#DAD6CD` |
+| `island.text` | `#F3F1EC` | `#121214` |
+| `island.text-secondary` | `#A8A6A0` | `#5B5A57` |
+| `island.shield` | `#3DDC97` | `#0B5E33` |
+| `elev.island` | `0 18 50 -18 rgba(0,0,0,.45)` | `… rgba(0,0,0,.60)` |
 
-- `gradient.ember`: `conic-gradient(from 210deg, #FFB27A, #FF8E5C, #F2603F, #FFB27A)` za ikonu, logo i Shield "bloom" trenutak.
-- `aura-mesh.*` (po temi): 4 meka mesh gradijenta od Aura boja **niske zasićenosti** za pozadinu New Taba, uvijek preko `surface.canvas`. Najviše jedan gradijent po ekranu.
-  - `dawn` (Sky + Lavender, default), `mist` (Mint + Sky), `dusk` (Lavender + Ember), `tide` (Periwinkle + Mint)
-  - light: alfa 25–45 %; dark: alfa 8–12 %, da tekst zadrži kontrast iz §2.1
+### 2.3 Accent (korisnik bira, default **Ember**)
+Accent obilježava "ovdje si": kursor, aktivni tab, fokus prsten i odabrani redak. Svaki accent ima ulogu po površini:
 
-### 2.4 Semantičke
+| Uloga | Na papiru (light) | Na papiru (dark) | Na otoku |
+|---|---|---|---|
+| `accent.ink` (tekst, ikone) | tamna ink varijanta | pastel | – |
+| `accent.fill` + `accent.on-fill` | pastel + `#121214` | pastel + `#121214` | – |
+| `accent.island` | – | – | light: pastel na tinti; dark: ink na papiru (≥ 3:1) |
 
-| Token | Light | Dark |
-|---|---|---|
-| `status.shield` / `success` | `#107640` | `#A6F1C9` |
-| `status.warning` | `#8A5300` | `#F5C26B` |
-| `status.danger` | `#B8322C` | `#FF8A7A` |
-| `status.info` | `#1E60DE` | `#A6C0F1` |
+Predlošci: **Ember** (default), Sky, Periwinkle, Lavender, Mint, Onyx. Kod vlastite boje `core/theme` izvodi sve uloge u OKLCH-u i odbija kombinacije ispod AA.
 
-Shield ikona u toolbaru je `status.shield` kad je zaštita aktivna, a `text.tertiary` kad je isključena za tu stranicu.
+### 2.4 Brend
+- **Ember:** `ember.300 #FFB27A` → `ember.800 #B8322C`. CTA je `ember.700` s bijelim tekstom (5,08:1), a hover `ember.800`.
+- **Znak SCYDE S** (vlasnikov logo, `brand/icon/scyde.svg`): S od dva zrcalna dijela s dijagonalnim rezom (munja). Boje su `brand.lime #C4F014` i `brand.ink #0A0A0A`. U sučelju je to uvijek **limun pločica (radijus 28 %) s crnim S-om**, 32 px u otoku, pa je čitljiv i na tamnom i na svijetlom otoku. Lime je samo boja ispune, nikad tekst na papiru.
+- **Bez Aura mesh pozadina.** Papir je čist; boja dolazi samo od faviconâ, accenta i Embera.
+
+### 2.5 Semantičke
+`status.shield` (light `#107640`, dark `#3DDC97`), `status.warning`, `status.danger`, `status.info`: kao u tokenima, sve ≥ AA na svim površinama.
 
 ---
 
 ## 3. Tipografija
+- **Bricolage Grotesque** (OFL, variable, opsz 12–96): glas brenda. Koristi se za hero, UI i nazive stranica. Na velikim veličinama ima karakter (stisnuti ritam, tamni rezovi), a na malim je čitljiv.
+- **Geist Mono** (OFL): podaci. Shield brojke, vremena ("2 min"), putovi u adresi, hintovi za tipke.
+- **Brojke:** uvijek `tabular-nums`.
+- **Težine:** 400 i 500, plus 600 samo za hero. Nikad VELIKA SLOVA, pa ni u mono hintovima.
+- Mobilni nativni UI (SwiftUI, Compose) koristi iste fontove ugrađene u aplikaciju; Dynamic Type i font scale do 200 % se poštuju.
 
-- **Brend i display:** *Aeonik* (CoType Foundry) **samo uz kupljenu app licencu** `[VLASNIK]`. Do tada je zamjena **Geist** (SIL OFL), a fallback je sistemski font. Provjeri glifove č, ć, đ, š, ž (`tools/font-check`).
-- **UI:**
-  - Desktop: brend font (Geist/Aeonik); fallback `"Segoe UI Variable", system-ui`
-  - iOS: **SF Pro** (sistem; Dynamic Type)
-  - Android: **Roboto Flex / sistem**
-  - Brend font se na mobitelu koristi samo za display naslove na internim stranicama.
-- **Brojke:** `font-variant-numeric: tabular-nums` za sve brojače (Shield, preuzimanja, vrijeme).
-- **Težine:** 400 i 500 (iznimno 600 za display). Najviše dvije težine po prikazu.
-
-| Token | Veličina / visina reda | Tracking | Upotreba |
+| Token | Veličina / red | Tracking | Upotreba |
 |---|---|---|---|
-| `type.display` | 56 / 60 | −0,02em | onboarding hero |
-| `type.headline` | 32 / 38 | −0,015em | "Top Stories", naslovi sekcija |
-| `type.title` | 20 / 26 | −0,01em | naslovi panela i sheetova |
-| `type.body-lg` | 16 / 24 | 0 | polje pretrage na New Tabu, mobilni tekst |
-| `type.body` | 14 / 20 | 0 | standardni tekst |
-| `type.label` | 13 / 18 | +0,005em | **desktop chrome default** (tabovi, omnibox, meniji) |
-| `type.caption` | 12 / 16 | +0,01em | meta, tile labele |
-| `type.micro` | 11 / 14 | +0,02em | badgevi (rijetko) |
+| `type.hero` | 104 / 102 | −0,045em | "Kamo danas?" (mobitel 54 / 56) |
+| `type.display` | 56 / 60 | −0,02em | onboarding |
+| `type.headline` | 32 / 38 | −0,015em | naslovi internih stranica |
+| `type.title` | 20 / 26 | −0,01em | naslovi panela |
+| `type.address` | 16 / 22 | −0,01em | adresa u otoku |
+| `type.body-lg` | 16 / 24 | 0 | redci "nedavno" (19 px na desktopu) |
+| `type.body` | 14 / 20 | 0 | tekst |
+| `type.label` | 13 / 18 | +0,005em | gumbi, meniji |
+| `type.data` | 13 / 20 | 0 | mono podaci |
+| `type.caption` | 12 / 16 | +0,01em | meta |
 
 ---
 
 ## 4. Prostor, oblik, veličine
-
-- **Grid:** 4 pt. Razmaci: `2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80`.
-- **Radijusi:** `xs 6` (kbd) · `sm 10` (tab, mali gumbi) · `md 14` (input, meni, toast) · `lg 22` (tile, kartica) · `xl 28` (sheet, dialog) · `full` (chip, pill CTA, omnibox na New Tabu). Kutove prozora na Windows 11 određuje sustav; ne mijenjaj ih.
-- **Desktop chrome:** tab strip 44, tab 34 (min širina 72, max 240), toolbar 48, omnibox 34 (radius full), rail 72 s gumbima od 44 (krug), ikone 20 px.
-- **New Tab:** max širina sadržaja 1120; polje pretrage 56 (radius full) s CTA od 48; tile 272×132 (radius 22, razmak 12, grid 4 stupca na desktopu i 2 na mobitelu); chip 36.
-- **Gustoća Compact:** visine × 0,875, razmaci jedan korak niže.
-- **Hit targeti:** ≥ 44 pt (iOS), ≥ 48 dp (Android), ≥ 32 px (desktop miš, s hover stanjem).
+- **Grid:** 4 pt. Razmaci `2…80` kao u tokenima.
+- **Radijusi:** `xs 6` · `sm 10` · `md 14` (redci, polja) · `lg 22` (paneli) · `xl 28` · **`island 30`** · `full`.
+- **Otok (desktop):** visina 60, širina 720 (mirovanje) i 760 (prošireno), 22 px od dna, centriran. Gumbi 44, tab-krugovi 30 s preklopom od 9 px, adresa 420.
+- **Otok (mobitel):** visina 58, 12 px od rubova, iznad safe-area.
+- **Caption gumbi (Windows):** 34 × 24, plutaju gore desno bez trake, s hoverom. Snap Layouts: ADR-0007.
+- **New Tab (desktop):** padding 72/96, stupac "nedavno" 360, redci 50.
+- **Hit targeti:** 32 px (miš), 44 pt (iOS), 48 dp (Android).
 
 ---
 
 ## 5. Dubina i materijali
-
-- **Light:** sjene su nježne i dvoslojne.
-  - `elev.1`: `0 1px 2px rgba(17,18,22,.06)`
-  - `elev.2` (popover): `0 8px 24px -6px rgba(17,18,22,.18), 0 0 0 1px rgba(17,18,22,.06)`
-  - `elev.3` (sheet, dialog): `0 24px 64px -12px rgba(17,18,22,.28)`
-- **Dark:** dubina dolazi od **svjetlije površine i hairlinea**, ne od sjene. Uz to `inset 0 1px 0 rgba(255,255,255,.04)` kao gornji highlight.
-- **Windows:** Mica ispod tab stripa i toolbara. Popoveri su **puna** `surface.raised` + hairline (bez Acrylica, zbog performansi). Kad je "Transparency effects" isključen, nema ni Mice.
-- **iOS:** sistemski materijali (Liquid Glass na iOS 26+ gdje prirodno paše, inače `.ultraThinMaterial`) za donju traku i sheetove. Reduce Transparency znači pune boje.
-- **Android:** pune površine i scrim. Blur ne koristimo (trošak na slabijim uređajima).
+- Sve što izlazi iz otoka (prijedlozi, police s tabovima, Shield panel) je `surface.raised` + `elev.2` i raste **iz otoka prema gore**.
+- Otok ima jednu sjenu (`elev.island`); nikad se ne slažu stakla.
+- **Windows:** bez Mice iza sadržaja (stranica ide do ruba). Otok je zaseban transparentni top-level prozor, kao i paneli (CLAUDE.md, ADR-0007).
+- **iOS:** otok je nativni SwiftUI; uz Reduce Transparency ostaje pun. **Android:** puni otok, bez blura.
 
 ---
 
 ## 6. Kretanje
 
 ### 6.1 Principi
-1. **Svrha prije ukrasa.** Animacija objašnjava odakle je nešto došlo i kamo je otišlo. Ako to ne radi, briše se (`remove-animations`).
-2. **Brzo i prekidivo.** Svaka animacija se može prekinuti novom radnjom bez skoka.
-3. **Česte radnje se ne animiraju teatralno.** Ctrl+Tab, tipkanje u omnibox i scroll ostaju trenutni.
-4. **Samo compositor svojstva:** `transform` i `opacity` (web); native ekvivalenti na mobitelu.
-5. **Reduced motion:** sve postaje `opacity` cross-fade od 120 ms, a parallax i stagger se gase.
+1. Otok je predmet: mijenja oblik (morph), ne pojavljuje se niotkuda.
+2. Brzo i prekidivo. Česte radnje (Ctrl+Tab, tipkanje, skrol) su trenutne.
+3. Animiraju se samo `transform` i `opacity`. Kod otoka je to širina kao `scaleX` na omotaču, uz kontra-skaliranje sadržaja.
+4. Reduced motion: sve postaje cross-fade od 120 ms.
 
 ### 6.2 Tokeni
+Trajanja (`instant 90`, `fast 140`, `base 200`, `slow 300`, `choreo-max 420`) i springovi (`snappy`, `smooth`, `bouncy`) su nepromijenjeni u odnosu na v1. Vremena smirivanja: 420, 663 i 805 ms.
 
-| Token | Vrijednost | Upotreba |
-|---|---|---|
-| `motion.duration.instant` | 90 ms | hover, press |
-| `motion.duration.fast` | 140 ms | tooltip, mala stanja, omnibox popover |
-| `motion.duration.base` | 200 ms | meni, promjena teme (cross-fade) |
-| `motion.duration.slow` | 300 ms | sheet, tab switcher |
-| `motion.duration.choreo-max` | 420 ms | **gornja granica** cijele koreografije (npr. ulazak New Taba) |
-| `motion.ease.out` | `cubic-bezier(0.23, 1, 0.32, 1)` | ulasci |
-| `motion.ease.in-out` | `cubic-bezier(0.77, 0, 0.175, 1)` | pomaci na ekranu |
-| `motion.ease.exit` | `cubic-bezier(0.4, 0, 1, 1)` | izlasci (trajanje × 0,7) |
-| `motion.spring.snappy` | response 0,30 s · damping 0,86 | toggle, press, pill |
-| `motion.spring.smooth` | response 0,45 s · damping 1,0 | sheetovi, tab switcher, drag reorder |
-| `motion.spring.bouncy` | response 0,50 s · damping 0,72 | **samo** Shield counter "pop" |
-| `motion.stagger` | 24–32 ms, najviše 8 elemenata | liste i tileovi |
-
-Izračunata vremena smirivanja springova (unutar 0,1 % od cilja), koja `tools/springs` daje uz CSS `linear()`: snappy **420 ms**, smooth **663 ms**, bouncy **805 ms** (overshoot 3,8 %). Rep springa je vizualno miran, pa `choreo-max` (420 ms) vrijedi za vremenske animacije i za trenutak kad je element interaktivan, ne za posljednjih 0,1 % springa.
-
-**Springovi na sve tri platforme** (`tools/springs`): stiffness `k = (2π / response)²` (masa 1), damping ratio `ζ = damping`.
-- Web: unaprijed generirani CSS `linear()` stringovi
-- SwiftUI: `.spring(response:dampingFraction:)`
-- Compose: `spring(dampingRatio = ζ, stiffness = k)`
-
-### 6.3 Imenovani efekti (zajednički rječnik; `animation-vocabulary`)
-
+### 6.3 Imenovani efekti
 | Efekt | Opis |
 |---|---|
 | **Press** | scale 0,97, 90 ms, snappy povratak |
-| **Lift** | tile na hover: `translateY(-2px)` + prijelaz na `elev.2`, 140 ms |
 | **Rise** | ulazak: opacity 0→1, y 8→0, `ease.out`, 200 ms |
-| **Bloom** | popover i meni: scale 0,96→1 iz točke okidača + opacity, 140 ms |
-| **Glide** | reorder tabova i tileova (FLIP), smooth spring |
-| **Morph** | Shield brojač: vertikalni "roll" znamenki (tabular), bouncy samo kad brojač skoči s 0 |
-| **Dissolve** | promjena teme: View Transition cross-fade 200 ms (progresivno; fallback je trenutna promjena) |
-| **Peek** | mobitel: long-press link preview, smooth spring + haptika |
-| **Sleep** | tab koji zaspi: favicon prelazi u 60 % opacity + mali "z" badge, 300 ms |
+| **Swell** | otok se širi (720→760) i iz njega raste panel prema gore: smooth spring |
+| **Pebble** | skrol prema dolje: otok se sažima u kamenčić (znak + Shield točka), 200 ms; vraća se pri skrolu gore ili kad se kursor približi |
+| **Fan** | tab-krugovi se rasklapaju u policu kartica iznad otoka, stagger 24 ms, najviše 8 |
+| **Caret** | Ember kursor u "Kamo danas?" trepće 1,1 s; uz reduced motion je statičan |
+| **Morph** | Shield brojač: roll znamenki; bouncy samo pri skoku s 0 |
+| **Dissolve** | promjena teme: View Transition cross-fade 200 ms |
+| **Sleep** | uspavani tab: krug na 60 % + mjesec |
 
-### 6.4 Koreografije (`choreograph`)
-- **New Tab ulazak** (≤ 420 ms): logo Rise (0 ms) → privacy chipovi Rise, stagger 28 ms → polje pretrage je **odmah** interaktivno (bez kašnjenja fokusa) → tileovi Rise, stagger 24 ms, najviše 8. Vijesti se ne animiraju.
-- **Otvaranje taba (desktop):** novi tab raste iz širine 0 (transform scaleX na wrapperu + clip), susjedi Glide, sadržaj se pojavljuje kad je prvi paint gotov. **Zatvaranje:** tab Dissolve 120 ms, susjedi Glide; širina se zaključava dok je kursor iznad tab stripa (kao u Chromeu) da tab ne pobjegne ispod miša.
-- **Fokus omniboxa:** polje dobiva fokus prsten, a popover s prijedlozima Bloom odozgo, 140 ms.
-- **Tab switcher (mobitel):** zoom iz trenutne kartice u grid, smooth spring. Zatvaranje kartice swipeom ima fizikalnu brzinu.
+### 6.4 Koreografije
+- **New Tab ulazak** (≤ 420 ms): Shield redak Rise (0) → hero Rise (28 ms) → redci "nedavno" Rise, stagger 24 ms. Polje je odmah interaktivno.
+- **Fokus adrese:** otok Swell, prijedlozi rastu iznad njega (Bloom iz otoka), 140 ms.
+- **Tabovi:** klik na stack izaziva Fan (police iznad otoka); Esc ili klik izvan vraća krugove.
 
 ---
 
 ## 7. Ikonografija
-- Linijske ikone, potez **1,5 px**, grid 20 px (desktop) i 24 px (mobitel), zaobljeni krajevi. Baza je **Lucide** (ISC), vlastite ikone za Shield, Aura i Sleep.
-- Ikone kategorija vijesti su vlastite linijske, **ne emoji**.
-- Faviconi u speed dialu: originalna boja na `surface.sunken`. Ako favicon ne postoji, prikazuje se monogram u Aura fillu.
-
-### Ikona aplikacije: **Aura S** (odabrano 2026-11-11)
-- Master: `brand/icon/scyde.svg` (light), `scyde.dark.svg`, `scyde.mark.svg` (prozirno), `scyde.mono.svg` (themed/tinted). Generira ih `tools/icon-export` iz `concepts.mjs` (`aura-s`).
-- S od dva jednaka polukružna poteza sa zaobljenim vanjskim krajevima i tankim prijelomom u sredini; conic Ember gradijent s centrom izvan znaka.
-
-### Ikona aplikacije (smjer)
-- Bijela squircle pločica (light) i `#17181E` pločica (dark varijanta na iOS 18+). Znak ima meki **conic Ember gradijent**.
-- Oblik je **originalan**. Ideje za Fazu 0.3 (vlasnik bira):
-  - (a) "orbit": jedan prsten s otvorom kroz koji prolazi manja kugla
-  - (b) apstraktno "S" od dva luka različitih radijusa
-  - (c) "aura kap": krug s pomaknutom unutarnjom svjetlinom
-- Nikako dva jednaka kruga koji se preklapaju.
-- Exporti: Windows `.ico` (16–256), Android adaptive (foreground, background, **monochrome** za themed icons), iOS 1024 + dark + tinted.
+- Linijske ikone, potez 1,5 px, grid 20/24, Lucide (ISC) + vlastite.
+- Favicon bez slike dobiva **monogram u Aura pastelu** po hostu (stabilno).
+- Ikona aplikacije: **SCYDE S**, vlasnikov znak (2026-11-11). Light: limun pločica + crni S. Dark: crna pločica s tankim svijetlim rubom + limun S. Android adaptive pozadina je lime; monochrome i tinted su crni ili bijeli S. **Windows (`.ico`, taskbar):** bez pločice, ruba i pozadine, samo limun S preko ~92 % površine, kao ostale ikone na taskbaru (vlasnik, 2026-11-11). Na svijetlom taskbaru kontrast je slabiji; ako zatreba, MSIX paket dobiva `altform-lightunplated` varijantu s crnim S-om. Exporti: `node tools/icon-export/export.mjs` (`brand.json → icon.concept = owner-s`). Aura S je povučen.
 
 ---
 
-## 8. Komponente (stanja su obavezna: default, hover, press, focus-visible, disabled, loading)
+## 8. Komponente (stanja obavezna: default, hover, press, focus-visible, disabled, loading)
 
 | Komponenta | Ključni detalji |
 |---|---|
-| **Tab (desktop)** | favicon 16, naslov `type.label` s fade maskom umjesto "…", gumb za zatvaranje na hover/aktivnom, indikator zvuka i spavanja. Aktivni tab ima `surface.canvas` i spaja se s toolbarom. |
-| **Omnibox** | Stanja: idle (prikazuje eTLD+1 naglašeno), focus (puni URL, selektiran), tipkanje (prijedlozi), sigurno/nesigurno/interno (`scyde://` s Aura točkom), učitavanje (tanka progress linija ispod, Ember→accent). Pillovi "Popup blokiran" i Shield desno. |
-| **Shield gumb i panel** | Ikona štita + mali brojač (Morph). Panel (Bloom): veliki prekidač za stranicu, brojke (blokirano, ušteda), razina, Zen, link na detalje. |
-| **Speed dial tile** | `surface.sunken`, radius 22, ikona 48, labela `type.caption`. Lift na hover, kontekstni meni (Uredi, Ukloni, Prikvači). |
-| **Privacy chip** | ikona + labela + živa brojka; `surface.sunken` ili transparentan s hairlineom. |
-| **Polje pretrage (New Tab)** | 56 px pill, ikona lupe, placeholder `text.tertiary`, ikone za glas i sliku, **Ember CTA** pill (`ember.700`, bijeli tekst). |
-| **Chip filtera (vijesti)** | odabrani: Aura fill + tamni tekst (light) / pastel tekst na `sunken` (dark). |
-| **Kartica vijesti** | `surface.raised`, slika 16:9 s radiusom 16 unutar kartice, izvor i vrijeme `type.caption`. |
-| **Rail (desktop)** | krugovi od 44, aktivni ima Aura ring; tooltip desno (fast). Postavke na dnu. |
-| **Meni / popover** | `surface.raised`, `elev.2`, radius 14, stavke visoke 32, prečaci desno u `Kbd`. |
-| **Toast** | dno-centar (desktop), iznad donje trake (mobitel); jedna radnja; auto-dismiss 4 s, pauza na hover. |
-| **Sheet (mobitel)** | detenti (medium/large), grabber, smooth spring, scrim 40 %. |
-| **Donja traka (mobitel)** | omnibox pill + 4 akcije; skriva se pri scrollu prema dolje, a vraća pri scrollu prema gore ili dodiru na dnu. |
-| **Tab switcher (mobitel)** | grid 2 stupca, kartice sa snapshotom, swipe za zatvaranje, "+" FAB s Ember gradijentom. |
+| **Otok** | Slijeva nadesno: znak (izbornik) · natrag · \| · adresa · Shield kamenčić (točka + broj) · \| · tab stack (+N). Desktop 720/60, mobitel puna širina − 24. |
+| **Adresa u otoku** | Mirovanje: domena (eTLD+1) u `island.text`, put mono u `island.text-secondary` s fade maskom. Fokus: puni URL selektiran, otok Swell, prijedlozi iznad. Nikad ne skriva domenu (PLAN §7). |
+| **Prijedlozi** | Panel iznad otoka, redci 48: favicon, naslov, domena u accent inku, desno izvor (povijest, oznaka, tražilica) i `Enter` na odabranom. |
+| **Tab stack i polica** | Krugovi 30 s preklopom; aktivni ima accent prsten. Polica (Fan): kartice 168 × 112 sa snapshotom i naslovom, `+` na kraju, tipke 1–9. |
+| **Shield kamenčić i panel** | Točka `island.shield` + broj (Morph). Panel iznad otoka: veliki prekidač, dvije brojke, razina, Zen, detalji. |
+| **New Tab** | Shield mono redak · hero pitanje s Ember kursorom · hintovi tipki · stupac "nedavno" (favicon, host, vrijeme mono). Vijesti su opt-in i prikazuju se kao drugi stupac popisa, ne kao kartice. |
+| **Caption gumbi** | Windows: tri sitna gumba gore desno, bez trake; hover `surface.sunken`, zatvaranje `status.danger`. |
+| **Meni** | Panel iz znaka u otoku, redci 32, prečaci desno u mono. |
+| **Toast** | Izlazi iz otoka prema gore, jedna radnja, 4 s. |
+| **Mobitel: otok** | Isti otok na dnu; swipe lijevo i desno po otoku mijenja tab, swipe gore otvara tab grid (polica preko cijelog ekrana). |
 
 ---
 
 ## 9. Teme i prilagodba
-
-Root atributi određuju temu, a komponente koriste samo semantičke varijable:
-`data-theme="light|dark"` · `data-accent="sky|periwinkle|lavender|mint|ember|onyx|custom"` · `data-density="comfortable|compact"` · `data-motion="full|reduced"`
-
-Ključne varijable: `--accent-fill`, `--accent-ink`, `--accent-on-fill`, `--accent-ring` te površine i tekst iz §2.
-
-- **Adaptivni tint (opcija):** chrome uzima `theme-color` stranice ili dominantnu boju favicona, miješa je 8–12 % u `surface.chrome` i automatski provjerava kontrast teksta. Ako provjera padne, tint se ne primjenjuje.
-- **Pozadina New Taba:** Aura gradijent (4 predloška), puna boja ili vlastita slika (lokalno skalirana; zatamnjenje 0–40 % za čitljivost).
+Root atributi: `data-theme="light|dark"` · `data-accent="ember|sky|periwinkle|lavender|mint|onyx|custom"` · `data-density` · `data-motion`.
+Ključne varijable: `--island-*`, `--accent-island`, `--accent-ink`, `--accent-fill`, `--accent-ring`, `--surface-*`, `--text-*`.
+- **Adaptivni tint (opcija):** otok uzima 8–12 % `theme-color` stranice uz provjeru kontrasta; ako provjera padne, tint se ne primjenjuje.
+- **Pozadina New Taba:** papir (default), puna boja ili vlastita slika uz zatamnjenje 0–40 %. Hero tekst zadržava AA kontrast.
 
 ---
 
 ## 10. Pristupačnost
-- Fokus prsten `2px solid var(--accent-ink)` (dark: `--accent-fill`) + `2px` offset u boji podloge. **Nikad** `outline: none` bez zamjene.
-- Potpuna navigacija tipkovnicom na desktopu (tab strip, omnibox, paneli, meniji kao ARIA meni/listbox).
-- Labele za čitače ekrana na svim ikonama. Shield brojač je `aria-live="polite"` s ograničenjem učestalosti.
-- Poštuje se: Dynamic Type i font scale do 200 %, Reduce Motion, Reduce Transparency, Windows High Contrast (sistemske boje), Increase Contrast (jači hairlinei).
+- Fokus prsten je `2px solid var(--accent-ring)` na papiru, odnosno `var(--accent-island)` na otoku, uz offset od 2 px.
+- Otok je landmark (`<nav aria-label>`). Tab stack je `tablist`, prijedlozi `listbox`, paneli `dialog`.
+- Shield brojač je `aria-live="polite"` s ograničenjem učestalosti.
+- Poštuju se Dynamic Type, 200 %, Reduce Motion, Reduce Transparency, High Contrast i Increase Contrast (jači hairline).
 
 ---
 
 ## 11. Da / Ne
+**Da:** sadržaj do ruba · jedan predmet za sve sučelje · papir i tinta · Ember samo na radnji · riječi umjesto pločica · mono za podatke · stvarne brojke · tišina dok se čita.
 
-**Da:**
-- velik razmak
-- jedan fokus po ekranu
-- meke površine
-- pill CTA
-- hairline u darku
-- stvarne brojke
-- tišina dok korisnik čita
-
-**Ne:**
-- generički ljubičasto-plavi hero gradijenti
-- slaganje glassmorphism slojeva
-- teške sjene
-- emoji kao ikone
-- "AI iskrice"
-- 3D blobovi
-- više od dvije težine fonta
-- tekst VELIKIM SLOVIMA
-- centriranje svega po defaultu
-- animacija svega što se miče
+**Ne:** traka s tabovima na vrhu · siva "Chrome" sučelja · gradijentne pozadine · staklo na staklu · teške sjene (osim jedne na otoku) · emoji · "AI iskrice" · 3D blobovi · VELIKA SLOVA · mreže jednakih pločica · više od dvije težine po prikazu.
 
 ---
 
 ## 12. Tokeni u kodu i changelog
-
-| Izvor | Izlaz | Gdje |
-|---|---|---|
-| `design/tokens/*.json` (DTCG) | CSS custom properties | `web/packages/tokens/dist/css/tokens.css` (`@scyde/tokens/tokens.css`) |
-| | Kotlin (Compose) | `dist/kotlin/ScydeTokens.kt`: `ScydeColorsLight/Dark`, `ScydeAccents`, `ScydeMotion`… |
-| | Swift (SwiftUI) | `dist/swift/ScydeTokens.swift`: `ScydeColors.light/.dark`, `ScydeAccents`, `ScydeMotion`… |
-| | ravni JSON | `dist/json/tokens.json` (za `tools/contrast-check` i `core/theme`) |
-
-**Imena CSS varijabli:** semantika bez prefiksa teme (`--surface-canvas`, `--text-primary`, `--accent-ink`, `--cta-fill`, `--elev-2`, `--aura-mesh-dawn`), primitivi po putanji (`--space-16`, `--radius-lg`, `--type-label-size`, `--motion-duration-fast`, `--motion-spring-smooth` + `--motion-spring-smooth-duration`). Komponente koriste samo semantiku i primitive za razmak, oblik, tip i kretanje, nikad `--neutral-*` ni `--aura-*` direktno.
-
-**Pomoćne varijable:** `--density-scale` (1 / 0,875) i `--motion-distance-scale` (1, a 0 uz reduced motion), npr. `translateY(calc(var(--motion-rise-distance) * var(--motion-distance-scale)))`.
-
-**Sustavne postavke:** bez `data-theme` vrijedi `prefers-color-scheme`; bez `data-motion="full"` vrijedi `prefers-reduced-motion`; `prefers-contrast: more` mijenja hairline u `border.strong`.
+Izlazi: `web/packages/tokens/dist/{css,kotlin,swift,json}`. Generator: `pnpm tokens`. Gate: `pnpm contrast`.
 
 ### Changelog
-- **v1.0 (Faza 0.2):**
-  - Kontrasti ponovno izračunati alatom; ispravljene vrijednosti "tamni tekst na fillu" (prije su bile izračunate prema `#000`, a ne prema `#111216`).
-  - Dark CTA hover je `ember.800`, ne `ember.600` (bijeli tekst na `ember.600` je 4,36:1 i pada AA; contrast-check ga je uhvatio).
-  - Dodani `border.strong` (Increase Contrast) i `scrim`.
-  - Aura mesh predlošci imenovani (`dawn`, `mist`, `dusk`, `tide`) s alfom po temi.
-  - Dodana izračunata vremena smirivanja springova i pravilo za `choreo-max`.
-  - Dodan §12 (tokeni u kodu).
+- **v2.0 (2026-11-11):** vlasnik je odbacio v1 "Aura" ("ne smije ličiti na svaki drugi browser") i između tri smjera (Otok, Kralježnica, Tipke; `design/prototypes/redesign/`) izabrao **Otok** (ADR-0008).
+  - Nova paleta papir i tinta, otok kao inverzna površina, accent uloga `island`, default accent Ember.
+  - Fontovi Bricolage Grotesque i Geist Mono (OFL) umjesto Geist/Aeonik.
+  - Nove veličine otoka, `radius.island`, `type.hero`, `type.data`, `type.address`.
+  - Novi efekti Swell, Pebble, Fan i Caret.
+  - Aura mesh pozadine su uklonjene.
+  - Contrast gate je proširen na parove na otoku (204 para).
+  - Ikona i znak: vlasnikov **SCYDE S** (lime + ink) zamjenjuje Aura S; tokeni `brand.lime` i `brand.ink`.
+- **v1.0 (Faza 0.2):** "Aura" (u git povijesti).
