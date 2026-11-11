@@ -111,6 +111,10 @@
       },
       "menu-item": {
         "$value": "32px"
+      },
+      "caption-button": {
+        "$value": "46px",
+        "$description": "Windows caption button width (min/max/close), height = tabstrip"
       }
     },
     "newtab": {
@@ -171,6 +175,43 @@
       },
       "offset": {
         "$value": "2px"
+      }
+    },
+    "popover": {
+      "$type": "dimension",
+      "shield": {
+        "$value": "360px"
+      },
+      "menu": {
+        "$value": "280px"
+      },
+      "omnibox-row": {
+        "$value": "40px"
+      }
+    },
+    "toggle": {
+      "$type": "dimension",
+      "width": {
+        "$value": "40px"
+      },
+      "height": {
+        "$value": "24px"
+      },
+      "knob": {
+        "$value": "18px"
+      }
+    },
+    "mobile": {
+      "$type": "dimension",
+      "toolbar": {
+        "$value": "56px"
+      },
+      "omnibox": {
+        "$value": "44px"
+      },
+      "tab-card-ratio": {
+        "$type": "number",
+        "$value": 1.45
       }
     }
   },
