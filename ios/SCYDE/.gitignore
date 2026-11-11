@@ -1,0 +1,7 @@
+*.xcodeproj/
+Sources/Generated/
+Resources/pages/
+Resources/filters/
+Resources/Assets.xcassets/AppIcon.appiconset/*
+!Resources/Assets.xcassets/AppIcon.appiconset/.gitkeep
+build/

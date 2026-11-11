@@ -5,7 +5,10 @@
   "type": "module",
   "description": "UI strings, English only (ADR-0009). Native platforms mirror the same keys.",
   "exports": {
-    ".": "./index.mjs",
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.mjs"
+    },
     "./locales/*": "./locales/*"
   },
   "scripts": {

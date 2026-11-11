@@ -1,0 +1,6 @@
+{
+  "name": "@scyde/i18n-native",
+  "private": true,
+  "type": "module",
+  "description": "en.json -> Localizable.xcstrings (iOS) and strings.xml (Android)"
+}

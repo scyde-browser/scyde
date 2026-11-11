@@ -1,0 +1,11 @@
+{
+  "name": "shield-extension",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SCYDE Shield extension: chromium-mv3 (WebView2, DNR) and gecko-mv2 (GeckoView, webRequest + WASM)",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test"
+  }
+}

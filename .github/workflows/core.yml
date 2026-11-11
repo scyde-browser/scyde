@@ -53,6 +53,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          retention-days: 3
           name: perf-shield
           path: core/target/perf/
           if-no-files-found: warn
@@ -87,6 +88,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          retention-days: 3
           name: shield-wasm
           path: |
             core/target/shield-wasm/web/
@@ -137,5 +139,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          retention-days: 3
           name: perf-ab
           path: perf/

@@ -1,14 +1,17 @@
 name: windows
 
+# SCYDE for Windows (Phase 3): internal pages + island → Shield extension from a fresh filter
+# bundle → Tauri NSIS installer → silent install → smoke run with screenshot (qa fixtures).
 on:
   push:
     tags: ["v*"]
   pull_request:
-    paths: ["desktop/**", ".github/workflows/windows.yml"]
+    paths: ["desktop/**", "web/**", "shield-extension/**", "core/**", ".github/workflows/windows.yml"]
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: windows-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
@@ -20,14 +23,53 @@ env:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
       - run: rustup show active-toolchain; if ($LASTEXITCODE -ne 0) { rustup toolchain install }
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: core
-      - name: Core compiles for x86_64-pc-windows-msvc
-        working-directory: core
-        run: cargo build --workspace
-      # Phase 0.5 (S5) / Phase 3: pnpm tauri build (NSIS + MSI), smoke start + screenshot artifact,
-      # updater artefacts on tags.
+          workspaces: |
+            core
+            desktop/src-tauri
+      - name: Web (tokens, internal pages, island)
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm tokens
+          pnpm -r --filter "./web/apps/*" build
+      - name: Filter bundle → Shield extension (ADR-0003)
+        shell: bash
+        run: |
+          node tools/filters/fetch.mjs --out lists || { echo "::warning::list download failed, using the fixture"; rm -rf lists; mkdir lists; }
+          cp qa/lists/fixture.txt lists/zz-fixture.txt
+          (cd core && cargo run --release -p shield-compiler -- --lists ../lists --out ../bundle --version "$(date -u +%Y%m%d)")
+          node shield-extension/build.mjs --target chromium-mv3 --bundle bundle --out desktop/extensions/scyde-shield
+      - name: Tauri build (NSIS)
+        working-directory: desktop
+        run: npx --yes @tauri-apps/cli@2.12.4 build --bundles nsis
+      - name: Install silently and smoke-test
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem desktop/src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          Write-Host "installer: $($setup.FullName) ($([math]::Round($setup.Length / 1MB, 1)) MB)"
+          Start-Process -FilePath $setup.FullName -ArgumentList '/S' -Wait
+          $exe = Join-Path $env:LOCALAPPDATA 'SCYDE\scyde.exe'
+          if (-not (Test-Path $exe)) { throw "not installed at $exe" }
+          Start-Process -FilePath node -ArgumentList 'qa/serve.mjs','8787' -WindowStyle Hidden
+          Start-Sleep -Seconds 2
+          ./desktop/ci/run.ps1 -Exe $exe -Name smoke -AppArgs '--smoke', "$PWD/smoke.json" -ShotAfter 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          retention-days: 3
+          name: scyde-windows
+          path: |
+            desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+            smoke.json
+            smoke.png
+            bundle/report.json

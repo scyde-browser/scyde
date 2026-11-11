@@ -1,0 +1,14 @@
+{
+  "name": "@scyde/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright: internal pages in Chromium, Firefox and WebKit, light and dark (PLAN §11 Phase 2)",
+  "scripts": {
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.63.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@scyde/app-desktop-chrome",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The island for Windows (Tauri chrome webview)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@scyde/i18n": "workspace:*",
+    "@scyde/ui": "workspace:*",
+    "@tauri-apps/api": "2.12.4"
+  }
+}

@@ -1,0 +1,51 @@
+# xcodegen spec for SCYDE iOS (PLAN §9.3). CI fills the generated inputs first:
+#   Sources/Generated/ScydeTokens.swift  (pnpm tokens)
+#   Resources/pages/<app>/               (web/apps/*/dist)
+#   Resources/filters/                   (shield-compiler ios/*.json + manifest.json)
+#   Resources/Assets.xcassets/AppIcon…   (tools/icon-export)
+#   ../../core/target/ffi-apple/ScydeCore (core/ffi/build-apple.sh)
+name: SCYDE
+options:
+  bundleIdPrefix: dev.scyde
+  deploymentTarget:
+    iOS: "16.4"
+packages:
+  ScydeCore:
+    path: ../../core/target/ffi-apple/ScydeCore
+targets:
+  SCYDE:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Resources/Assets.xcassets
+      - path: Resources/pages
+        type: folder
+        buildPhase: resources
+      - path: Resources/filters
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: ScydeCore
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: SCYDE
+        CFBundleShortVersionString: "0.2.0"
+        CFBundleVersion: "2"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        ITSAppUsesNonExemptEncryption: false
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.scyde.browser
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGNING_ALLOWED: "NO"
+        ENABLE_USER_SCRIPT_SANDBOXING: "NO"

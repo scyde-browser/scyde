@@ -165,6 +165,33 @@ fn re2_ok(re: &str) -> bool {
         && !(1..=9).any(|n| re.contains(&format!("\\{n}")))
 }
 
+/// Chromium compiles DNR regexes with a small RE2 memory budget, and one regex over it makes
+/// Chromium reject the whole extension (found with `[%0-9a-zA-Z]{200,1300}` from uBO filters).
+/// Large counted repetitions and very long patterns are therefore dropped.
+pub const MAX_REGEX_LEN: usize = 300;
+pub const MAX_REGEX_REPEAT: u32 = 64;
+
+fn re2_small(re: &str) -> bool {
+    if re.len() > MAX_REGEX_LEN {
+        return false;
+    }
+    let b = re.as_bytes();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'{' && (i == 0 || b[i - 1] != b'\\') {
+            let end = re[i..].find('}').map_or(b.len(), |e| i + e);
+            for n in re[i + 1..end].split(',') {
+                if n.trim().parse::<u32>().is_ok_and(|n| n > MAX_REGEX_REPEAT) {
+                    return false;
+                }
+            }
+            i = end;
+        }
+        i += 1;
+    }
+    true
+}
+
 /// Converts one filter line. `Err(reason)` means dropped; `Ok(None)` means not a filter.
 #[allow(clippy::too_many_lines)] // one flat option table reads better than helpers
 fn convert_line(raw: &str, report: &mut DnrReport) -> Result<Option<Value>, String> {
@@ -271,6 +298,9 @@ fn convert_line(raw: &str, report: &mut DnrReport) -> Result<Option<Value>, Stri
         let re = &pattern[1..pattern.len() - 1];
         if !re2_ok(re) {
             return Err("regex:unsupported".into());
+        }
+        if !re2_small(re) {
+            return Err("regex:too-complex".into());
         }
         if report.regex_rules >= MAX_REGEX_RULES {
             return Err("regex:limit".into());
@@ -447,6 +477,11 @@ mod tests {
             "domain:unsupported"
         );
         assert_eq!(one("/ad(?=s)/").unwrap_err(), "regex:unsupported");
+        assert_eq!(
+            one("/^https?:\\/\\/[a-z]{5,13}\\/[%0-9a-z]{200,1300}/").unwrap_err(),
+            "regex:too-complex"
+        );
+        assert!(one("/banner[0-9]{2,8}\\.js/").is_ok());
         assert_eq!(
             one("||x.com^$frobnicate").unwrap_err(),
             "option:unknown:frobnicate"

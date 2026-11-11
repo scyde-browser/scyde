@@ -2,7 +2,7 @@
 
 > At the start of every session, read this file and continue from the first open task of the current phase.
 
-**Current phase:** Phase 1, Rust core and Shield pipeline (PLAN §11) · **done 2026-11-11** (PRs #5–#12), except the `[OWNER]` items below · next: Phase 2 (web design system and internal pages) once the owner confirms
+**Current phase:** Phases 2–5 implemented on PR #14 (owner, 2026-11-11: "continue with all phases"), **in CI** (Actions paused for about 30 minutes at 20:30 UTC, then resumed). Phase 1 done (PRs #5–#12).
 **Last updated:** 2026-11-11
 
 ## Phase 0: CLOSED (2026-11-11)
@@ -112,6 +112,40 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - the scriptlet resources source (resources.json, GPLv3; open question 3)
 - default search engine (open question 2; DuckDuckGo until then)
 
+## Phase 2: web design system and internal pages
+- [x] `@scyde/ui`: Svelte 5 components from the Island prototype (BrandMark, Icon, Button, IconButton, Toggle, Segmented, Tabs, Favicon monogram, Kbd, Stat, Card, Skeleton, Toast), `base.css` (OFL fonts, tokens, focus, Rise), `applyAppearance` (data-theme/accent/density/motion), formatters
+- [x] `@scyde/bridge`: typed API (13 methods, one allowlist), transports Tauri / WKWebView reply handler / GeckoView native messaging, trusted-origin check, timeouts, in-memory mock for dev and tests
+- [x] Apps `newtab`, `settings` (rendered from `core/settings/schema/settings.schema.json`), `shields`, `library` (history + bookmarks); strict CSP meta in production builds
+- [x] `@scyde/i18n`: `t()` with ICU plurals; all copy in `en.json`
+- [x] Playwright (`web/e2e`): Chromium, Firefox, WebKit × light/dark × 1440/390 screenshots, axe (no serious/critical), no console/CSP errors, interaction tests; CI artifact `screenshots`
+- [x] `pnpm size`: JS gz newtab 20.5 KB, settings 21.4 KB, shields 19.8 KB, library 24.7 KB (budget 120 KB)
+- [ ] Lighthouse a11y ≥ 95: covered by axe in 3 engines for now; Lighthouse CI to be added
+- Skills `emil-design-eng`, `animate`, `mobile-native` are not installed; DESIGN.md was followed directly
+
+## Phase 3: Windows (ADR-0012), code on PR #14
+- [x] `desktop/src-tauri`: Tauri 2.12.5 multiwebview, tabs on one WebView2 environment, island band (`web/apps/desktop-chrome`), omnibox (core), history (places), settings (settings), `scyde://` pages via a custom protocol with CSP headers, bridge with origin + allowlist checks
+- [x] Shield: `shield-extension` chromium-mv3 (DNR + cosmetics) built from a fresh bundle; **11/11 on qa/adblock in Chromium locally**. The first CI smoke test in WebView2 scored 8/11 because the worker-based cosmetics did not run, so cosmetics now work without a service worker (a stylesheet plus host shards)
+- [x] Popup blocker (`NewWindowRequested` + `IsUserInitiated`), shortcuts (`AcceleratorKeyPressed`)
+- [x] `cargo check` + clippy pass for a Windows target locally (x86_64-pc-windows-gnu)
+- [x] CI: NSIS installer → silent install → smoke run + screenshot
+- [ ] Not yet: blocked-request counters (only popups are counted), per-site switches, suggestions popover, session restore, downloads, find, zoom, private window, default browser, updater (`TAURI_SIGNING_PRIVATE_KEY` `[OWNER]`), frameless window and floating island (Phase 6)
+
+## Phase 4: iOS, code on PR #14
+- [x] `ios/SCYDE` (xcodegen): SwiftUI island (back, address with eTLD+1, Shield, tabs, menu, swipes), tab grid, WKWebView tabs with a Safari UA suffix, `scyde://` scheme handler, bridge (main-frame `scyde://` only), ScydeCore (omnibox, places, settings), WKContentRuleLists from the bundle (compiled once, cached per version), WebKit popup gate + popups open as tabs
+- [x] CI `ios` → `app`: simulator screenshots (New Tab light/dark, qa/adblock, settings) + **unsigned .ipa** for Feather
+- [ ] `[OWNER]`: install via Feather on a real device, Google sign-in check (Phase 4 AC)
+- [ ] Not yet: blocked counter estimate, per-site switches, downloads, find, private tabs
+
+## Phase 5: Android, code on PR #14
+- [x] `android/` Kotlin + Compose + GeckoView 160: edge-to-edge, predictive back, island (address with inline completion, Shield, tabs, menu, swipes), tab grid, ETP Strict + TCP, built-in extension (gecko-mv2: WASM engine from `engine.dat`, cosmetics, internal pages), bridge over native messaging (sender URL + environment + allowlist), popup prompts denied and counted, ScydeCore via UniFFI + JNA
+- [x] CI `android` → `app`: per-ABI release APKs (owner keystore if the secrets exist, otherwise a per-build test key), emulator screenshots
+- [ ] `[OWNER]`: release keystore secrets (`ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`), so that updates install over earlier versions
+- [ ] Not yet: Baseline Profile, live-session limit, downloads, private tabs
+
+## Release
+- [x] `release.yml` calls `windows`, `ios` and `android` as reusable workflows and attaches the `.exe`, `.ipa` and `.apk` files (a tag created with `GITHUB_TOKEN` does not trigger other workflows)
+- [ ] v0.2.0: once PR #14 is green and merged, run `release` with `tag=v0.2.0`
+
 ## Skills
 `impeccable`, `taste-skill`, `prototype` and `pick-ui-library` do not exist in the plugin catalog, so they are **implemented as project skills** in `.claude/skills/` (2026-11-11) and are loaded in every session in this repo:
 - `impeccable`: quality gate against DESIGN.md (critique / audit / polish / finalize), findings P1–P3, mandatory format for PRs
@@ -160,4 +194,4 @@ Defaults apply until the owner decides (PLAN §17).
 Decision: **no fork or rebrand** of Chromium, Brave or Firefox. The shell, UI, Shield logic, omnibox, history and themes are our own code. The render engine is the platform one (WebView2 / WKWebView), because a custom engine is not realistic for v1. The owner confirmed two libraries as permitted: GeckoView (Android) and adblock-rust (Shield). The rule is also written into CLAUDE.md (rule 11).
 
 ## Blockers
-None.
+- None that block the work. Open `[OWNER]` items are listed in the phase sections.

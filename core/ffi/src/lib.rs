@@ -16,19 +16,21 @@ uniffi::setup_scaffolding!("scyde_core");
 /// Errors crossing the FFI boundary.
 #[derive(Debug, uniffi::Error)]
 pub enum CoreError {
+    // The field is `detail`, not `message`: Kotlin errors extend Exception, whose `message`
+    // would be redeclared by the generated bindings.
     /// Input was rejected (bad URL, invalid setting, unknown bookmark…).
-    Invalid { message: String },
+    Invalid { detail: String },
     /// Storage or file problem.
-    Io { message: String },
+    Io { detail: String },
     /// A filter bundle or `engine.dat` failed verification.
-    Verification { message: String },
+    Verification { detail: String },
 }
 
 impl std::fmt::Display for CoreError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Invalid { message } | Self::Io { message } | Self::Verification { message } => {
-                f.write_str(message)
+            Self::Invalid { detail } | Self::Io { detail } | Self::Verification { detail } => {
+                f.write_str(detail)
             }
         }
     }
@@ -38,7 +40,7 @@ impl std::error::Error for CoreError {}
 
 fn invalid(e: impl std::fmt::Display) -> CoreError {
     CoreError::Invalid {
-        message: e.to_string(),
+        detail: e.to_string(),
     }
 }
 
@@ -82,7 +84,7 @@ impl ShieldEngine {
         shield::Shield::from_dat(&bytes)
             .map(|inner| Arc::new(Self { inner }))
             .map_err(|e| CoreError::Verification {
-                message: e.to_string(),
+                detail: e.to_string(),
             })
     }
 
@@ -147,12 +149,12 @@ impl ShieldEngine {
 pub fn verify_filter_bundle(dir: String, public_key_b64: String) -> Result<String, CoreError> {
     let key = shield_compiler::bundle::verifying_key_from_b64(&public_key_b64).map_err(|e| {
         CoreError::Verification {
-            message: e.to_string(),
+            detail: e.to_string(),
         }
     })?;
     let m = shield_compiler::bundle::verify(Path::new(&dir), &key).map_err(|e| {
         CoreError::Verification {
-            message: e.to_string(),
+            detail: e.to_string(),
         }
     })?;
     Ok(m["version"].as_str().unwrap_or_default().to_owned())
@@ -272,7 +274,7 @@ pub struct TopSite {
 fn places_err(e: places::PlacesError) -> CoreError {
     match e {
         places::PlacesError::Sqlite(e) => CoreError::Io {
-            message: e.to_string(),
+            detail: e.to_string(),
         },
         other => invalid(other),
     }

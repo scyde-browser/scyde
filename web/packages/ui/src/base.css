@@ -1,0 +1,44 @@
+/* SCYDE internal pages: fonts, tokens, resets, focus and named effects (DESIGN.md §3, §6, §10).
+   Tokens only (rule 4). Literals allowed: 0, 1px hairlines, percentages. */
+
+@font-face { font-family: "Bricolage Grotesque"; src: url("../../../../design/fonts/bricolage-grotesque-latin-opsz-normal.woff2") format("woff2"); font-weight: 200 800; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: "Bricolage Grotesque"; src: url("../../../../design/fonts/bricolage-grotesque-latin-ext-opsz-normal.woff2") format("woff2"); font-weight: 200 800; font-display: swap; unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20AB, U+A720-A7FF; }
+@font-face { font-family: "Geist"; src: url("../../../../design/fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("../../../../design/fonts/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: var(--font-weight-regular);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+:focus-visible { outline: var(--size-focus-ring) solid var(--accent-ring); outline-offset: var(--size-focus-offset); }
+.mono { font-family: var(--font-family-mono); }
+.num { font-variant-numeric: tabular-nums; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@keyframes caret { 50% { opacity: 0; } }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(calc(var(--motion-rise-distance) * var(--motion-distance-scale))); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.rise { animation: rise var(--motion-duration-base) var(--motion-ease-out) both; animation-delay: calc(var(--i, 0) * var(--motion-stagger-min)); }
+[data-motion="reduced"] .rise { animation-name: fade; animation-duration: var(--motion-duration-reduced); animation-delay: 0ms; }
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .rise { animation-name: fade; animation-duration: var(--motion-duration-reduced); animation-delay: 0ms; }
+  :root:not([data-motion="full"]) * { scroll-behavior: auto; }
+}
