@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SCYDE",
+  "mainBinaryName": "scyde",
+  "version": "0.2.0",
+  "identifier": "dev.scyde.browser",
+  "build": {
+    "frontendDist": "../../web/apps/desktop-chrome/dist"
+  },
+  "app": {
+    "windows": [],
+    "withGlobalTauri": false,
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "SCYDE",
+    "shortDescription": "SCYDE Browser",
+    "longDescription": "A fast browser with built-in ad, tracker and popup blocking.",
+    "copyright": "SCYDE",
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "resources": {
+      "../../web/apps/newtab/dist/": "pages/newtab/",
+      "../../web/apps/settings/dist/": "pages/settings/",
+      "../../web/apps/shields/dist/": "pages/shields/",
+      "../../web/apps/library/dist/": "pages/library/",
+      "../extensions/": "extensions/"
+    },
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

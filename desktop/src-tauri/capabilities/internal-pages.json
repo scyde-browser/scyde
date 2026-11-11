@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "internal-pages",
+  "description": "scyde:// pages in tab webviews may reach the bridge command only; it re-checks origin and method (CLAUDE.md rule 6). Web pages get no IPC.",
+  "windows": ["main"],
+  "webviews": ["tab-*"],
+  "remote": { "urls": ["http://scyde.localhost/*"] },
+  "permissions": ["core:event:default"]
+}

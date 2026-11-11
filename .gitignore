@@ -30,3 +30,9 @@ Thumbs.db
 web/e2e/results/
 web/e2e/report/
 web/e2e/screenshots/
+# Desktop (generated)
+desktop/extensions/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+bundle/
+lists/

@@ -1,0 +1,37 @@
+[package]
+name = "scyde"
+version = "0.2.0"
+description = "SCYDE Browser for Windows (Tauri 2 + WebView2, ADR-0007)"
+edition = "2024"
+rust-version = "1.97"
+license = "MPL-2.0"
+publish = false
+
+[[bin]]
+name = "scyde"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.4", features = [] }
+
+[dependencies]
+# Versions pinned by spike S5 (ADR-0007).
+tauri = { version = "=2.12.5", features = ["unstable"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+omnibox = { path = "../../core/omnibox" }
+places = { path = "../../core/places" }
+settings = { path = "../../core/settings" }
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "=0.39.1"
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com", "Win32_UI_Input_KeyboardAndMouse"] }
+windows-core = "0.62"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
+[workspace]
