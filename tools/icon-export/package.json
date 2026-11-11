@@ -7,7 +7,7 @@
   "scripts": {
     "concepts": "node concepts.mjs",
     "export": "node export.mjs",
-    "test": "node concepts.mjs && node export.mjs --concept all --check"
+    "test": "node concepts.mjs && node export.mjs --check"
   },
   "devDependencies": {
     "@resvg/resvg-js": "2.6.2"

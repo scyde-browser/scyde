@@ -213,6 +213,31 @@ const concepts = {
       };
     },
   },
+  // ---------- round 3: final mark, refined from Fold S after taste-skill + impeccable critique ----------
+  'aura-s': {
+    round: 3,
+    name: 'Aura S',
+    blurb: 'Finalni znak: S od dva jednaka polukružna poteza sa zaobljenim krajevima i tankim "prijelomom" u sredini. Na 16 px čita se kao čisto S.',
+    draw() {
+      const sw = 118; // stroke width
+      const Rm = 128; // centre-line radius of each half
+      const fold = 24; // slit where the halves meet (detail at large sizes, vanishes at 16 px)
+      const top = { x: C - fold / 2, y: C - Rm };
+      const bot = { x: C + fold / 2, y: C + Rm };
+      const dTop = `M${top.x} ${top.y - Rm}A${Rm} ${Rm} 0 0 0 ${top.x} ${top.y + Rm}`;
+      const dBot = `M${bot.x} ${bot.y - Rm}A${Rm} ${Rm} 0 0 1 ${bot.x} ${bot.y + Rm}`;
+      const shapes = (fill) =>
+        `<path d="${dTop}" fill="none" stroke="${fill}" stroke-width="${sw}"/>` +
+        `<path d="${dBot}" fill="none" stroke="${fill}" stroke-width="${sw}"/>` +
+        `<circle cx="${top.x}" cy="${top.y - Rm}" r="${sw / 2}" fill="${fill}"/>` +
+        `<circle cx="${bot.x}" cy="${bot.y + Rm}" r="${sw / 2}" fill="${fill}"/>`;
+      return {
+        defs: `<mask id="m-aura-s" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}">${shapes('#fff')}</mask>`,
+        colour: `<g mask="url(#m-aura-s)">${conic(C - 340, C - 340, 90, [E300, E500, E500, E400, E300])}</g>`,
+        mono: shapes(MONO),
+      };
+    },
+  },
 };
 
 const svg = (defs, body) =>

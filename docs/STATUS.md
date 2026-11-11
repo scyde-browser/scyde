@@ -30,7 +30,7 @@
 ### 0.3 Brand i ikona
 - [x] Tri originalna koncepta ikone (SVG): **Orbit**, **Twin Arc**, **Aura Drop** (`brand/icon/concepts/`), bez dva preklopljena kruga
 - [x] `tools/icon-export`: Windows `.ico` 16–256, Android adaptive (foreground, background, monochrome) + legacy, iOS 1024 + dark + tinted, pregled `preview.png`
-- [ ] `[VLASNIK]` bira koncept (čeka odgovor)
+- [x] Ikona odabrana: **Aura S** (`brand/icon/scyde.svg`, `brand.json → icon`). Vlasnik je nakon dva kruga (6 koncepata) prepustio izbor; znak je doveden do kraja kroz `taste-skill` + `impeccable` critique (vidi dolje).
 
 ### 0.4 Prototipovi
 - [ ] New Tab light/dark
@@ -47,12 +47,27 @@
 - [ ] S5 Tauri multiwebview, 20 tabova, popoveri, Mica, snap → **G5**
 
 ## Skillovi
-Skillovi `impeccable`, `taste-skill`, `pick-ui-library` i `prototype` **nisu instalirani** u ovom okruženju. Prema CLAUDE.md rad se nastavlja po DESIGN.md:
-- DESIGN.md je finaliziran ručno: svaka tvrdnja o kontrastu je provjerena alatom, ne procjenom.
-- Provjera generičnosti: ručno prema listi "Ne" iz DESIGN §11.
-- Odabir UI biblioteke: ADR-0005 s mjerenjem bundlea.
+`impeccable`, `taste-skill`, `prototype` i `pick-ui-library` ne postoje u katalogu pluginova, pa su **implementirani kao project skillovi** u `.claude/skills/` (2026-11-11) i učitavaju se u svakoj sesiji u ovom repou:
+- `impeccable`: quality gate prema DESIGN.md (critique / audit / polish / finalize), nalazi P1–P3, obavezni format za PR
+- `taste-skill`: provjera generičnosti (lista "AI-made" znakova, ocjena 1–5 na 5 osi, prag ≥ 4)
+- `prototype`: HTML prototipovi na pravim tokenima + `shot.mjs` (Playwright, light/dark × 1440/390)
+- `pick-ui-library`: odluka mjerenjem buildova (ADR-0005)
 
-Kad se skillovi instaliraju, pokreni `impeccable` critique nad DESIGN.md i prototipovima i upiši nalaze ovdje.
+Ostali skillovi iz PLAN §12 (`emil-design-eng`, `apple-design`, `mobile-native`, `animate`, `choreograph`, `animation-*`, `break-ui`, `awwwards-animations`) još nisu instalirani; rade se po istom obrascu kad ih faza zatraži.
+
+### taste-skill: ikona Aura S
+Generički znakovi: nijedan (nema 2 kruga, nema glossa ni sparkla; R1 krug 1 Aura Drop je odbačen zbog 3D kugle).
+Ocjene: distinctiveness 4/5, restraint 5/5, specificity 4/5, craft 4/5, coherence 5/5 → **pass**.
+Potpis: S monogram (SCYDE), meki conic Ember gradijent, bijela/onyx squircle pločica.
+
+### impeccable critique: ikona Aura S
+Rendered: `brand/icon/preview.png` (light, dark, mono, 64/32/16 px) + Android/iOS/Windows exporti
+| # | P | Nalaz | Pravilo | Popravak | Status |
+|---|---|---|---|---|---|
+| 1 | P2 | Vrh conic gradijenta padao je na prijelom S-a (tamna točka) | DESIGN §7, bez vidljivog vrha | centar gradijenta pomaknut izvan znaka | ✅ |
+| 2 | P3 | Znak premalen u pločici (~55 %) | §7 čitljivost | stroke 108→118, radijus 116→128 | ✅ |
+| 3 | P3 | Prijelom na 16 px postaje stepenica | čitljivost | prihvaćeno: S je i dalje jasan; detalj vrijedi na velikim veličinama | – |
+Verdict: **ship**.
 
 ## Otvorena pitanja za vlasnika `[VLASNIK]`
 Zadane vrijednosti vrijede dok vlasnik ne odluči (PLAN §17).
@@ -67,7 +82,7 @@ Zadane vrijednosti vrijede dok vlasnik ne odluči (PLAN §17).
 | 6 | SCYDE Sync self-hosted | – | otvoreno (Faza 7) |
 | 7 | Izvori za Top Stories | isključeno (opt-in) | otvoreno |
 | 8 | Distribucija za Android | GitHub Releases | otvoreno |
-| 9 | Koncept ikone (0.3) | – | krug 1 (Orbit, Twin Arc, Aura Drop) odbijen; **krug 2 čeka izbor: Petal / Portal / Fold S** (`node tools/icon-export/export.mjs --round 2`) |
+| 9 | Koncept ikone (0.3) | – | **odlučeno 2026-11-11**: Aura S (vlasnik: "generiraj ikonu") |
 | 11 | Pravilo "čisti naš kod": GeckoView i adblock-rust? | – | **odlučeno 2026-11-11**: GeckoView ostaje (Android engine kao biblioteka), adblock-rust ostaje (Shield matcher). Bez forka preglednika. |
 | 10 | Regionalne HR/EU filter liste | isključeno | otvoreno |
 

@@ -10,8 +10,18 @@
   "website": "https://github.com/scyde-browser/scyde",
   "colors": {
     "brand": "{ember.700}",
-    "iconGradient": ["#FFB27A", "#FF8E5C", "#F2603F"],
+    "iconGradient": [
+      "#FFB27A",
+      "#FF8E5C",
+      "#F2603F"
+    ],
     "iconTileLight": "#FFFFFF",
     "iconTileDark": "#17181E"
+  },
+  "icon": {
+    "concept": "aura-s",
+    "master": "brand/icon/scyde.svg",
+    "chosen": "2026-11-11",
+    "note": "Owner asked Claude to generate the icon after rounds 1-2; refined from Fold S via taste-skill + impeccable critique."
   }
 }

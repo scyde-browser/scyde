@@ -1,5 +1,5 @@
 // Icon export pipeline (PLAN §11 Faza 0.3, DESIGN.md §7).
-//   node export.mjs --concept <id|all> [--round <n>, default latest] [--out <dir>] [--check]
+//   node export.mjs [--concept <id|all|brand>] (default: brand.json icon) [--round <n>, default latest] [--out <dir>] [--check]
 // Output (default brand/icon/export/<id>/, gitignored; CI uploads it as an artifact):
 //   windows/scyde.ico                        16–256 px, PNG-compressed entries
 //   android/res/mipmap-*/ic_launcher*.png    legacy + adaptive foreground + monochrome
@@ -24,7 +24,7 @@ const arg = (name, def) => {
   return i >= 0 ? args[i + 1] : def;
 };
 const check = args.includes('--check');
-const which = arg('concept', 'all');
+const which = arg('concept', 'brand') === 'brand' ? brand.icon?.concept ?? 'all' : arg('concept', 'all');
 const round = Number(arg('round', latestRound));
 const ids = which === 'all' ? conceptIds.filter((id) => roundOf(id) === round) : [which];
 for (const id of ids) if (!conceptIds.includes(id)) throw new Error(`Unknown concept "${id}". Known: ${conceptIds.join(', ')}`);

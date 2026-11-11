@@ -37,4 +37,8 @@ jobs:
         with:
           name: tokens
           path: web/packages/tokens/dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: icons
+          path: brand/icon/export
       # Playwright (chromium + firefox + webkit) screenshots and bundle-size budgets start in Phase 2

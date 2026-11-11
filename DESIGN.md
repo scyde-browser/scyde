@@ -208,6 +208,10 @@ Izračunata vremena smirivanja springova (unutar 0,1 % od cilja), koja `tools/sp
 - Ikone kategorija vijesti su vlastite linijske, **ne emoji**.
 - Faviconi u speed dialu: originalna boja na `surface.sunken`. Ako favicon ne postoji, prikazuje se monogram u Aura fillu.
 
+### Ikona aplikacije: **Aura S** (odabrano 2026-11-11)
+- Master: `brand/icon/scyde.svg` (light), `scyde.dark.svg`, `scyde.mark.svg` (prozirno), `scyde.mono.svg` (themed/tinted). Generira ih `tools/icon-export` iz `concepts.mjs` (`aura-s`).
+- S od dva jednaka polukružna poteza sa zaobljenim vanjskim krajevima i tankim prijelomom u sredini; conic Ember gradijent s centrom izvan znaka.
+
 ### Ikona aplikacije (smjer)
 - Bijela squircle pločica (light) i `#17181E` pločica (dark varijanta na iOS 18+). Znak ima meki **conic Ember gradijent**.
 - Oblik je **originalan**. Ideje za Fazu 0.3 (vlasnik bira):
