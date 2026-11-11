@@ -41,7 +41,7 @@
 
 ### 0.5 Spikeovi
 CI: `.github/workflows/spikes.yml` (pokreće se na PR-u ili ručno). Fixturei: `qa/` (`node qa/serve.mjs 8787`).
-- [ ] S1 Google prijava na WebView2, GeckoView i WKWebView → **G1**: buildovi su spremni (`s1-windows-exe`, `s3-geckoview-apk`, `s1-ios-ipa`), čeka se ručni test `[VLASNIK]` (koraci ispod) → ADR-0002
+- [ ] S1 Google prijava → **G1**: **WebView2 ✅** (vlasnik potvrdio 2026-11-11, svi tabovi); GeckoView (`s3-geckoview-apk`) i WKWebView (`s1-ios-ipa`) čekaju potvrdu `[VLASNIK]` → ADR-0002
 - [x] S2 WebView2 Shield → **G2 ✅**: A i B blokiraju 6/6 mrežnih fixture zahtjeva; učitavanje je brže nego bez blokiranja (index.hr 1102 → 229 ms). Odluka: **opcija A (DNR)**, B rezerva → ADR-0003
 - [x] S3 GeckoView → **G3 ✅**: GeckoView 160, fixture 10/11 (6/6 mreža), WASM p99 40 µs u SpiderMonkeyju (14,8 µs u V8), interna stranica ↔ aplikacija radi → ADR-0004
 - [x] S4 iOS rule liste → **G4 ✅**: 263.790 pravila u 2 liste, keširani load 6 ms, fixture 6/6 mreža; kompajliranje 83 s + 133 s → samo u pozadini → ADR-0006
