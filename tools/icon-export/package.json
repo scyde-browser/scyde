@@ -1,0 +1,15 @@
+{
+  "name": "@scyde/icon-export",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generates icon concept SVG masters and exports Windows .ico, Android adaptive and iOS icon sets",
+  "scripts": {
+    "concepts": "node concepts.mjs",
+    "export": "node export.mjs",
+    "test": "node concepts.mjs && node export.mjs --concept all --check"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  }
+}
