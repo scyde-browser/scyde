@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Which spike to run (all, s3-wasm, s3-geckoview-app, s4-ios-rulelists)"
+        description: "Which spike to run (all, s3-wasm, s3-geckoview-app, s4-ios-rulelists, s5-windows)"
         default: all
 
 concurrency:
@@ -185,3 +185,56 @@ jobs:
           path: |
             s4-results.txt
             s4.log
+
+  s5-windows:
+    # S5 (G5) multiwebview + popover timings, S2 (G2) option B vs no blocking, S1 (G1) exe for the manual sign-in test.
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all' || inputs.job == 's5-windows'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: rustup show active-toolchain; if ($LASTEXITCODE -ne 0) { rustup toolchain install }
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: spikes/s5-tauri/src-tauri
+      - name: Build
+        working-directory: spikes/s5-tauri/src-tauri
+        run: cargo build --release
+      - name: Download filter lists
+        shell: bash
+        run: |
+          mkdir -p lists
+          for u in $LISTS; do curl -sSfL --retry 3 -o "lists/$(basename "$u")" "$u"; done
+      - name: Serve qa fixtures
+        shell: bash
+        run: node qa/serve.mjs 8787 > /dev/null 2>&1 &
+      - name: S5 bench (20 tabs, switches, popover)
+        run: ./spikes/s5-tauri/ci/run.ps1 -Exe spikes/s5-tauri/src-tauri/target/release/scyde-spike-s5.exe -Name s5 -AppArgs '--mode','bench','--out','s5.json','--hold','10' -ShotAfter 12
+      - name: S2 baseline (no blocking)
+        run: ./spikes/s5-tauri/ci/run.ps1 -Exe spikes/s5-tauri/src-tauri/target/release/scyde-spike-s5.exe -Name s2-none -AppArgs '--mode','shield','--shield','none','--out','s2-none.json','--rounds','3','--sites',$env:SITES -ShotAfter 20
+        env:
+          SITES: https://www.index.hr/,https://www.24sata.hr/,https://www.jutarnji.hr/,https://www.youtube.com/,https://edition.cnn.com/
+      - name: S2 option B (WebResourceRequested + adblock-rust)
+        run: ./spikes/s5-tauri/ci/run.ps1 -Exe spikes/s5-tauri/src-tauri/target/release/scyde-spike-s5.exe -Name s2-b -AppArgs '--mode','shield','--shield','b','--out','s2-b.json','--rounds','3','--sites',$env:SITES,'--lists',$env:LISTFILES -ShotAfter 20
+        env:
+          SITES: https://www.index.hr/,https://www.24sata.hr/,https://www.jutarnji.hr/,https://www.youtube.com/,https://edition.cnn.com/
+          LISTFILES: qa/lists/fixture.txt,lists/easylist.txt,lists/easyprivacy.txt,lists/filters.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: s5-s2-results
+          path: |
+            s5.json
+            s5.png
+            s2-none.json
+            s2-none.png
+            s2-b.json
+            s2-b.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s1-windows-exe
+          path: spikes/s5-tauri/src-tauri/target/release/scyde-spike-s5.exe

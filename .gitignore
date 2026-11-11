@@ -32,3 +32,4 @@ spikes/**/Resources/rulelists/*.json
 spikes/**/fixture-out/
 spikes/**/.build/
 spikes/**/.swiftpm/
+spikes/s5-tauri/src-tauri/gen/
