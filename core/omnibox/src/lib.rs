@@ -1,3 +1,12 @@
-//! URL fixup, URL-or-search, suggestion ranking and safe URL display.
+//! Omnibox: URL fixup, URL-or-search, safe URL display and frecency ranking (PLAN §11, §7).
 //!
-//! Skeleton crate (Phase 0). Implementation lands in Phase 1, see `PLAN.md` §11.
+//! - [`input`]: what the user typed → URL or search
+//! - [`display`]: eTLD+1 emphasis, punycode for confusable IDNs, elision that keeps the domain
+//! - [`frecency`]: suggestion scoring, matching and inline completion
+
+pub mod display;
+pub mod frecency;
+pub mod input;
+
+pub use display::{HostDisplay, UrlDisplay, display_host, display_url, elide_host};
+pub use input::{DEFAULT_SEARCH_TEMPLATE, Input, classify, search_url};
