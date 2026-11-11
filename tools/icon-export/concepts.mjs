@@ -146,6 +146,73 @@ const concepts = {
       };
     },
   },
+  // ---------- round 2 (owner asked for new directions, 2026-11-11) ----------
+  petal: {
+    round: 2,
+    name: 'Petal',
+    blurb: 'Kap/latica: tri zaobljena kuta i jedan oštar, usmjeren gore-desno. Naprijed, lagano, zaštićeno.',
+    draw() {
+      const s = 300; // half-size of the bounding square
+      const R = s; // full rounding on three corners
+      const r = 46; // the one sharp-ish corner (top-right)
+      const [x0, y0, x1, y1] = [C - s, C - s, C + s, C + s];
+      const d =
+        `M${x0 + R} ${y0}L${x1 - r} ${y0}A${r} ${r} 0 0 1 ${x1} ${y0 + r}` +
+        `L${x1} ${y1 - R}A${R} ${R} 0 0 1 ${x1 - R} ${y1}` +
+        `L${x0 + R} ${y1}A${R} ${R} 0 0 1 ${x0} ${y1 - R}` +
+        `L${x0} ${y0 + R}A${R} ${R} 0 0 1 ${x0 + R} ${y0}Z`;
+      const k = 0.94;
+      const t = `translate(${C * (1 - k)} ${C * (1 - k)}) scale(${k})`;
+      return {
+        defs: `<clipPath id="c-petal"><path d="${d}" transform="${t}"/></clipPath>`,
+        colour: `<g clip-path="url(#c-petal)">${conic(C + s * k, C - s * k, 180, [E300, E500, E500, E400, E300])}</g>`,
+        mono: `<path d="${d}" transform="${t}" fill="${MONO}"/>`,
+      };
+    },
+  },
+  portal: {
+    round: 2,
+    name: 'Portal',
+    blurb: 'Luk kao vrata prema webu, s točkom svjetla na pragu. Ulaz u sadržaj; jedan oblik i jedna točka.',
+    draw() {
+      const w = 236; // half width to stroke centre
+      const sw = 96;
+      const top = C - 150; // centre of the arch
+      const foot = C + 250; // bottom of the legs
+      const d = `M${C - w} ${foot}L${C - w} ${top}A${w} ${w} 0 0 1 ${C + w} ${top}L${C + w} ${foot}`;
+      const dot = { x: C, y: foot - 36, r: 62 };
+      const bboxTop = top - w - sw / 2;
+      const bboxBottom = foot + sw / 2;
+      const lift = `translate(0 ${C - (bboxTop + bboxBottom) / 2})`;
+      const shapes = (fill) =>
+        `<g transform="${lift}"><path d="${d}" fill="none" stroke="${fill}" stroke-width="${sw}" stroke-linecap="round"/><circle cx="${dot.x}" cy="${dot.y}" r="${dot.r}" fill="${fill}"/></g>`;
+      return {
+        defs: `<mask id="m-portal" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}">${shapes('#fff')}</mask>`,
+        colour: `<g mask="url(#m-portal)">${conic(C, C, 210, GRAD)}</g>`,
+        mono: shapes(MONO),
+      };
+    },
+  },
+  'fold-s': {
+    round: 2,
+    name: 'Fold S',
+    blurb: 'Slovo S od dvije pune polukružne trake s malim "prijelomom" u sredini. Monogram, čvrst i na 16 px.',
+    draw() {
+      const Ro = 158;
+      const Ri = 66;
+      const fold = 26; // horizontal step where the two halves meet
+      const cy1 = C - (Ro + Ri) / 2;
+      const cy2 = cy1 + Ro + Ri;
+      const left = (cx, cy) => `M${cx} ${cy - Ro}A${Ro} ${Ro} 0 0 0 ${cx} ${cy + Ro}L${cx} ${cy + Ri}A${Ri} ${Ri} 0 0 1 ${cx} ${cy - Ri}Z`;
+      const right = (cx, cy) => `M${cx} ${cy - Ro}A${Ro} ${Ro} 0 0 1 ${cx} ${cy + Ro}L${cx} ${cy + Ri}A${Ri} ${Ri} 0 0 0 ${cx} ${cy - Ri}Z`;
+      const d = left(C - fold / 2, cy1) + right(C + fold / 2, cy2);
+      return {
+        defs: `<clipPath id="c-fold"><path d="${d}"/></clipPath>`,
+        colour: `<g clip-path="url(#c-fold)">${conic(C, C, 210, GRAD)}</g>`,
+        mono: `<path d="${d}" fill="${MONO}"/>`,
+      };
+    },
+  },
 };
 
 const svg = (defs, body) =>
@@ -171,6 +238,8 @@ export function buildConcept(id) {
 }
 
 export const conceptIds = Object.keys(concepts);
+export const roundOf = (id) => concepts[id].round ?? 1;
+export const latestRound = Math.max(...conceptIds.map(roundOf));
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   mkdirSync(outDir, { recursive: true });

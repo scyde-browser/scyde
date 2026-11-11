@@ -35,7 +35,7 @@ Zajednička Rust jezgra je `core/`, zajednički web UI je `web/`.
 8. **Odluke idu u ADR.** Svako odstupanje od PLAN.md dobiva `docs/adr/NNNN-*.md`.
 9. **Mali PR-ovi, zeleni CI.** Conventional Commits. Grane `phase/N-*`, `feat/*`, `fix/*`. Svaki UI PR ima screenshotove (CI artefakti) i `impeccable` critique u opisu.
 10. **i18n od prvog dana.** Hrvatski i engleski. Nema hardkodiranih stringova u UI-ju. Ključevi su u `web/packages/i18n`, `android/.../strings.xml` i `ios/.../Localizable.xcstrings`.
-11. **Čisti naš kod, ne fork.** SCYDE se ne gradi kao Brave, Firefox ili drugi preglednici: nema forka ni rebrandanja Chromiuma, Bravea, Firefoxa ni njihovog koda. Ljuska, UI, Shield logika, omnibox, povijest, teme i sve značajke pišemo sami. Render engine je platformski (WebView2, WKWebView). Svaka nova vanjska biblioteka koja nosi kod drugog preglednika ide prvo vlasniku `[VLASNIK]` (vidi `docs/STATUS.md`, pitanje 11).
+11. **Čisti naš kod, ne fork.** SCYDE se ne gradi kao Brave, Firefox ili drugi preglednici: nema forka ni rebrandanja Chromiuma, Bravea, Firefoxa ni njihovog koda. Ljuska, UI, Shield logika, omnibox, povijest, teme i sve značajke pišemo sami. Render engine je platformski (WebView2, WKWebView). Odobrene iznimke (vlasnik, 2026-11-11): **GeckoView** kao Android engine i **adblock-rust** kao Shield matcher, obje kao biblioteke. Svaka nova vanjska biblioteka koja nosi kod drugog preglednika ide prvo vlasniku `[VLASNIK]`.
 
 ## Okruženje i build
 Claude Code obično radi na **Linuxu**. Lokalno radi `core/`, `web/`, `shield-extension/` i `android/`. **Windows i iOS se grade i testiraju u GitHub Actions.** Iteriraj ovako:

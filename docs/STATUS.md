@@ -67,14 +67,14 @@ Zadane vrijednosti vrijede dok vlasnik ne odluči (PLAN §17).
 | 6 | SCYDE Sync self-hosted | – | otvoreno (Faza 7) |
 | 7 | Izvori za Top Stories | isključeno (opt-in) | otvoreno |
 | 8 | Distribucija za Android | GitHub Releases | otvoreno |
-| 9 | Koncept ikone (0.3) | – | **čeka izbor**: Orbit / Twin Arc / Aura Drop |
-| 11 | "Čisti naš custom code, ne građen kao Brave/Firefox" (vlasnik, 2026-11-11): vrijedi li i za **GeckoView** (Mozillin engine kao biblioteka na Androidu) i **adblock-rust** (Braveova biblioteka za Shield)? | nema forka nijednog preglednika (PLAN već tako postavlja Windows i iOS) | **otvoreno**: utječe na ADR-0001, S3 i Fazu 1 |
+| 9 | Koncept ikone (0.3) | – | krug 1 (Orbit, Twin Arc, Aura Drop) odbijen; **krug 2 čeka izbor: Petal / Portal / Fold S** (`node tools/icon-export/export.mjs --round 2`) |
+| 11 | Pravilo "čisti naš kod": GeckoView i adblock-rust? | – | **odlučeno 2026-11-11**: GeckoView ostaje (Android engine kao biblioteka), adblock-rust ostaje (Shield matcher). Bez forka preglednika. |
 | 10 | Regionalne HR/EU filter liste | isključeno | otvoreno |
 
 ## Pravilo vlasnika (2026-11-11)
 > "Ne smije biti građen kao Brave, Firefox i ostali, čisti naš custom code."
 
-Tumačenje do odluke: **nema forka ni rebrandanja** Chromiuma, Bravea ni Firefoxa. Ljuska, UI, Shield logika, omnibox, povijest i teme su naš kod. Render engine je platformski (WebView2 / WKWebView), jer vlastiti engine nije realan za v1. Dvije posuđene komponente iz plana čekaju potvrdu (pitanje 11).
+Odluka: **nema forka ni rebrandanja** Chromiuma, Bravea ni Firefoxa. Ljuska, UI, Shield logika, omnibox, povijest i teme su naš kod. Render engine je platformski (WebView2 / WKWebView), jer vlastiti engine nije realan za v1. Vlasnik je potvrdio dvije biblioteke kao dopuštene: GeckoView (Android) i adblock-rust (Shield). Pravilo je upisano i u CLAUDE.md (pravilo 11).
 
 ## Blokade
 Nema.

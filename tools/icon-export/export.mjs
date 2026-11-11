@@ -1,5 +1,5 @@
 // Icon export pipeline (PLAN §11 Faza 0.3, DESIGN.md §7).
-//   node export.mjs --concept <id|all> [--out <dir>] [--check]
+//   node export.mjs --concept <id|all> [--round <n>, default latest] [--out <dir>] [--check]
 // Output (default brand/icon/export/<id>/, gitignored; CI uploads it as an artifact):
 //   windows/scyde.ico                        16–256 px, PNG-compressed entries
 //   android/res/mipmap-*/ic_launcher*.png    legacy + adaptive foreground + monochrome
@@ -12,7 +12,7 @@ import { Resvg } from '@resvg/resvg-js';
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildConcept, conceptIds, SIZE } from './concepts.mjs';
+import { buildConcept, conceptIds, roundOf, latestRound, SIZE } from './concepts.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
@@ -25,7 +25,8 @@ const arg = (name, def) => {
 };
 const check = args.includes('--check');
 const which = arg('concept', 'all');
-const ids = which === 'all' ? conceptIds : [which];
+const round = Number(arg('round', latestRound));
+const ids = which === 'all' ? conceptIds.filter((id) => roundOf(id) === round) : [which];
 for (const id of ids) if (!conceptIds.includes(id)) throw new Error(`Unknown concept "${id}". Known: ${conceptIds.join(', ')}`);
 
 export const render = (svg, px) => Buffer.from(new Resvg(svg, { fitTo: { mode: 'width', value: px } }).render().asPng());
