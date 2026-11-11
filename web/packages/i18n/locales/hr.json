@@ -1,0 +1,20 @@
+{
+  "app.name": "SCYDE Browser",
+  "newtab.search.placeholder": "Pretraži ili upiši adresu",
+  "newtab.search.cta": "Traži",
+  "newtab.search.voice": "Pretraži glasom",
+  "newtab.search.image": "Pretraži slikom",
+  "newtab.privacy.blocked_today": "Blokirano danas",
+  "newtab.privacy.data_saved": "Ušteđeno podataka",
+  "newtab.privacy.time_saved": "Ušteđeno vremena",
+  "newtab.tiles.add": "Dodaj",
+  "newtab.stories.title": "Najvažnije vijesti",
+  "shield.label": "Shield",
+  "shield.on_for_site": "Shield je uključen za ovu stranicu",
+  "shield.off_for_site": "Shield je isključen za ovu stranicu",
+  "shield.blocked_count": "{count, plural, one {# blokiran} few {# blokirana} other {# blokiranih}}",
+  "popup.blocked": "Popup blokiran",
+  "popup.allow_once": "Dopusti jednom",
+  "popup.always_allow": "Uvijek dopusti za ovu stranicu",
+  "omnibox.placeholder": "Pretraži ili upiši adresu"
+}

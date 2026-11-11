@@ -1,0 +1,20 @@
+{
+  "app.name": "SCYDE Browser",
+  "newtab.search.placeholder": "Search or type a URL",
+  "newtab.search.cta": "Search",
+  "newtab.search.voice": "Search by voice",
+  "newtab.search.image": "Search by image",
+  "newtab.privacy.blocked_today": "Blocked today",
+  "newtab.privacy.data_saved": "Data saved",
+  "newtab.privacy.time_saved": "Time saved",
+  "newtab.tiles.add": "Add",
+  "newtab.stories.title": "Top Stories",
+  "shield.label": "Shield",
+  "shield.on_for_site": "Shield is on for this site",
+  "shield.off_for_site": "Shield is off for this site",
+  "shield.blocked_count": "{count, plural, one {# blocked} other {# blocked}}",
+  "popup.blocked": "Popup blocked",
+  "popup.allow_once": "Allow once",
+  "popup.always_allow": "Always allow on this site",
+  "omnibox.placeholder": "Search or type a URL"
+}

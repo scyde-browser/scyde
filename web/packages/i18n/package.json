@@ -1,0 +1,12 @@
+{
+  "name": "@scyde/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "UI strings (hr, en). Source for web apps; native platforms mirror the same keys.",
+  "exports": {
+    ".": "./index.mjs",
+    "./locales/*": "./locales/*"
+  },
+  "scripts": { "test": "node --test" }
+}
