@@ -242,8 +242,8 @@ const concepts = {
   'owner-s': {
     round: 4,
     name: 'SCYDE S',
-    blurb: 'Vlasnikov znak: S od dva zrcalna dijela s dijagonalnim rezom (munja). Ember pločica s crnim znakom; tamna varijanta s Ember znakom.',
-    palette: { tileLight: '#F2603F', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#F2603F', radius: 230 },
+    blurb: 'Vlasnikov znak: S od dva zrcalna dijela s dijagonalnim rezom (munja). Samo slovo S u Emberu, bez pločice i pozadine.',
+    palette: { tileLight: '#F2603F', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#F2603F', radius: 230, unplated: true, iosLightBg: '#FFFFFF' },
     draw() {
       // Points read from the owner's construction drawing (539 x 584 artboard). The lower half is the upper
       // half rotated 180 degrees about the centre of the mark, so the S is exactly point-symmetric.
@@ -261,6 +261,7 @@ const concepts = {
         mono: shapes(MONO),
         // Windows taskbar style: no plate, no border, transparent; the glyph fills the icon (owner, 2026-11-11).
         unplated: shapesAt(this.palette.markOnDark, 940),
+        ember: shapesAt(this.palette.markOnDark, 590),
         shapes,
       };
     },
@@ -272,8 +273,26 @@ const svg = (defs, body) =>
 
 export function buildConcept(id) {
   const c = concepts[id];
-  const { defs, colour, mono, colourDark, unplated } = c.draw();
+  const { defs, colour, mono, colourDark, unplated, ember } = c.draw();
   const tile = (fill) => `<path d="${squircle(0)}" fill="${fill}"/>`;
+  if (c.palette?.unplated) {
+    // Owner: "bez backgrounda, samo slovo". Transparent wherever the platform allows it.
+    const p = c.palette;
+    return {
+      id,
+      name: c.name,
+      blurb: c.blurb,
+      mark: svg(defs, ember), // Android adaptive foreground (inside the safe zone)
+      mono: svg(defs, mono),
+      light: svg(defs, unplated), // previews, Android legacy launcher icon, Windows
+      dark: svg(defs, unplated),
+      fullBleedLight: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="${p.iosLightBg}"/>` + ember), // iOS light must be opaque
+      fullBleedDark: svg(defs, ember), // iOS 18+ dark icon may be transparent
+      tinted: svg(defs, mono.replaceAll(MONO, '#FFFFFF')),
+      androidBackground: '#00000000',
+      windows: svg(defs, unplated),
+    };
+  }
   if (c.palette) {
     // Concepts with their own tile colours (owner's mark): rounded-square tile, solid colours, no gradient.
     const p = c.palette;

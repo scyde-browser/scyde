@@ -25,19 +25,11 @@ button { cursor: pointer; }
 .num { font-variant-numeric: tabular-nums; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .brand-mark {
-  /* Ember tile with the ink S: readable on both the ink island and the paper island. */
-  position: relative;
+  /* The owner's S alone, in Ember: no plate, no background (owner, 2026-11-11). */
   display: inline-block;
-  width: var(--space-32);
-  height: var(--space-32);
-  border-radius: 28%;
+  width: var(--space-24);
+  height: var(--space-24);
   background: var(--brand-mark);
-}
-.brand-mark::after {
-  content: "";
-  position: absolute;
-  inset: 22%;
-  background: var(--brand-ink);
   -webkit-mask: var(--brand-mark-mask) center / contain no-repeat;
   mask: var(--brand-mark-mask) center / contain no-repeat;
 }
