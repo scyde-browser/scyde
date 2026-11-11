@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="hr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCYDE · smjer A "Otok"</title>
+<link rel="stylesheet" href="../../_shared/fonts/fonts.css">
+<style>
+/* Exploration tokens for direction A. If chosen, they move into design/tokens. */
+:root {
+  --paper: #F3F1EC; --ink: #121214; --ink-2: #5B5A57; --ink-3: #8C8A85; --line: rgba(18,18,20,.10);
+  --island: #121214; --island-2: #2A2A2E; --on-island: #F3F1EC; --on-island-2: #A8A6A0;
+  --ember: #E8553A; --ember-2: #FF8E5C; --shield: #3DDC97;
+  --sans: "Bricolage Grotesque", "Segoe UI Variable", system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+  --r-island: 30px; --ease: cubic-bezier(.23,1,.32,1);
+}
+[data-theme="dark"] {
+  --paper: #0D0D0F; --ink: #F1EEE7; --ink-2: #A6A39C; --ink-3: #6E6C67; --line: rgba(241,238,231,.10);
+  --island: #F1EEE7; --island-2: #DAD6CD; --on-island: #121214; --on-island-2: #5B5A57;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+.win { position: relative; height: 100dvh; }
+
+/* Windows captions: tiny, top-right, the only thing at the top */
+.caps { position: absolute; top: 10px; right: 12px; display: flex; gap: 2px; z-index: 5; }
+.caps span { width: 34px; height: 24px; display: grid; place-items: center; border-radius: 8px; color: var(--ink-3); font: 12px var(--mono); }
+
+/* ---------- New Tab ---------- */
+.nt { height: 100%; display: grid; grid-template-columns: 1fr 360px; gap: 80px; padding: 72px 96px 140px; }
+.nt-main { display: flex; flex-direction: column; justify-content: center; }
+.shield-line { font: 13px/20px var(--mono); color: var(--ink-2); display: flex; gap: 18px; align-items: center; }
+.shield-line b { color: var(--ink); font-weight: 500; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--shield); box-shadow: 0 0 0 4px color-mix(in oklab, var(--shield) 20%, transparent); }
+.ask { margin: 28px 0 0; font-size: 104px; line-height: .98; letter-spacing: -.045em; font-weight: 600; font-variation-settings: "opsz" 96; }
+.ask .typed { color: var(--ink-3); font-weight: 400; }
+.caret { display: inline-block; width: 6px; height: .78em; margin-left: 6px; background: var(--ember); vertical-align: -.04em; border-radius: 2px; animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.hint { margin-top: 28px; font: 13px var(--mono); color: var(--ink-3); display: flex; gap: 22px; }
+.hint kbd { font: inherit; color: var(--ink-2); padding: 1px 6px; border: 1px solid var(--line); border-radius: 6px; }
+.recent { align-self: center; }
+.recent h2 { margin: 0 0 14px; font-size: 13px; font-weight: 500; color: var(--ink-3); font-family: var(--mono); }
+.recent a { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 19px; letter-spacing: -.01em; }
+.recent a:last-child { border-bottom: 1px solid var(--line); }
+.fav { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font: 600 11px var(--sans); color: #121214; }
+.recent time { font: 12px var(--mono); color: var(--ink-3); }
+
+/* ---------- Browse ---------- */
+.page { position: absolute; inset: 0; background: #FFFFFF; overflow: hidden; }
+[data-theme="dark"] .page { background: #17171A; }
+.site { max-width: 1040px; margin: 0 auto; padding: 56px 40px; display: grid; grid-template-columns: 2fr 1fr; gap: 48px; }
+.ph { background: color-mix(in oklab, var(--ink) 7%, transparent); border-radius: 6px; height: 12px; margin-bottom: 14px; }
+.ph.h { height: 38px; width: 75%; margin-bottom: 26px; } .ph.img { height: 300px; border-radius: 14px; margin: 26px 0; }
+
+/* ---------- The island: all chrome in one object ---------- */
+.island {
+  position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 10;
+  display: flex; align-items: center; gap: 6px; height: 60px; padding: 0 8px;
+  background: var(--island); color: var(--on-island); border-radius: var(--r-island);
+  box-shadow: 0 18px 50px -18px rgba(0,0,0,.45);
+}
+.mark { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 22px; }
+.mark i { width: 16px; height: 26px; background: conic-gradient(from 90deg at 20% 20%, var(--ember-2), var(--ember)); -webkit-mask: var(--s) center/contain no-repeat; mask: var(--s) center/contain no-repeat; }
+.stack { display: flex; align-items: center; padding: 0 6px; }
+.stack .fav { width: 30px; height: 30px; border-radius: 50%; margin-left: -9px; box-shadow: 0 0 0 3px var(--island); font-size: 12px; }
+.stack .fav:first-child { margin-left: 0; }
+.stack .fav.on { box-shadow: 0 0 0 3px var(--island), 0 0 0 5px var(--ember); }
+.stack .more { margin-left: 8px; font: 12px var(--mono); color: var(--on-island-2); }
+.sep { width: 1px; height: 26px; background: color-mix(in oklab, var(--on-island) 18%, transparent); margin: 0 6px; }
+.addr { width: 420px; display: flex; white-space: nowrap; overflow: hidden; align-items: center; gap: 10px; padding: 0 14px; font-size: 16px; letter-spacing: -.01em; }
+.addr .path { color: var(--on-island-2); white-space: nowrap; overflow: hidden; text-overflow: clip; mask-image: linear-gradient(90deg,#000 70%,transparent); }
+.addr .ph2 { color: var(--on-island-2); }
+.shieldc { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 20px; background: var(--island-2); font: 13px var(--mono); }
+.nav { width: 40px; height: 40px; display: grid; place-items: center; color: var(--on-island-2); font: 18px var(--sans); }
+
+/* mobile */
+@media (max-width: 600px) {
+  .nt { grid-template-columns: 1fr; gap: 28px; padding: 64px 22px 120px; align-content: center; }
+  .ask { font-size: 54px; }
+  .shield-line { flex-wrap: wrap; gap: 10px 14px; font-size: 12px; }
+  .hint { display: none; }
+  .recent a { font-size: 17px; padding: 11px 0; }
+  .recent a:nth-child(n+6) { display: none; }
+  .island { left: 12px; right: 12px; transform: none; bottom: max(env(safe-area-inset-bottom), 16px); height: 58px; }
+  .addr { width: auto; flex: 1; min-width: 0; padding: 0 6px; font-size: 15px; }
+  .nav, .island .sep:last-of-type { display: none; }
+  .stack .fav:nth-child(n+3) { display: none; }
+  .caps { display: none; }
+  .site { grid-template-columns: 1fr; padding: 28px 18px; }
+}
+</style>
+</head>
+<body>
+<div class="win" id="win"></div>
+<script>
+const q = new URLSearchParams(location.search);
+document.documentElement.dataset.theme = q.get('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+const S = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='313 197 398 630'><g fill='none' stroke='black' stroke-width='118'><path d='M500 256A128 128 0 0 0 500 512'/><path d='M524 512A128 128 0 0 1 524 768'/></g><circle cx='500' cy='256' r='59'/><circle cx='524' cy='768' r='59'/></svg>";
+document.documentElement.style.setProperty('--s', `url("data:image/svg+xml,${encodeURIComponent(S)}")`);
+const fills = ['#ABD5E9', '#A6C0F1', '#C6A5F1', '#A6F1C9', '#FF9F7E'];
+const fav = (m, i, cls = '') => `<span class="fav ${cls}" style="background:${fills[i % 5]}">${m}</span>`;
+const state = q.get('state') || 'newtab';
+const caps = `<div class="caps"><span>–</span><span>□</span><span>✕</span></div>`;
+const island = (addr) => `
+  <nav class="island" aria-label="SCYDE">
+    <span class="mark" aria-label="Izbornik"><i></i></span>
+    <span class="nav">←</span>
+    <div class="sep"></div>
+    <div class="addr">${addr}</div>
+    <span class="shieldc"><span class="dot"></span>23</span>
+    <div class="sep"></div>
+    <div class="stack">${fav('I', 0, state === 'browse' ? 'on' : '')}${fav('G', 3)}${fav('Y', 1)}<span class="more">+4</span></div>
+  </nav>`;
+const recent = [['index.hr', 'I', 0, '2 min'], ['github.com/scyde-browser', 'G', 3, '18 min'], ['youtube.com', 'Y', 1, '1 h'], ['hr.wikipedia.org', 'W', 0, '3 h'], ['jutarnji.hr', 'J', 4, 'jučer'], ['mail.google.com', 'M', 2, 'jučer'], ['reddit.com/r/croatia', 'R', 3, 'pon']];
+const win = document.getElementById('win');
+if (state === 'newtab') {
+  win.innerHTML = caps + `
+  <main class="nt">
+    <section class="nt-main">
+      <div class="shield-line"><span class="dot"></span><span>Shield danas</span><span><b>1.284</b> blokirano</span><span><b>42 MB</b> ušteđeno</span><span><b>≈ 3 min</b> vremena</span></div>
+      <h1 class="ask">Kamo<br>danas?<span class="caret"></span></h1>
+      <div class="hint"><span><kbd>Enter</kbd> traži ili otvori</span><span><kbd>Ctrl K</kbd> naredbe</span><span><kbd>Tab</kbd> nedavno</span></div>
+    </section>
+    <aside class="recent"><h2>nedavno</h2>${recent.map(([h, m, c, t]) => `<a href="#">${fav(m, c)}<span>${h}</span><time>${t}</time></a>`).join('')}</aside>
+  </main>` + island('<span class="ph2">Nova kartica</span>');
+} else {
+  win.innerHTML = `<div class="page"><div class="site"><div><div class="ph h"></div><div class="ph"></div><div class="ph" style="width:90%"></div><div class="ph" style="width:80%"></div><div class="ph img"></div><div class="ph"></div><div class="ph" style="width:70%"></div></div><div><div class="ph" style="width:60%"></div><div class="ph img" style="height:160px"></div><div class="ph"></div><div class="ph img" style="height:160px"></div></div></div></div>` + caps + island('<span>index.hr</span><span class="path">/vijesti/hrvatska-dobila-novi-most</span>');
+}
+</script>
+</body>
+</html>
