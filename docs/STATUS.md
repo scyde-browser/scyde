@@ -99,6 +99,19 @@ Branch: the session's designated branch (agent sessions may only push there), on
 
 **Phase 1 AC (PLAN §11):** `cargo test` green, clippy without warnings, budgets from 1.1, lists within limits, signature verified, omnibox tests pass.
 
+| AC | Status |
+|---|---|
+| `cargo test` green, clippy `-D warnings` | ✅ CI `core` → `check` (pedantic lints, native and wasm32) |
+| match p50 < 5 µs, p99 < 50 µs, deserialization < 50 ms | ✅ ADR-0010, gated in CI, A/B regression gate |
+| iOS ≤ 150k per list, DNR within Chromium limits, dropped rules reported | ✅ real lists: iOS 148,676 (compiled on the simulator), DNR 118,964 in 4 rulesets; `report.json` |
+| bundle signed and verified in a test | ✅ `shield-compiler` golden tests; publishing waits on `[OWNER]` key (1.4) |
+| omnibox: URL or search, punycode/confusables, fixups | ✅ unit + property tests |
+
+**Remaining `[OWNER]` items for Phase 1:**
+- `FILTERS_SIGNING_KEY` and `brand/keys/filters.pub` (docs/filters-signing.md)
+- the scriptlet resources source (resources.json, GPLv3; open question 3)
+- default search engine (open question 2; DuckDuckGo until then)
+
 ## Skills
 `impeccable`, `taste-skill`, `prototype` and `pick-ui-library` do not exist in the plugin catalog, so they are **implemented as project skills** in `.claude/skills/` (2026-11-11) and are loaded in every session in this repo:
 - `impeccable`: quality gate against DESIGN.md (critique / audit / polish / finalize), findings P1–P3, mandatory format for PRs
