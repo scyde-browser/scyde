@@ -4,4 +4,4 @@ Shared code of the Shield extension with two build targets (PLAN §5.4):
 - `chromium-mv3`: DNR static rulesets for WebView2 (Windows, option A)
 - `gecko-mv2`: `webRequestBlocking` + WASM engine for GeckoView (Android)
 
-Implementation: Phase 1 (WASM) and Phase 3/5.
+The WASM engine is built by `core/shield-wasm/build.sh`: `target/shield-wasm/web` is the ES module for the gecko target. The extension itself is Phase 3/5.

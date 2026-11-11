@@ -52,9 +52,12 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - [x] Golden tests: `qa/lists/fixture.txt` → expected DNR / iOS / cosmetic output (`tests/golden/`); bundles are reproducible
 - [x] macOS CI job `ios` → `shield-rulelists`: compiles the iOS output of real lists and the fixture on the simulator (tag/manual/`ios/**`)
 - **AC:** ✅ DNR and iOS output within limits (tested), dropped rules reported in `report.json`, signature verified in a test (wrong key, tampered file and tampered manifest all rejected)
+- **CI evidence (PR #6):** EasyList + EasyPrivacy + uBO filters → **132,009** WebKit rules in one list, compiled on the simulator in **6.0 s**, lookup 1 ms; fixture 10/11 (6/6 network, exception, generic and attribute cosmetics; the host-specific rule cannot match `file://`, as in G4)
 
 ### 1.3 `shield-wasm`: package for the GeckoView extension
-- [ ] wasm32 build + wasm-bindgen (from S3), size within budget, p99 test in CI
+- [x] `core/shield-wasm`: wasm-bindgen layer over `shield` (`fromDat`, `fromLists`, `useResources`, `shouldBlock`, `check`, `cosmetics`, `hiddenSelectors`); `build.sh` → `web` (extension) + `node` (bench)
+- [x] CI job `core` → `wasm`: fixture decisions, p99 < 200 µs, ≤ 1000 KB gz; artifact `shield-wasm` (package + `perf.json`)
+- **AC:** ✅ V8 p50 4.3 µs, p99 7.9–12.3 µs (best of 3; single-shot p99 50–72 µs), 80k rules build 149 ms; WASM 2.42 MB / **840 KB gz**
 
 ### 1.4 `filters.yml`: daily bundle
 - [ ] fetch lists → compile → golden tests → sign → release `filters-YYYYMMDD` + `filters-latest`

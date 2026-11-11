@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "shield",
     "shield-compiler",
+    "shield-wasm",
     "omnibox",
     "places",
     "settings",
