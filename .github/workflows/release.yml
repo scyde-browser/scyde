@@ -1,14 +1,18 @@
 name: release
 
-# On a version tag: build the design system and icons, package them and publish a GitHub Release.
-# Browser binaries (Windows installer, APK, IPA) join this workflow from Phases 3–5.
+# Builds every platform and publishes a GitHub pre-release:
+#   SCYDE-<tag>-windows-x64-setup.exe · SCYDE-<tag>-ios-unsigned.ipa · scyde-<tag>-android-<abi>.apk
+#   + icons, design tokens, fonts, prototypes, docs.
+# Agent sessions cannot push tags (403), so a manual run creates the tag through the API. A tag
+# created with GITHUB_TOKEN does not trigger other workflows, so the platform builds are called here
+# as reusable workflows instead of reacting to the tag.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to (re)publish, e.g. v0.1.0. Created on `target` if it does not exist yet."
+        description: "Tag to (re)publish, e.g. v0.2.0. Created on `target` if it does not exist yet."
         required: true
       target:
         description: "Branch or commit for a new tag (ignored if the tag already exists)"
@@ -18,13 +22,13 @@ on:
 permissions:
   contents: write
 
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
 jobs:
-  publish:
+  prepare:
     runs-on: ubuntu-latest
-    env:
-      TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      # A tag push can be refused from some environments; a manual run creates the tag on GitHub instead.
       - name: Create tag if missing (manual run)
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -38,6 +42,28 @@ jobs:
             gh api "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${TAG}" -f sha="${SHA}"
             echo "Created ${TAG} at ${SHA}"
           fi
+
+  windows:
+    needs: prepare
+    uses: ./.github/workflows/windows.yml
+    secrets: inherit
+
+  ios:
+    needs: prepare
+    uses: ./.github/workflows/ios.yml
+    secrets: inherit
+
+  android:
+    needs: prepare
+    uses: ./.github/workflows/android.yml
+    secrets: inherit
+
+  publish:
+    # Publishes whatever built; a failed platform is reported in the summary instead of blocking the rest.
+    needs: [prepare, windows, ios, android]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
@@ -51,21 +77,40 @@ jobs:
         run: |
           pnpm tokens
           pnpm contrast
-          pnpm test
       - name: Export app icons (Windows, Android, iOS)
         run: node tools/icon-export/export.mjs --out dist/icons
+      - name: Download platform builds
+        uses: actions/download-artifact@v4
+        with:
+          path: builds
+        continue-on-error: true
       - name: Package release assets
         run: |
           mkdir -p dist/release
           V="${TAG}"
           (cd dist/icons && zip -qr "../release/scyde-icons-${V}.zip" .)
-          cp dist/icons/owner-s/windows/scyde.ico "dist/release/scyde-${V}.ico"
           cp brand/icon/scyde.svg "dist/release/scyde-mark-${V}.svg"
           (cd web/packages/tokens/dist && zip -qr "../../../../dist/release/scyde-design-tokens-${V}.zip" .)
           zip -qr "dist/release/scyde-fonts-ofl-${V}.zip" design/fonts
-          zip -qr "dist/release/scyde-prototypes-${V}.zip" design/prototypes design/fonts web/packages/tokens/dist/css
           zip -qr "dist/release/scyde-docs-${V}.zip" PLAN.md DESIGN.md CLAUDE.md README.md docs
+          for f in builds/scyde-windows/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe; do
+            [ -f "$f" ] && cp "$f" "dist/release/SCYDE-${V}-windows-x64-setup.exe"
+          done
+          for f in builds/scyde-ios/ios/SCYDE/build/SCYDE-unsigned.ipa builds/scyde-ios/SCYDE-unsigned.ipa; do
+            [ -f "$f" ] && cp "$f" "dist/release/SCYDE-${V}-ios-unsigned.ipa"
+          done
+          for f in builds/scyde-android/apk/*.apk builds/scyde-android/*.apk; do
+            [ -f "$f" ] && cp "$f" "dist/release/$(basename "$f" | sed "s/0\.2\.0/${V#v}/; s/^scyde-/scyde-/")"
+          done
           ls -la dist/release
+          {
+            echo "### Release ${V}"
+            echo "| Platform | Build |"
+            echo "|---|---|"
+            echo "| Windows | ${{ needs.windows.result }} |"
+            echo "| iOS | ${{ needs.ios.result }} |"
+            echo "| Android | ${{ needs.android.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -6,9 +6,10 @@ on:
   pull_request:
     paths: ["android/**", "core/**", "shield-extension/**", "tools/i18n-native/**", ".github/workflows/android.yml"]
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: android-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:

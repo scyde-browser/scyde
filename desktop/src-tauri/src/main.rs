@@ -223,11 +223,10 @@ pub fn new_tab(app: &AppHandle, url: Option<&str>, activate: bool) -> tauri::Res
                 t.title = title.clone();
                 t.url.clone()
             };
-            if internal::page_path(&url).is_none() {
-                if let Some(p) = lock(&st.places).as_ref() {
+            if internal::page_path(&url).is_none()
+                && let Some(p) = lock(&st.places).as_ref() {
                     let _ = p.set_title(&url, &title);
                 }
-            }
             emit_state(&app_title);
         });
     let (pos, size) = content_bounds(&window);
