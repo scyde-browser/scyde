@@ -1,0 +1,12 @@
+[package]
+name = "omnibox"
+description = "URL fixup, URL-or-search, suggestion ranking and safe URL display"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

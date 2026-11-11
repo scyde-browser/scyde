@@ -1,0 +1,16 @@
+! Title: SCYDE QA fixture list
+! Deterministic rules for qa/adblock. Every engine (DNR, webRequest+WASM, WKContentRuleList) must block exactly these.
+! Network (5 rules)
+/ad-network/*$script,image
+/tracker/pixel.gif
+/analytics/collect.js
+/ad-network/frame.html$subdocument
+/cdn/prebid*.js$script
+! Exception: must NOT be blocked
+@@/cdn/prebid-allowed.js
+! Cosmetic: generic and host-specific
+##.ad-banner
+##div[id^="sponsor-"]
+127.0.0.1##.scyde-specific-ad
+localhost##.scyde-specific-ad
+10.0.2.2##.scyde-specific-ad

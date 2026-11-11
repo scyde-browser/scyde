@@ -1,0 +1,173 @@
+{
+  "neutral": {
+    "$type": "color",
+    "$description": "Island neutrals: warm paper and ink (DESIGN.md v2 §2).",
+    "light": {
+      "0": {
+        "$value": "#FFFFFF"
+      },
+      "50": {
+        "$value": "#F3F1EC"
+      },
+      "100": {
+        "$value": "#EEEBE5"
+      },
+      "200": {
+        "$value": "#DAD6CD"
+      },
+      "500": {
+        "$value": "#66645F"
+      },
+      "600": {
+        "$value": "#5B5A57"
+      },
+      "700": {
+        "$value": "#2A2A2E"
+      },
+      "900": {
+        "$value": "#121214"
+      }
+    },
+    "dark": {
+      "0": {
+        "$value": "#0D0D0F"
+      },
+      "50": {
+        "$value": "#F1EEE7"
+      },
+      "100": {
+        "$value": "#1A1A1D"
+      },
+      "150": {
+        "$value": "#1F1F23"
+      },
+      "300": {
+        "$value": "#A6A39C"
+      },
+      "400": {
+        "$value": "#8E8B84"
+      },
+      "600": {
+        "$value": "#5B5A57"
+      },
+      "900": {
+        "$value": "#121214"
+      }
+    }
+  },
+  "aura": {
+    "$type": "color",
+    "$description": "Pastel fills from reference 02 and their AA-safe ink variants for light mode.",
+    "sky": {
+      "fill": {
+        "$value": "#ABD5E9"
+      },
+      "ink": {
+        "$value": "#236F93"
+      }
+    },
+    "periwinkle": {
+      "fill": {
+        "$value": "#A6C0F1"
+      },
+      "ink": {
+        "$value": "#1E60DE"
+      }
+    },
+    "lavender": {
+      "fill": {
+        "$value": "#C6A5F1"
+      },
+      "ink": {
+        "$value": "#853BE5"
+      }
+    },
+    "mint": {
+      "fill": {
+        "$value": "#A6F1C9"
+      },
+      "ink": {
+        "$value": "#107640"
+      }
+    },
+    "ember": {
+      "fill": {
+        "$value": "#FF9F7E"
+      },
+      "ink": {
+        "$value": "#B8322C"
+      }
+    }
+  },
+  "ember": {
+    "$type": "color",
+    "$description": "Brand energy. 700 is the CTA fill (white text 5.08:1). 600 is large/bold text only (4.36:1).",
+    "300": {
+      "$value": "#FFB27A"
+    },
+    "400": {
+      "$value": "#FF8E5C"
+    },
+    "500": {
+      "$value": "#F2603F"
+    },
+    "600": {
+      "$value": "#D9433A"
+    },
+    "700": {
+      "$value": "#C93A33"
+    },
+    "800": {
+      "$value": "#B8322C"
+    }
+  },
+  "status-raw": {
+    "$type": "color",
+    "warning-light": {
+      "$value": "#8A5300"
+    },
+    "warning-dark": {
+      "$value": "#F5C26B"
+    },
+    "danger-dark": {
+      "$value": "#FF8A7A"
+    },
+    "shield-bright": {
+      "$value": "#3DDC97",
+      "$description": "Shield green on a dark island / dark paper"
+    },
+    "shield-deep": {
+      "$value": "#0B5E33",
+      "$description": "Shield green on the paper island (dark theme)"
+    }
+  },
+  "white": {
+    "$type": "color",
+    "$value": "#FFFFFF"
+  },
+  "gradient": {
+    "ember": {
+      "$type": "x-conic-gradient",
+      "$description": "Icon, logo and Shield bloom moment.",
+      "$value": {
+        "from": "90deg",
+        "stops": [
+          "{ember.300}",
+          "{ember.400}",
+          "{ember.500}",
+          "{ember.300}"
+        ]
+      }
+    }
+  },
+  "brand": {
+    "$type": "color",
+    "$description": "Owner's mark (brand/icon/scyde.svg) in Ember. A fill colour for the mark only; text in Ember uses accent ink / ember.800.",
+    "mark": {
+      "$value": "{ember.500}"
+    },
+    "ink": {
+      "$value": "#0A0A0A"
+    }
+  }
+}

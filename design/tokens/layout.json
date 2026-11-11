@@ -1,0 +1,276 @@
+{
+  "space": {
+    "$type": "dimension",
+    "$description": "4 pt grid (DESIGN.md §4).",
+    "0": {
+      "$value": "0px"
+    },
+    "2": {
+      "$value": "2px"
+    },
+    "4": {
+      "$value": "4px"
+    },
+    "6": {
+      "$value": "6px"
+    },
+    "8": {
+      "$value": "8px"
+    },
+    "12": {
+      "$value": "12px"
+    },
+    "16": {
+      "$value": "16px"
+    },
+    "20": {
+      "$value": "20px"
+    },
+    "24": {
+      "$value": "24px"
+    },
+    "32": {
+      "$value": "32px"
+    },
+    "40": {
+      "$value": "40px"
+    },
+    "48": {
+      "$value": "48px"
+    },
+    "64": {
+      "$value": "64px"
+    },
+    "80": {
+      "$value": "80px"
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "xs": {
+      "$value": "6px",
+      "$description": "kbd"
+    },
+    "sm": {
+      "$value": "10px",
+      "$description": "tab, small buttons"
+    },
+    "md": {
+      "$value": "14px",
+      "$description": "input, menu, toast"
+    },
+    "lg": {
+      "$value": "22px",
+      "$description": "tile, card"
+    },
+    "xl": {
+      "$value": "28px",
+      "$description": "sheet, dialog"
+    },
+    "full": {
+      "$value": "9999px",
+      "$description": "chip, pill CTA, New Tab omnibox"
+    },
+    "media": {
+      "$value": "16px",
+      "$description": "16:9 image inside a news card"
+    },
+    "island": {
+      "$value": "30px",
+      "$description": "The island and its expansions"
+    }
+  },
+  "size": {
+    "chrome": {
+      "$type": "dimension",
+      "tabstrip": {
+        "$value": "44px"
+      },
+      "tab-height": {
+        "$value": "34px"
+      },
+      "tab-min": {
+        "$value": "72px"
+      },
+      "tab-max": {
+        "$value": "240px"
+      },
+      "toolbar": {
+        "$value": "48px"
+      },
+      "omnibox": {
+        "$value": "34px"
+      },
+      "rail": {
+        "$value": "72px"
+      },
+      "rail-button": {
+        "$value": "44px"
+      },
+      "icon": {
+        "$value": "20px"
+      },
+      "favicon": {
+        "$value": "16px"
+      },
+      "menu-item": {
+        "$value": "32px"
+      },
+      "caption-button": {
+        "$value": "34px",
+        "$description": "Floating Windows caption buttons (top-right, no bar)"
+      },
+      "caption-height": {
+        "$value": "24px"
+      }
+    },
+    "newtab": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "1120px"
+      },
+      "search": {
+        "$value": "56px"
+      },
+      "search-cta": {
+        "$value": "48px"
+      },
+      "tile-width": {
+        "$value": "272px"
+      },
+      "tile-height": {
+        "$value": "132px"
+      },
+      "tile-gap": {
+        "$value": "12px"
+      },
+      "tile-icon": {
+        "$value": "48px"
+      },
+      "chip": {
+        "$value": "36px"
+      },
+      "recent-width": {
+        "$value": "360px"
+      },
+      "recent-row": {
+        "$value": "50px"
+      }
+    },
+    "hit": {
+      "$type": "dimension",
+      "desktop": {
+        "$value": "32px"
+      },
+      "ios": {
+        "$value": "44px"
+      },
+      "android": {
+        "$value": "48px"
+      }
+    },
+    "icon": {
+      "$type": "dimension",
+      "desktop": {
+        "$value": "20px"
+      },
+      "mobile": {
+        "$value": "24px"
+      },
+      "stroke": {
+        "$value": "1.5px"
+      }
+    },
+    "focus": {
+      "$type": "dimension",
+      "ring": {
+        "$value": "2px"
+      },
+      "offset": {
+        "$value": "2px"
+      }
+    },
+    "popover": {
+      "$type": "dimension",
+      "shield": {
+        "$value": "360px"
+      },
+      "menu": {
+        "$value": "280px"
+      },
+      "omnibox-row": {
+        "$value": "40px"
+      }
+    },
+    "toggle": {
+      "$type": "dimension",
+      "width": {
+        "$value": "40px"
+      },
+      "height": {
+        "$value": "24px"
+      },
+      "knob": {
+        "$value": "18px"
+      }
+    },
+    "mobile": {
+      "$type": "dimension",
+      "toolbar": {
+        "$value": "56px"
+      },
+      "omnibox": {
+        "$value": "44px"
+      },
+      "tab-card-ratio": {
+        "$type": "number",
+        "$value": 1.45
+      }
+    },
+    "island": {
+      "$type": "dimension",
+      "$description": "DESIGN.md v2 §4: the island.",
+      "height": {
+        "$value": "60px"
+      },
+      "width": {
+        "$value": "720px"
+      },
+      "width-expanded": {
+        "$value": "760px"
+      },
+      "inset-bottom": {
+        "$value": "22px"
+      },
+      "button": {
+        "$value": "44px"
+      },
+      "tab-dot": {
+        "$value": "30px"
+      },
+      "address-width": {
+        "$value": "420px"
+      },
+      "mobile-height": {
+        "$value": "58px"
+      },
+      "mobile-inset": {
+        "$value": "12px"
+      }
+    }
+  },
+  "density": {
+    "$type": "number",
+    "$description": "Compact: heights x0.875, spacing one step lower (DESIGN.md §4).",
+    "comfortable": {
+      "scale": {
+        "$value": 1
+      }
+    },
+    "compact": {
+      "scale": {
+        "$value": 0.875
+      }
+    }
+  }
+}

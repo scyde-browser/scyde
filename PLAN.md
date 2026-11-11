@@ -1,103 +1,103 @@
-# SCYDE Browser: master plan za Claude Code
+# SCYDE Browser: master plan for Claude Code
 
-> **Radni naziv:** SCYDE Browser · **repo/codename:** `scyde-browser` · **app id:** `dev.scyde.browser`
-> Naziv, ikona i boje žive u `brand/brand.json` + `design/tokens/`, pa je rebrand jedna izmjena.
-> **Platforme:** Windows 10/11 (x64, arm64 kasnije) · Android 8+ · iOS 16+ (.ipa za Feather / SideStore / TrollStore)
-> **Status dokumenta:** v1, temelj za Fazu 0. Odluke koje Faza 0 potvrdi ili promijeni bilježe se kao ADR u `docs/adr/`.
-
----
-
-## 0. Kako Claude Code koristi ovaj dokument
-
-1. Redoslijed čitanja: **PLAN.md → CLAUDE.md → DESIGN.md → `design/references/`**.
-2. Radi se strogo po fazama (§11). Faza se ne zatvara dok nisu ispunjeni svi njezini **kriteriji prihvaćanja (AC)**.
-3. **Faza 0 ima gate-ove (G1–G5).** Ako neki gate padne, ne nastavljaj sa sljedećom fazom. Upiši nalaz u ADR, predloži alternativu iz §2.3 i označi odluku s `[VLASNIK]`.
-4. Svaka arhitektonska odluka koja odstupa od ovog plana dobiva ADR (`docs/adr/NNNN-naslov.md`, predložak u §13.4).
-5. Stanje rada uvijek je u `docs/STATUS.md`: što je gotovo, što je u tijeku, blokade i otvorena pitanja za vlasnika.
-6. Windows i iOS artefakti grade se u **GitHub Actions** (Claude Code obično radi na Linuxu). Iteriraj kroz `gh run watch` i `gh run view --log-failed`. Za UI promjene CI uvijek prilaže screenshotove (§13.3).
+> **Working name:** SCYDE Browser · **repo/codename:** `scyde-browser` · **app id:** `dev.scyde.browser`
+> The name, icon and colours live in `brand/brand.json` + `design/tokens/`, so a rebrand is a single change.
+> **Platforms:** Windows 10/11 (x64, arm64 later) · Android 8+ · iOS 16+ (.ipa for Feather / SideStore / TrollStore)
+> **Document status:** v1, the foundation for Phase 0. Decisions that Phase 0 confirms or changes are recorded as ADRs in `docs/adr/`.
 
 ---
 
-## 1. Vizija i ne-pregovarajući zahtjevi
+## 0. How Claude Code uses this document
 
-**Vizija:** brz, tih, premium preglednik koji štiti po defaultu. Sadržaj stranice je u prvom planu, a sučelje se osjeća kao jedan proizvod na sve tri platforme, ne kao tri aplikacije.
+1. Reading order: **PLAN.md → CLAUDE.md → DESIGN.md → `design/references/`**.
+2. Work proceeds strictly by phases (§11). A phase is not closed until all of its **acceptance criteria (AC)** are met.
+3. **Phase 0 has gates (G1–G5).** If a gate fails, do not continue with the next phase. Record the finding in an ADR, propose an alternative from §2.3 and mark the decision with `[OWNER]`.
+4. Every architectural decision that deviates from this plan gets an ADR (`docs/adr/NNNN-title.md`, template in §13.4).
+5. The state of work is always in `docs/STATUS.md`: what is done, what is in progress, blockers and open questions for the owner.
+6. Windows and iOS artifacts are built in **GitHub Actions** (Claude Code usually runs on Linux). Iterate via `gh run watch` and `gh run view --log-failed`. For UI changes, CI always attaches screenshots (§13.3).
 
-| # | Zahtjev | Što konkretno znači |
+---
+
+## 1. Vision and non-negotiable requirements
+
+**Vision:** a fast, quiet, premium browser that protects by default. Page content is in the foreground, and the interface feels like one product across all three platforms, not like three apps.
+
+| # | Requirement | What it concretely means |
 |---|---|---|
-| R1 | **Unikatan** | Vlastiti vizualni jezik "Aura" (DESIGN.md), vlastita ikona, vlastiti Shield sustav i vlastite značajke (§11, Faza 6). Ne smije izgledati kao reskin Chromea ili Bravea. |
-| R2 | **Nula reklama + ad/popup blocker** | (a) Shield blokira reklame, trackere i popupe na svim platformama, uključen po defaultu. (b) **Sam preglednik nikad ne prikazuje reklame:** nema sponzoriranih tileova, sponzoriranih pozadina, affiliate preusmjeravanja ni crypto/rewards programa. |
-| R3 | **Dark/Light + teme** | Light, Dark i System. Uz to Aura accent (5 predložaka + vlastita boja s provjerom kontrasta), pozadine New Taba, gustoća sučelja, smanjeno kretanje i opcionalni adaptivni tint prema `theme-color` stranice. |
-| R4 | **Premium izgled** | Prema DESIGN.md. Svaki UI PR prolazi `impeccable` critique. Animacije su fizikalne, prekidive i unutar frame budgeta. |
-| R5 | **Jako optimiziran** | Tvrdi performance budgeti (§8) mjere se u CI-ju. Regresija budgeta blokira merge. |
-| R6 | **Privatnost** | Bez telemetrije po defaultu. Crash izvješća su opt-in. Mrežni pozivi samog preglednika: provjera ažuriranja, filter bundle i (opt-in) prijedlozi pretrage i vijesti. Svaki takav poziv je dokumentiran u `docs/NETWORK.md`. |
+| R1 | **Unique** | Own visual language "Aura" (DESIGN.md), own icon, own Shield system and own features (§11, Phase 6). It must not look like a reskin of Chrome or Brave. |
+| R2 | **Zero ads + ad/popup blocker** | (a) Shield blocks ads, trackers and popups on all platforms, enabled by default. (b) **The browser itself never shows ads:** no sponsored tiles, sponsored backgrounds, affiliate redirects or crypto/rewards programmes. |
+| R3 | **Dark/Light + themes** | Light, Dark and System. In addition, Aura accent (5 presets + a custom colour with a contrast check), New Tab backgrounds, interface density, reduced motion and an optional adaptive tint based on the page's `theme-color`. |
+| R4 | **Premium look** | According to DESIGN.md. Every UI PR goes through an `impeccable` critique. Animations are physics-based, interruptible and within the frame budget. |
+| R5 | **Highly optimised** | Hard performance budgets (§8) are measured in CI. A budget regression blocks the merge. |
+| R6 | **Privacy** | No telemetry by default. Crash reports are opt-in. Network calls made by the browser itself: update check, filter bundle and (opt-in) search suggestions and news. Every such call is documented in `docs/NETWORK.md`. |
 
-**Izvan opsega v1:** crypto novčanik, BAT-style rewards (ikone novčanika i poklona iz reference se **ne** implementiraju), vlastiti tražilični indeks, sinkronizacija (dolazi u Fazi 7), AI chat (kasnije, opt-in).
+**Out of scope for v1:** crypto wallet, BAT-style rewards (the wallet and gift icons from the reference are **not** implemented), own search index, sync (comes in Phase 7), AI chat (later, opt-in).
 
 ---
 
-## 2. Ključne arhitektonske odluke
+## 2. Key architectural decisions
 
-### 2.1 Strategija enginea
+### 2.1 Engine strategy
 
-Brave je fork Chromiuma. Za samostalnog developera s Claude Codeom to je pogrešan početak: build traži velike strojeve (stotine GB, sati kompajliranja), GitHub hosted runneri to ne podnose, a sigurnosne zakrpe Chromiuma izlaze svakih nekoliko tjedana i fork bi ih morao pratiti ručno. Zato v1 gradi **vlastitu ljusku (shell) oko platformskih enginea koji se sami sigurnosno ažuriraju**, a sav "mozak" (Shield, omnibox, povijest, teme) drži u zajedničkoj Rust jezgri.
+Brave is a fork of Chromium. For a solo developer with Claude Code that is the wrong starting point: the build needs big machines (hundreds of GB, hours of compiling), GitHub hosted runners cannot handle it, and Chromium security patches ship every few weeks, which a fork would have to track by hand. That is why v1 builds **its own shell around platform engines that update their own security**, and keeps all the "brain" (Shield, omnibox, history, themes) in a shared Rust core.
 
-| Platforma | Engine | Shell / UI | Zašto | Sigurnosna ažuriranja |
+| Platform | Engine | Shell / UI | Why | Security updates |
 |---|---|---|---|---|
-| **Windows** | **WebView2 (Evergreen)**, Chromium | **Tauri 2** (Rust) + chrome UI u web tehnologiji (Svelte 5) | Mali installer, dijeljeni runtime, Rust jezgra se linka direktno, puna kontrola dizajna kroz web UI | Automatski (Microsoft Evergreen runtime) |
-| **Android** | **GeckoView** (Mozilla, MPL-2.0) | Kotlin + Jetpack Compose | Pravi browser engine: WebExtensions s blokirajućim `webRequest`, Enhanced Tracking Protection, Total Cookie Protection. Ne pogađa ga Googleova zabrana prijave u Android WebViewu (§2.2). | Bump verzije u Gradleu (Renovate PR svaka 4 tjedna + hitni) |
-| **iOS** | **WKWebView** (WebKit, jedini dopušteni izvan EU-a) | Swift: SwiftUI + UIKit za browser view | Jedina realna opcija. Svi iOS preglednici (Chrome, Brave, Firefox) rade na WebKitu. | Automatski sa sustavom |
+| **Windows** | **WebView2 (Evergreen)**, Chromium | **Tauri 2** (Rust) + chrome UI in web technology (Svelte 5) | Small installer, shared runtime, the Rust core links directly, full design control through the web UI | Automatic (Microsoft Evergreen runtime) |
+| **Android** | **GeckoView** (Mozilla, MPL-2.0) | Kotlin + Jetpack Compose | A real browser engine: WebExtensions with blocking `webRequest`, Enhanced Tracking Protection, Total Cookie Protection. Not affected by Google's sign-in ban in Android WebView (§2.2). | Version bump in Gradle (Renovate PR every 4 weeks + urgent ones) |
+| **iOS** | **WKWebView** (WebKit, the only one allowed outside the EU) | Swift: SwiftUI + UIKit for the browser view | The only realistic option. All iOS browsers (Chrome, Brave, Firefox) run on WebKit. | Automatic with the OS |
 
-**Zajednička Rust jezgra (`core/`)** (isti pristup kao Mozillin *application-services*):
-- `shield`: omotač oko **adblock-rust** (Braveov engine, MPL-2.0). Podržava EasyList/uBO sintaksu, kozmetičko filtriranje, scriptlete, WASM build i konverziju u Appleov content-blocking format.
-- `shield-compiler`: CLI koji u CI-ju kompajlira filter liste u formate po platformi (§5).
-- `omnibox`: URL fixup, URL ili pretraga, rangiranje prijedloga (frecency), sigurnosni prikaz URL-a.
-- `places`: povijest, oznake, top sites (SQLite, `rusqlite` bundled).
-- `settings`: shema postavki, validacija, migracije (JSON Schema kao izvor istine).
-- `theme`: razrješavanje tokena, generiranje accent skale iz korisničke boje, provjera kontrasta.
-- `ffi`: UniFFI bindings (Swift, Kotlin). Windows host koristi crateove direktno.
+**Shared Rust core (`core/`)** (the same approach as Mozilla's *application-services*):
+- `shield`: a wrapper around **adblock-rust** (Brave's engine, MPL-2.0). Supports EasyList/uBO syntax, cosmetic filtering, scriptlets, a WASM build and conversion to Apple's content-blocking format.
+- `shield-compiler`: a CLI that compiles filter lists in CI into per-platform formats (§5).
+- `omnibox`: URL fixup, URL or search, suggestion ranking (frecency), secure URL display.
+- `places`: history, bookmarks, top sites (SQLite, `rusqlite` bundled).
+- `settings`: settings schema, validation, migrations (JSON Schema as the source of truth).
+- `theme`: token resolution, generating an accent scale from a user colour, contrast checking.
+- `ffi`: UniFFI bindings (Swift, Kotlin). The Windows host uses the crates directly.
 
-### 2.2 Rizik br. 1: prijava u Google račun u embedded engineima
+### 2.2 Risk no. 1: Google account sign-in in embedded engines
 
-Google blokira OAuth prijavu u "embedded webviewima". Android WebView i WKWebView su eksplicitno navedeni kao neusklađeni, a postoje i prijave blokade na desktop WebView2. Preglednik u kojem se ne možeš prijaviti u Gmail ili YouTube je neupotrebljiv. Zato:
-- **Android → GeckoView**, ne Android WebView. Gecko je engine Firefoxa, nije Android WebView.
-- **iOS → WKWebView s potpunim Safari-like User-Agentom** (`applicationNameForUserAgent = "Version/<x> Mobile/15E148 Safari/604.1"`), kao što rade svi iOS preglednici.
-- **Windows → WebView2 je uvjetan.** Gate **G1** u Fazi 0 mora dokazati da prijava radi (accounts.google.com → Gmail, YouTube, Drive, i "Sign in with Google" na trećoj stranici). UA mora biti identičan stabilnom Edgeu. Nema `navigator.webdriver` ni automation zastavica.
+Google blocks OAuth sign-in in "embedded webviews". Android WebView and WKWebView are explicitly listed as non-compliant, and there are also reports of blocking on desktop WebView2. A browser in which you cannot sign in to Gmail or YouTube is unusable. Therefore:
+- **Android → GeckoView**, not Android WebView. Gecko is Firefox's engine, not Android WebView.
+- **iOS → WKWebView with a full Safari-like User-Agent** (`applicationNameForUserAgent = "Version/<x> Mobile/15E148 Safari/604.1"`), as all iOS browsers do.
+- **Windows → WebView2 is conditional.** Gate **G1** in Phase 0 must prove that sign-in works (accounts.google.com → Gmail, YouTube, Drive, and "Sign in with Google" on a third-party site). The UA must be identical to stable Edge. No `navigator.webdriver` and no automation flags.
 
-### 2.3 Fallback ako G1 padne na Windowsu
+### 2.3 Fallback if G1 fails on Windows
 
-1. **Gecko desktop fork** (pristup Zen / Floorp / LibreWolf). Isti engine kao na Androidu, chrome UI u HTML/CSS/JS, uBO-razina blokiranja. Cijena: rebase na Firefox svaka 4 tjedna i full build na self-hosted runneru (Proxmox homelab / vlastiti server). Za razvoj UI-ja koriste se "artifact buildovi" (samo frontend).
-2. **CEF**: puni Chromium u paketu, ali Google ga u istoj politici navodi kao problematičnog, pa nije pravo rješenje.
-3. **Chromium fork (Brave-put)**: samo ako projekt dobije build infrastrukturu i vrijeme za praćenje zakrpa. Nije za v1.
+1. **Gecko desktop fork** (the Zen / Floorp / LibreWolf approach). The same engine as on Android, chrome UI in HTML/CSS/JS, uBO-level blocking. Cost: rebase onto Firefox every 4 weeks and a full build on a self-hosted runner (Proxmox homelab / own server). For UI development, "artifact builds" (frontend only) are used.
+2. **CEF**: full Chromium in the package, but Google lists it as problematic in the same policy, so it is not a real solution.
+3. **Chromium fork (the Brave route)**: only if the project gets build infrastructure and time to track patches. Not for v1.
 
-Odluka ide u ADR-0002 s rezultatima spikea.
+The decision goes into ADR-0002 with the spike results.
 
 ---
 
-## 3. Arhitektura
+## 3. Architecture
 
 ```
-┌──────────────────────────── core/  (Rust: jedna istina) ────────────────────────────┐
+┌──────────────────────────── core/  (Rust: single source of truth) ──────────────────┐
 │  shield (adblock-rust) · omnibox · places (SQLite) · settings · theme · ffi (UniFFI)  │
-│  shield-compiler (CLI, radi u CI-ju)  ──►  potpisani filter bundle (§5.3)             │
+│  shield-compiler (CLI, runs in CI)  ──►  signed filter bundle (§5.3)                  │
 └──────┬───────────────────────────┬──────────────────────────────┬────────────────────┘
        │ native (crate)            │ WASM                          │ UniFFI
        ▼                           ▼                               ▼
  WINDOWS                     shield-extension/              ANDROID: Kotlin + Compose
  Tauri 2 host (Rust)         · target "chromium-mv3"        · libscyde_core.so (places, omnibox, settings, theme)
-  ├ chrome webview (UI)        (DNR pravila → WebView2)     · GeckoView + built-in shield ekstenzija (MV2, WASM engine)
+  ├ chrome webview (UI)        (DNR rules → WebView2)       · GeckoView + built-in shield extension (MV2, WASM engine)
   ├ tab webviews (WebView2)  · target "gecko-mv2"           IOS: Swift + SwiftUI/UIKit
-  └ popover prozori            (webRequest → GeckoView)     · ScydeCore.xcframework (uklj. shield native)
-                             · content scripts (kozmetika,  · WKContentRuleList + WKUserScript (izolirani world)
-                               scriptleti, brojači)
+  └ popover windows            (webRequest → GeckoView)     · ScydeCore.xcframework (incl. shield native)
+                             · content scripts (cosmetics,  · WKContentRuleList + WKUserScript (isolated world)
+                               scriptlets, counters)
        ▲                           ▲                               ▲
-       └────────────── web/ (Svelte 5 + TS + Vite): dijeljeni dizajn sustav i interne stranice ─────┘
+       └────────────── web/ (Svelte 5 + TS + Vite): shared design system and internal pages ─────┘
              newtab · settings (desktop) · shields panel · history/bookmarks · downloads · desktop chrome UI
 ```
 
-**Interne stranice** imaju shemu `scyde://` (`newtab`, `settings`, `shields`, `history`, `bookmarks`, `downloads`, `about`). Po platformi:
-- Windows: Tauri custom protocol / WebView2 virtual host. Omnibox prikazuje `scyde://…`.
-- Android: stranice žive unutar built-in ekstenzije (`moz-extension://…`) i s aplikacijom komuniciraju preko native messaginga built-in ekstenzije. Omnibox prikazuje `scyde://…`.
-- iOS: `WKURLSchemeHandler` za `scyde://`.
+**Internal pages** use the `scyde://` scheme (`newtab`, `settings`, `shields`, `history`, `bookmarks`, `downloads`, `about`). Per platform:
+- Windows: Tauri custom protocol / WebView2 virtual host. The omnibox shows `scyde://…`.
+- Android: the pages live inside the built-in extension (`moz-extension://…`) and communicate with the app via the built-in extension's native messaging. The omnibox shows `scyde://…`.
+- iOS: `WKURLSchemeHandler` for `scyde://`.
 
 ---
 
@@ -106,458 +106,458 @@ Odluka ide u ADR-0002 s rezultatima spikea.
 ```
 scyde-browser/
 ├─ PLAN.md · CLAUDE.md · DESIGN.md · README.md · LICENSE · NOTICE.md
-├─ brand/                    brand.json (ime, app id, boje brenda), ikona (SVG master + exporti)
+├─ brand/                    brand.json (name, app id, brand colours), icon (SVG master + exports)
 ├─ design/
-│  ├─ references/            referentne slike (samo inspiracija, vidi §16)
-│  ├─ prototypes/            brzi HTML prototipovi (skill: prototype)
-│  └─ tokens/                DTCG JSON tokeni → Style Dictionary → CSS / Kotlin / Swift
+│  ├─ references/            reference images (inspiration only, see §16)
+│  ├─ prototypes/            quick HTML prototypes (skill: prototype)
+│  └─ tokens/                DTCG JSON tokens → Style Dictionary → CSS / Kotlin / Swift
 ├─ core/                     Cargo workspace
 │  ├─ shield/ · shield-compiler/ · omnibox/ · places/ · settings/ · theme/ · ffi/
-│  └─ benches/               criterion benchmarki (shield match latencija itd.)
+│  └─ benches/               criterion benchmarks (shield match latency etc.)
 ├─ web/                      pnpm workspace
-│  ├─ packages/tokens/ · packages/ui/ · packages/bridge/   (tipizirani IPC klijent)
+│  ├─ packages/tokens/ · packages/ui/ · packages/bridge/   (typed IPC client)
 │  └─ apps/newtab/ · apps/settings/ · apps/shields/ · apps/library/ (history+bookmarks+downloads) · apps/desktop-chrome/
-├─ shield-extension/         zajednički kod; build targeti chromium-mv3 i gecko-mv2
-├─ desktop/                  Tauri 2 app (src-tauri/ + veza na web/apps/desktop-chrome)
-├─ android/                  Gradle projekt (app/, core-bindings/, baselineprofile/, benchmark/)
+├─ shield-extension/         shared code; build targets chromium-mv3 and gecko-mv2
+├─ desktop/                  Tauri 2 app (src-tauri/ + link to web/apps/desktop-chrome)
+├─ android/                  Gradle project (app/, core-bindings/, baselineprofile/, benchmark/)
 ├─ ios/                      project.yml (XcodeGen), App/, BrowserKit/, Tests/, UITests/
-├─ qa/                       adblock i popup fixture stranice, break-ui skripte, popisi stranica za ručni QA
-├─ spikes/                   Faza 0: jednokratni prototipovi enginea (brišu se nakon ADR-a)
-├─ tools/                    ikona export, contrast check, perf skripte, release skripte
+├─ qa/                       adblock and popup fixture pages, break-ui scripts, site lists for manual QA
+├─ spikes/                   Phase 0: one-off engine prototypes (deleted after the ADR)
+├─ tools/                    icon export, contrast check, perf scripts, release scripts
 ├─ docs/                     STATUS.md · NETWORK.md · adr/ · architecture/ · release.md
-└─ .github/workflows/        vidi §13
+└─ .github/workflows/        see §13
 ```
 
-**Alati:** Rust stable (rustup, `cargo-ndk`, `uniffi-bindgen`, `wasm-pack` ili `wasm-bindgen-cli`), Node LTS + pnpm, JDK 17+, Android SDK/NDK, Xcode zadnji stabilni (na CI-ju), XcodeGen. Verzije se pinaju u Fazi 0 (rust-toolchain.toml, .nvmrc, gradle version catalog).
+**Tools:** Rust stable (rustup, `cargo-ndk`, `uniffi-bindgen`, `wasm-pack` or `wasm-bindgen-cli`), Node LTS + pnpm, JDK 17+, Android SDK/NDK, latest stable Xcode (on CI), XcodeGen. Versions are pinned in Phase 0 (rust-toolchain.toml, .nvmrc, gradle version catalog).
 
 ---
 
-## 5. Shield: ad, tracker i popup zaštita
+## 5. Shield: ad, tracker and popup protection
 
-### 5.1 Liste (default uključene)
-EasyList, EasyPrivacy, uBlock filters (+ privacy, + unbreak), Peter Lowe's list. Opcionalno: cookie-banner/annoyance liste ("Zen" prekidač), regionalne HR/EU liste (`[VLASNIK]` potvrđuje izbor). Korisnik može dodati vlastitu listu (URL) i vlastita pravila.
+### 5.1 Lists (enabled by default)
+EasyList, EasyPrivacy, uBlock filters (+ privacy, + unbreak), Peter Lowe's list. Optional: cookie-banner/annoyance lists (the "Zen" switch), regional HR/EU lists (`[OWNER]` confirms the selection). The user can add their own list (URL) and their own rules.
 
-### 5.2 Izlazi `shield-compiler`a (jedan izvor → svi formati)
+### 5.2 `shield-compiler` outputs (one source → all formats)
 
-| Izlaz | Koristi ga | Napomena |
+| Output | Used by | Note |
 |---|---|---|
-| `engine.dat` (serijalizirani adblock-rust engine) | iOS native, WASM u gecko ekstenziji, Windows host (kozmetika) | Brzi start: deserijalizacija umjesto parsiranja lista |
-| `dnr/*.json` (Chromium declarativeNetRequest static rulesets) | Windows (opcija A, §5.4) | Chromium jamči 30.000 statičkih pravila po ekstenziji plus globalni pool. Najviše 50 uključenih rulesetova od 100 deklariranih. Kompajler dijeli liste i prijavljuje ono što ne stane. |
-| `ios/*.json` (WKContentRuleList) | iOS | Najviše 150.000 pravila po listi. Kompajler dijeli u više lista. |
-| `cosmetic/` (generički + per-host indeksi) | sve platforme | Za brzi lookup u content skriptama |
-| `resources.json` (scriptleti/redirect resursi, uBO-kompatibilni) | sve | Licenca: GPLv3, vidi §16 |
-| `manifest.json` (verzija, hashevi, potpis) | updater | ed25519 / minisign |
+| `engine.dat` (serialised adblock-rust engine) | iOS native, WASM in the gecko extension, Windows host (cosmetics) | Fast start: deserialisation instead of parsing lists |
+| `dnr/*.json` (Chromium declarativeNetRequest static rulesets) | Windows (option A, §5.4) | Chromium guarantees 30,000 static rules per extension plus a global pool. At most 50 enabled rulesets out of 100 declared. The compiler splits lists and reports whatever does not fit. |
+| `ios/*.json` (WKContentRuleList) | iOS | At most 150,000 rules per list. The compiler splits them into multiple lists. |
+| `cosmetic/` (generic + per-host indexes) | all platforms | For fast lookup in content scripts |
+| `resources.json` (scriptlets/redirect resources, uBO-compatible) | all | Licence: GPLv3, see §16 |
+| `manifest.json` (version, hashes, signature) | updater | ed25519 / minisign |
 
-### 5.3 Ažuriranje lista
-- `filters.yml` (GitHub Actions, dnevno): preuzmi liste → `shield-compiler` → testovi (golden fixtures) → potpiši → objavi kao release `filters-YYYYMMDD` i kao `filters-latest` (GitHub Releases ili vlastiti CDN/server).
-- Klijent provjerava jednom dnevno (ETag/If-None-Match), provjerava potpis, priprema novi engine **izvan main threada** i radi atomski swap. Ako bilo što pukne, ostaje stari bundle.
-- Installer, APK i IPA nose snapshot bundlea, pa Shield radi i offline od prve sekunde.
+### 5.3 List updates
+- `filters.yml` (GitHub Actions, daily): download lists → `shield-compiler` → tests (golden fixtures) → sign → publish as release `filters-YYYYMMDD` and as `filters-latest` (GitHub Releases or own CDN/server).
+- The client checks once a day (ETag/If-None-Match), verifies the signature, prepares the new engine **off the main thread** and does an atomic swap. If anything breaks, the old bundle stays.
+- The installer, APK and IPA ship a snapshot of the bundle, so Shield works offline from the first second.
 
-### 5.4 Integracija po platformi
+### 5.4 Per-platform integration
 
-**Windows (WebView2).** Konačni izbor radi spike S2 prema mjerljivim kriterijima:
-- **A, preferirano:** vlastita **MV3 ekstenzija** (učitana kroz `browser_extensions_enabled` + `extensions_path` u Tauriju, odnosno `AddBrowserExtension`) s **DNR statičkim rulesetovima**. Blokiranje se odvija unutar mrežnog sloja Chromiuma, bez IPC-a prema hostu. Per-site iznimke idu u dinamička pravila.
-- **B:** `WebResourceRequested` filter i Rust engine u hostu. Jednostavno, ali svaki zahtjev ide na UI thread hosta (dodatni process hop), pa je moguća latencija.
-- **C:** CDP `Network.setBlockedURLs` kroz `CallDevToolsProtocolMethod`, s brojačima iz `Network.loadingFailed`. Samo kao mjerenje.
-- **Kozmetika i scriptleti (v1):** host ubacuje bootstrap skriptu (`AddScriptToExecuteOnDocumentCreated`) koja traži kozmetiku od hosta preko WebMessagea (`url_cosmetic_resources`, `hidden_class_id_selectors` u batchu iz MutationObservera). CSS se primjenjuje kroz `adoptedStyleSheets`. Ako spike pokaže da je isolated world ekstenzije stabilniji, kozmetika se seli u ekstenziju (ADR).
-- **Glavni okvir (popunder/redirect):** `NavigationStarting` provjerava engine. Blokirana domena dobiva internu interstitial stranicu "Shield je zaustavio ovu stranicu" (Nastavi jednom / Uvijek dopusti).
+**Windows (WebView2).** The final choice is made by spike S2 against measurable criteria:
+- **A, preferred:** our own **MV3 extension** (loaded via `browser_extensions_enabled` + `extensions_path` in Tauri, i.e. `AddBrowserExtension`) with **DNR static rulesets**. Blocking happens inside Chromium's network layer, with no IPC to the host. Per-site exceptions go into dynamic rules.
+- **B:** a `WebResourceRequested` filter and the Rust engine in the host. Simple, but every request goes to the host's UI thread (an extra process hop), so latency is possible.
+- **C:** CDP `Network.setBlockedURLs` via `CallDevToolsProtocolMethod`, with counters from `Network.loadingFailed`. Only as a measurement.
+- **Cosmetics and scriptlets (v1):** the host injects a bootstrap script (`AddScriptToExecuteOnDocumentCreated`) that requests cosmetics from the host via WebMessage (`url_cosmetic_resources`, `hidden_class_id_selectors` batched from a MutationObserver). CSS is applied via `adoptedStyleSheets`. If the spike shows that the extension's isolated world is more stable, cosmetics move into the extension (ADR).
+- **Main frame (popunder/redirect):** `NavigationStarting` checks the engine. A blocked domain gets an internal interstitial page "Shield stopped this page" (Continue once / Always allow).
 
 **Android (GeckoView).**
-- Built-in ekstenzija (`WebExtensionController.ensureBuiltIn`, nije potreban potpis) s **MV2 `webRequest` + `webRequestBlocking`**, a engine radi kao **WASM** u background skripti.
-- Content scripti rade kozmetiku i scriptlete. Brojače šalju aplikaciji preko native messaginga (`setMessageDelegate`).
-- Uz to uključi GeckoView **ETP Strict** i **Total Cookie Protection** (ContentBlocking postavke).
+- A built-in extension (`WebExtensionController.ensureBuiltIn`, no signature needed) with **MV2 `webRequest` + `webRequestBlocking`**, and the engine runs as **WASM** in the background script.
+- Content scripts handle cosmetics and scriptlets. They send counters to the app via native messaging (`setMessageDelegate`).
+- In addition, enable GeckoView **ETP Strict** and **Total Cookie Protection** (ContentBlocking settings).
 
 **iOS (WKWebView).**
-- Mreža i generička kozmetika: **WKContentRuleList** (kompajlira se jednom, kešira u `WKContentRuleListStore`, rekompajlira se u pozadini nakon updatea).
-- Specifična kozmetika: `WKUserScript` u vlastitom `WKContentWorld` (izolirano od stranice). Upit ide prema native engineu (UniFFI) preko `WKScriptMessageHandlerWithReply`.
-- Scriptleti: page world, `atDocumentStart`.
-- **Brojač je procjena:** WKContentRuleList ne prijavljuje blokirane zahtjeve. Content script skuplja URL-ove resursa iz DOM-a i pita engine, a UI prikazuje "≈".
+- Network and generic cosmetics: **WKContentRuleList** (compiled once, cached in `WKContentRuleListStore`, recompiled in the background after an update).
+- Specific cosmetics: `WKUserScript` in its own `WKContentWorld` (isolated from the page). The query goes to the native engine (UniFFI) via `WKScriptMessageHandlerWithReply`.
+- Scriptlets: page world, `atDocumentStart`.
+- **The counter is an estimate:** WKContentRuleList does not report blocked requests. A content script collects resource URLs from the DOM and asks the engine, and the UI shows "≈".
 
-**Zajedničko:**
-- Per-site Shield panel: on/off za stranicu, razina (Standard / Agresivno), blokiranje cookie bannera, broj blokiranih, ušteda podataka i vremena (procjena).
-- Globalna statistika na New Tabu.
-- **Očekivanja:** YouTube i slični servisi su igra mačke i miša. Blokiranje je best-effort i ovisi o svježim scriptletima, pa dnevni bundle nije opcionalan.
+**Shared:**
+- Per-site Shield panel: on/off for the site, level (Standard / Aggressive), cookie banner blocking, number blocked, data and time saved (estimate).
+- Global statistics on the New Tab.
+- **Expectations:** YouTube and similar services are a cat-and-mouse game. Blocking is best-effort and depends on fresh scriptlets, so the daily bundle is not optional.
 
 ### 5.5 Popup blocker
 
-| Platforma | Mehanizam |
+| Platform | Mechanism |
 |---|---|
-| Windows | WebView2 isključuje Edgeov popup blocker, pa ga radimo sami: `NewWindowRequested`. Ako `IsUserInitiated == false`, postavi `Handled = true` i prikaži "Popup blokiran" pill u omniboxu (Dopusti jednom / Uvijek za ovu stranicu). Popup koji je pokrenuo korisnik otvara se kao novi tab u našem UI-ju (`NewWindow` = naš webview, s Deferralom). |
-| Android | Gecko interni popup blocker + `PromptDelegate.onPopupPrompt` (naš pill i odluka) + `NavigationDelegate.onNewSession` (novi tab). |
-| iOS | `WKPreferences.javaScriptCanOpenWindowsAutomatically = false`. `WKUIDelegate.createWebViewWith` otvara novi tab samo za geste korisnika. |
-| Sve | Navigacije glavnog okvira prema blokiranim domenama (popunder, redirect lanci) idu na interstitial. Obavijesti i automatsko puštanje zvuka su po defaultu "tiho" ili isključeni. |
+| Windows | WebView2 disables Edge's popup blocker, so we do it ourselves: `NewWindowRequested`. If `IsUserInitiated == false`, set `Handled = true` and show a "Popup blocked" pill in the omnibox (Allow once / Always for this site). A user-initiated popup opens as a new tab in our UI (`NewWindow` = our webview, with a Deferral). |
+| Android | Gecko's internal popup blocker + `PromptDelegate.onPopupPrompt` (our pill and decision) + `NavigationDelegate.onNewSession` (new tab). |
+| iOS | `WKPreferences.javaScriptCanOpenWindowsAutomatically = false`. `WKUIDelegate.createWebViewWith` opens a new tab only for user gestures. |
+| All | Main-frame navigations to blocked domains (popunder, redirect chains) go to the interstitial. Notifications and audio autoplay are "quiet" or disabled by default. |
 
 ---
 
-## 6. Teme i dizajn sustav (sažetak, detalji u DESIGN.md)
+## 6. Themes and design system (summary, details in DESIGN.md)
 
-- **Izvor istine:** `design/tokens/*.json` (DTCG format) → Style Dictionary → `web/packages/tokens` (CSS custom properties), `android/…/theme/Tokens.kt`, `ios/BrowserKit/Theme/Tokens.swift`.
-- **Opcije korisnika:**
-  - mod (Light / Dark / System)
-  - Aura accent (Sky, Periwinkle, Lavender, Mint, Ember ili vlastita boja; `core/theme` generira skalu i "ink" varijante te odbija kombinacije ispod WCAG AA)
-  - pozadina New Taba (Aura gradijenti, puna boja ili vlastita slika; slika se lokalno skalira i kešira)
-  - gustoća (Comfortable / Compact)
-  - veličina teksta
-  - smanjeno kretanje (prati sustav, ručno se može nadjačati)
-  - adaptivni tint (opcija)
-- **Primjena:** desktop chrome UI i interne stranice čitaju CSS varijable. Promjena teme je cross-fade od 200 ms bez reflowa. Native UI (Compose, SwiftUI) čita generirane tokene.
+- **Source of truth:** `design/tokens/*.json` (DTCG format) → Style Dictionary → `web/packages/tokens` (CSS custom properties), `android/…/theme/Tokens.kt`, `ios/BrowserKit/Theme/Tokens.swift`.
+- **User options:**
+  - mode (Light / Dark / System)
+  - Aura accent (Sky, Periwinkle, Lavender, Mint, Ember or a custom colour; `core/theme` generates the scale and "ink" variants and rejects combinations below WCAG AA)
+  - New Tab background (Aura gradients, solid colour or own image; the image is scaled and cached locally)
+  - density (Comfortable / Compact)
+  - text size
+  - reduced motion (follows the system, can be overridden manually)
+  - adaptive tint (optional)
+- **Application:** the desktop chrome UI and internal pages read CSS variables. A theme change is a 200 ms cross-fade without reflow. Native UI (Compose, SwiftUI) reads the generated tokens.
 
 ---
 
-## 7. Sigurnost (preglednik je sigurnosni proizvod)
+## 7. Security (a browser is a security product)
 
-- **Omnibox:** naglasi registrabilnu domenu (eTLD+1). Miješana pisma i konfuzabilne IDN domene prikazuju se kao punycode. Duge poddomene se skraćuju od početka, nikad tako da sakriju domenu. Lokot i stanje veze dolaze isključivo iz enginea.
-- **Interne stranice:** stroga CSP, bez udaljenih skripti. Native bridge je dostupan **samo** `scyde://` originu (provjera origina na svakoj poruci, allowlista metoda, tipizirane poruke u `web/packages/bridge`). Web sadržaj nikad ne dobiva host objekte.
-- **Dozvole** (kamera, mikrofon, lokacija, obavijesti, clipboard): native prompt s pamćenjem po stranici i pregledom u postavkama.
-- **Privatni tabovi/prozori:**
-  - Windows: WebView2 InPrivate profil (`incognito`)
-  - Android: GeckoSession s `usePrivateMode`
+- **Omnibox:** emphasise the registrable domain (eTLD+1). Mixed scripts and confusable IDN domains are displayed as punycode. Long subdomains are truncated from the start, never in a way that hides the domain. The padlock and connection state come exclusively from the engine.
+- **Internal pages:** strict CSP, no remote scripts. The native bridge is available **only** to the `scyde://` origin (origin check on every message, method allowlist, typed messages in `web/packages/bridge`). Web content never receives host objects.
+- **Permissions** (camera, microphone, location, notifications, clipboard): native prompt with per-site memory and an overview in settings.
+- **Private tabs/windows:**
+  - Windows: WebView2 InPrivate profile (`incognito`)
+  - Android: GeckoSession with `usePrivateMode`
   - iOS: `WKWebsiteDataStore.nonPersistent()`
-- **Ažuriranja:** Tauri updater s potpisom. Filter bundle s potpisom. GeckoView bump preko Renovatea, a sigurnosni bump se mergea u roku od 48 h.
-- Safe Browsing / SmartScreen: politika privatnost vs. zaštita ide u ADR `[VLASNIK]`.
+- **Updates:** Tauri updater with a signature. Filter bundle with a signature. GeckoView bump via Renovate, and a security bump is merged within 48 h.
+- Safe Browsing / SmartScreen: the privacy vs. protection policy goes into an ADR `[OWNER]`.
 
 ---
 
-## 8. Performanse
+## 8. Performance
 
-### 8.1 Budgeti (ciljevi; Faza 0 mjeri baseline i ADR ih može korigirati)
+### 8.1 Budgets (targets; Phase 0 measures the baseline and an ADR may adjust them)
 
-| Metrika | Windows (laptop srednje klase, SSD) | Android (Pixel 6a klasa) | iOS (iPhone 12 klasa) |
+| Metric | Windows (mid-range laptop, SSD) | Android (Pixel 6a class) | iOS (iPhone 12 class) |
 |---|---|---|---|
-| Hladni start do interaktivnog chromea | ≤ 600 ms (cilj 400) | ≤ 900 ms | ≤ 500 ms |
-| Prikaz New Taba nakon Ctrl+T / + | ≤ 120 ms | ≤ 200 ms | ≤ 150 ms |
-| Prebacivanje taba (živ tab) | ≤ 1 frame (16 ms) | ≤ 100 ms | ≤ 100 ms |
-| Animacije | 60 fps, 0 izgubljenih frameova u tab open/close i omnibox focus | 60/90/120 fps prema zaslonu | 60/120 fps (ProMotion) |
-| Shield odluka po zahtjevu | native p99 < 50 µs | WASM p99 < 200 µs | rule list (WebKit) |
-| Veličina paketa | installer ≤ 15 MB (Evergreen runtime) | GeckoView baseline + ≤ 10 MB našeg koda, po ABI-ju | ≤ 30 MB |
-| JS bundle desktop chromea | ≤ 80 KB gz | – | – |
-| JS bundle New Taba | ≤ 120 KB gz (bez slika) | isto | isto |
-| Memorija ljuske (bez renderera) | ≤ 150 MB | mjeri se u Fazi 0 | mjeri se u Fazi 0 |
+| Cold start to interactive chrome | ≤ 600 ms (target 400) | ≤ 900 ms | ≤ 500 ms |
+| New Tab display after Ctrl+T / + | ≤ 120 ms | ≤ 200 ms | ≤ 150 ms |
+| Tab switch (live tab) | ≤ 1 frame (16 ms) | ≤ 100 ms | ≤ 100 ms |
+| Animations | 60 fps, 0 dropped frames in tab open/close and omnibox focus | 60/90/120 fps depending on the display | 60/120 fps (ProMotion) |
+| Shield decision per request | native p99 < 50 µs | WASM p99 < 200 µs | rule list (WebKit) |
+| Package size | installer ≤ 15 MB (Evergreen runtime) | GeckoView baseline + ≤ 10 MB of our code, per ABI | ≤ 30 MB |
+| Desktop chrome JS bundle | ≤ 80 KB gz | – | – |
+| New Tab JS bundle | ≤ 120 KB gz (without images) | same | same |
+| Shell memory (without renderers) | ≤ 150 MB | measured in Phase 0 | measured in Phase 0 |
 
-### 8.2 Tehnike
+### 8.2 Techniques
 - **Windows:**
-  - jedan dijeljeni `CoreWebView2Environment` za sve tabove
-  - prozor odmah pokazuje boju teme i native skeleton (bez bijelog bljeska), a chrome webview se pojavljuje kad je spreman
-  - lijeno vraćanje tabova (tab se kreira tek kad postane vidljiv)
-  - **sleeping tabs**: pozadinski tab dobiva `MemoryUsageTargetLevel = Low`, a nakon N minuta neaktivnosti `TrySuspendAsync` (UI prikazuje "spava · ušteđeno X MB")
-  - popover prozori su unaprijed kreirani i skriveni
-  - nema WebView2 za splash
+  - one shared `CoreWebView2Environment` for all tabs
+  - the window immediately shows the theme colour and a native skeleton (no white flash), and the chrome webview appears when ready
+  - lazy tab restore (a tab is created only when it becomes visible)
+  - **sleeping tabs**: a background tab gets `MemoryUsageTargetLevel = Low`, and after N minutes of inactivity `TrySuspendAsync` (the UI shows "sleeping · X MB saved")
+  - popover windows are pre-created and hidden
+  - no WebView2 for the splash
 - **Android:**
-  - `GeckoRuntime` kao singleton s ranom asinkronom inicijalizacijom
-  - najviše N živih `GeckoSession`a (default 5), ostali spremaju `SessionState` i vraćaju se na dodir
-  - Baseline Profiles + Macrobenchmark, R8 full mode, ABI splits, Compose stabilnost (bez nepotrebnih rekompozicija; provjera kroz Layout Inspector i compiler metrics)
+  - `GeckoRuntime` as a singleton with early asynchronous initialisation
+  - at most N live `GeckoSession`s (default 5), the others save their `SessionState` and are restored on tap
+  - Baseline Profiles + Macrobenchmark, R8 full mode, ABI splits, Compose stability (no unnecessary recompositions; checked via Layout Inspector and compiler metrics)
 - **iOS:**
-  - ograničen broj živih `WKWebView`a; ostali tabovi su snapshot + `interactionState` (iOS 15+)
-  - content rule liste se kompajliraju jednom i keširaju
-  - nema teškog posla na main threadu (Swift 6 concurrency)
+  - a limited number of live `WKWebView`s; other tabs are a snapshot + `interactionState` (iOS 15+)
+  - content rule lists are compiled once and cached
+  - no heavy work on the main thread (Swift 6 concurrency)
 - **Web UI:**
-  - Svelte 5 (kompajlirano, mali runtime)
-  - animiraju se samo `transform` i `opacity`; `content-visibility` za liste; virtualizacija povijesti
-  - fontovi kao subsetani variable WOFF2 (Latin + Latin Ext za č, ć, đ, š, ž)
-  - slike u AVIF/WebP, lijeno učitavanje
-- **Mjerenje u CI-ju:** criterion benchmarki (`core/benches`), Lighthouse-CI/perf skripta za interne stranice, Macrobenchmark (Android, na emulatoru samo trend), XCTest `measure` (iOS), startup skripta na Windows runneru (trend). Rezultati se spremaju kao artefakt `perf.json`. Regresija veća od 10 % ruši job.
+  - Svelte 5 (compiled, small runtime)
+  - only `transform` and `opacity` are animated; `content-visibility` for lists; history virtualisation
+  - fonts as subset variable WOFF2 (Latin + Latin Ext for č, ć, đ, š, ž)
+  - images in AVIF/WebP, lazy loading
+- **Measurement in CI:** criterion benchmarks (`core/benches`), Lighthouse-CI/perf script for internal pages, Macrobenchmark (Android, trend only on the emulator), XCTest `measure` (iOS), a startup script on the Windows runner (trend). Results are saved as a `perf.json` artifact. A regression greater than 10 % fails the job.
 
 ---
 
-## 9. Platforme u detalje
+## 9. Platforms in detail
 
 ### 9.1 Windows (Tauri 2 + WebView2)
 
-**Prozor:**
-- `decorations: false`, Mica/Acrylic pozadina (Tauri window effects), vlastiti titlebar s tabovima
-- Windows 11 **Snap Layouts** na maximize gumbu: `WM_NCHITTEST → HTMAXBUTTON` kroz subclass prozora ili evaluacija `tauri-plugin-decorum`
-- caption gumbi u Windows stilu (ne macOS semafor iz reference)
+**Window:**
+- `decorations: false`, Mica/Acrylic background (Tauri window effects), custom titlebar with tabs
+- Windows 11 **Snap Layouts** on the maximize button: `WM_NCHITTEST → HTMAXBUTTON` via window subclassing, or evaluate `tauri-plugin-decorum`
+- Windows-style caption buttons (not the macOS traffic lights from the reference)
 
-**Slojevi:**
-1. `chrome` webview: tab strip, toolbar i lijevi rail za web panele
-2. `tab-*` webviewi (Tauri multiwebview, feature `unstable`, svi na **istom environmentu**), vidljiv je samo aktivni
-3. **popover prozori**: transparentni borderless prozori bez taskbar ikone, u vlasništvu glavnog prozora, za omnibox prijedloge, menije, Shield panel, command palette i toastove. Child webviewi se ne mogu prozirno slagati jedan preko drugoga, pa popoveri žive u zasebnim top-level prozorima.
+**Layers:**
+1. `chrome` webview: tab strip, toolbar and the left rail for web panels
+2. `tab-*` webviews (Tauri multiwebview, feature `unstable`, all on the **same environment**), only the active one is visible
+3. **popover windows**: transparent borderless windows without a taskbar icon, owned by the main window, for omnibox suggestions, menus, the Shield panel, the command palette and toasts. Child webviews cannot be stacked transparently on top of each other, so popovers live in separate top-level windows.
 
-**Escape hatch:** `Webview::with_webview(|w| w.controller())` daje sirovi `ICoreWebView2Controller` za API-je koje Tauri ne izlaže (`NewWindowRequested` s Deferralom, `MemoryUsageTargetLevel`, `TrySuspend`, `AddBrowserExtension`, download eventi).
+**Escape hatch:** `Webview::with_webview(|w| w.controller())` gives the raw `ICoreWebView2Controller` for APIs that Tauri does not expose (`NewWindowRequested` with a Deferral, `MemoryUsageTargetLevel`, `TrySuspend`, `AddBrowserExtension`, download events).
 
-**Značajke v1:**
-- tabovi (pin, mute, drag reorder, drag-out u novi prozor kasnije), omnibox s prijedlozima, back/forward/reload
-- find-in-page, zoom, preuzimanja (vlastiti panel), print
-- povijest, oznake + traka oznaka, uvoz iz Chromea, Edgea i Firefoxa (Faza 7)
-- Shield, popup blocker, New Tab, postavke, teme
-- privatni prozor, "Postavi kao zadani preglednik" (registry `RegisteredApplications`, `StartMenuInternet`, URL i datotečne asocijacije, zatim otvori `ms-settings:defaultapps`)
-- prečaci kao u Chromeu (Ctrl+T/W/L/Tab, Ctrl+Shift+T, Ctrl+K command palette)
+**v1 features:**
+- tabs (pin, mute, drag reorder, drag-out to a new window later), omnibox with suggestions, back/forward/reload
+- find-in-page, zoom, downloads (own panel), print
+- history, bookmarks + bookmarks bar, import from Chrome, Edge and Firefox (Phase 7)
+- Shield, popup blocker, New Tab, settings, themes
+- private window, "Set as default browser" (registry `RegisteredApplications`, `StartMenuInternet`, URL and file associations, then open `ms-settings:defaultapps`)
+- Chrome-like shortcuts (Ctrl+T/W/L/Tab, Ctrl+Shift+T, Ctrl+K command palette)
 
-**Paket:**
-- NSIS per-user installer (bez admina) + MSI za IT
-- WebView2 bootstrapper ako runtime nedostaje
-- Tauri updater (GitHub Releases, potpis)
-- code signing (Azure Trusted Signing ili OV cert) `[VLASNIK]`, inače SmartScreen upozorava
+**Package:**
+- NSIS per-user installer (no admin) + MSI for IT
+- WebView2 bootstrapper if the runtime is missing
+- Tauri updater (GitHub Releases, signature)
+- code signing (Azure Trusted Signing or OV cert) `[OWNER]`, otherwise SmartScreen warns
 
 ### 9.2 Android (Kotlin + Compose + GeckoView)
 
-- **Arhitektura:** single-activity, `BrowserStore` (StateFlow) za tabove, aktivni tab, nav stanje i Shield brojače. `EngineSession` omot oko `GeckoSession` (sučelje dopušta zamjenu enginea). `TabManager` s limitom živih sesija. Core preko UniFFI (`cargo-ndk`, arm64-v8a + armeabi-v7a + x86_64 za emulator). Postavke u DataStoreu (shema iz `core/settings`).
+- **Architecture:** single-activity, `BrowserStore` (StateFlow) for tabs, the active tab, nav state and Shield counters. `EngineSession` wrapper around `GeckoSession` (the interface allows swapping the engine). `TabManager` with a limit on live sessions. Core via UniFFI (`cargo-ndk`, arm64-v8a + armeabi-v7a + x86_64 for the emulator). Settings in DataStore (schema from `core/settings`).
 - **UI:**
-  - **donji toolbar** s omniboxom (zona palca); swipe po toolbaru mijenja tab; swipe gore otvara tab switcher (grid sa shared-element tranzicijom)
-  - Shield bottom sheet; kontekstni meni za linkove (long-press, peek preview u Fazi 6)
-  - **edge-to-edge** (obavezno za targetSdk 35+), **predictive back** (povijest webviewa → zatvaranje sheeta → izlaz)
-  - Material 3 je samo tehnička baza; vizualno je sve iz DESIGN.md (bez generičkog Material izgleda)
-- **Interne stranice:** web build se pakira u built-in ekstenziju (assets). New Tab je `moz-extension` stranica prikazana kao `scyde://newtab`.
-- **Paket:** potpisani APK po ABI-ju (GitHub Releases, Obtainium-kompatibilno), kasnije AAB za Play i F-Droid `[VLASNIK]`. `applicationId dev.scyde.browser`.
+  - **bottom toolbar** with the omnibox (thumb zone); swiping on the toolbar switches tabs; swiping up opens the tab switcher (grid with a shared-element transition)
+  - Shield bottom sheet; context menu for links (long-press, peek preview in Phase 6)
+  - **edge-to-edge** (mandatory for targetSdk 35+), **predictive back** (webview history → close sheet → exit)
+  - Material 3 is only the technical base; visually everything comes from DESIGN.md (no generic Material look)
+- **Internal pages:** the web build is packaged into the built-in extension (assets). The New Tab is a `moz-extension` page displayed as `scyde://newtab`.
+- **Package:** signed APK per ABI (GitHub Releases, Obtainium-compatible), later AAB for Play and F-Droid `[OWNER]`. `applicationId dev.scyde.browser`.
 
-### 9.3 iOS (Swift + WKWebView, .ipa za Feather)
+### 9.3 iOS (Swift + WKWebView, .ipa for Feather)
 
-- **Arhitektura:**
-  - SwiftUI za app shell, postavke i sheetove; UIKit `BrowserViewController` za WKWebView (geste, performanse, `UIScrollView` kontrola)
+- **Architecture:**
+  - SwiftUI for the app shell, settings and sheets; UIKit `BrowserViewController` for WKWebView (gestures, performance, `UIScrollView` control)
   - Swift 6 strict concurrency
-  - `ScydeCore.xcframework` (Rust, targeti `aarch64-apple-ios` + `aarch64-apple-ios-sim`) se gradi u CI-ju
-  - XcodeGen `project.yml` (bez ručnog `.pbxproj`, pa nema merge konflikata)
+  - `ScydeCore.xcframework` (Rust, targets `aarch64-apple-ios` + `aarch64-apple-ios-sim`) is built in CI
+  - XcodeGen `project.yml` (no hand-edited `.pbxproj`, so no merge conflicts)
 - **UI:**
-  - **donja adresna traka** (kao Safari), swipe po traci mijenja tab, tab grid sa zoom tranzicijom
-  - Shield sheet s detentima, haptika
-  - sistemski materijali (na iOS 26+ Liquid Glass gdje prirodno paše, inače `ultraThinMaterial`); sve prema `apple-design` skillu
+  - **bottom address bar** (like Safari), swiping on the bar switches tabs, tab grid with a zoom transition
+  - Shield sheet with detents, haptics
+  - system materials (Liquid Glass on iOS 26+ where it fits naturally, otherwise `ultraThinMaterial`); everything per the `apple-design` skill
   - Dynamic Type
-- **Engine postavke:** Safari-like UA (§2.2). `WKWebpagePreferences.allowsContentJavaScript` po stranici (opcija). Privatni tab koristi `nonPersistent` data store. `isInspectable` samo u debug buildu.
-- **Paket:** CI na macOS runneru: `xcodebuild archive CODE_SIGNING_ALLOWED=NO`, zatim `Payload/<App>.app` zipan u `.ipa` i release artefakt. Feather potpisuje na uređaju. Opcija: AltStore-kompatibilan JSON izvor (GitHub Pages) za ažuriranja kroz Feather.
-- **Očekivana ograničenja sideloada:**
-  - aplikacija ne može biti zadani preglednik (entitlement `com.apple.developer.web-browser` dodjeljuje Apple)
-  - bez push notifikacija
-  - App Groups i share extension mogu ovisiti o certifikatu u Featheru, pa share extension ostaje opcionalan i ne smije biti obavezan za rad aplikacije
+- **Engine settings:** Safari-like UA (§2.2). `WKWebpagePreferences.allowsContentJavaScript` per site (option). A private tab uses the `nonPersistent` data store. `isInspectable` only in the debug build.
+- **Package:** CI on a macOS runner: `xcodebuild archive CODE_SIGNING_ALLOWED=NO`, then `Payload/<App>.app` zipped into an `.ipa` and a release artifact. Feather signs on the device. Option: an AltStore-compatible JSON source (GitHub Pages) for updates via Feather.
+- **Expected sideloading limitations:**
+  - the app cannot be the default browser (the `com.apple.developer.web-browser` entitlement is granted by Apple)
+  - no push notifications
+  - App Groups and the share extension may depend on the certificate in Feather, so the share extension remains optional and must not be required for the app to work
 
 ---
 
-## 10. New Tab (prema referenci, ali vlastito)
+## 10. New Tab (based on the reference, but our own)
 
-- **Hero:** logo SCYDE + tri "privacy chipa" sa **živim brojkama** (npr. "Blokirano danas 1.284", "Ušteđeno 42 MB", "≈ 3 min").
-- **Pretraga:** veliko polje s pill CTA gumbom (Ember). Prijedlozi iz povijesti, oznaka i tražilice (opt-out). Glasovni unos ide preko native speech API-ja kroz bridge. Pretraga slikom (Faza 6) šalje sliku na reverse-image stranicu odabrane tražilice, uz upozorenje o privatnosti.
-- **Speed dial:** grid tileova (top sites + prikvačeni), drag reorder, "Dodaj". Favicon se dohvaća i kešira lokalno. Fallback je monogram tile u Aura boji.
-- **Top Stories:** **opt-in** RSS agregator (kategorije: Vijesti, Tech, Sport, Zabava, Putovanja…). Izvore bira `[VLASNIK]` (HR + svjetski). Dohvat je direktan, bez trackera, s keširanjem. Kategorije koriste vlastite ikone (ne emoji kao u referenci).
-- **Desktop lijevi rail:** web paneli (Gmail, Discord, Telegram, WhatsApp Web, LinkedIn… koje korisnik sam doda). Svaki panel je zaseban webview koji ostaje prijavljen.
-- **Pozadina:** Aura gradijent ili vlastita slika. Bez sponzoriranih slika, ikad (R2).
-- **Prazna stanja i break-ui:** 0 i 100 tileova, bez interneta, s isključenim vijestima.
+- **Hero:** SCYDE logo + three "privacy chips" with **live numbers** (e.g. "Blocked today 1,284", "Saved 42 MB", "≈ 3 min").
+- **Search:** a large field with a pill CTA button (Ember). Suggestions from history, bookmarks and the search engine (opt-out). Voice input goes through the native speech API via the bridge. Image search (Phase 6) sends the image to the reverse-image page of the selected search engine, with a privacy warning.
+- **Speed dial:** a grid of tiles (top sites + pinned), drag reorder, "Add". The favicon is fetched and cached locally. The fallback is a monogram tile in an Aura colour.
+- **Top Stories:** an **opt-in** RSS aggregator (categories: News, Tech, Sport, Entertainment, Travel…). Sources are chosen by `[OWNER]` (HR + international). Fetching is direct, with no trackers, with caching. Categories use our own icons (not emoji as in the reference).
+- **Desktop left rail:** web panels (Gmail, Discord, Telegram, WhatsApp Web, LinkedIn… that the user adds themselves). Each panel is a separate webview that stays signed in.
+- **Background:** Aura gradient or own image. No sponsored images, ever (R2).
+- **Empty states and break-ui:** 0 and 100 tiles, no internet, with news turned off.
 
 ---
 
-## 11. Faze
+## 11. Phases
 
-> Veličine su relativne (S/M/L/XL). Faze 4 i 5 mogu ići paralelno nakon Faze 3 (zasebne grane i sesije).
+> Sizes are relative (S/M/L/XL). Phases 4 and 5 can run in parallel after Phase 3 (separate branches and sessions).
 
-### Faza 0: Temelji, dizajn i spikeovi (L) 🔒 gate
-**Koraci:**
-1. **0.1 Repo:** struktura iz §4, pinani toolchainovi, `CLAUDE.md`, `docs/STATUS.md`, `docs/NETWORK.md`, ADR predložak, Renovate, osnovni CI (lint i build prazni skeleton).
-2. **0.2 Dizajn temelj:** skill `impeccable` finalizira **DESIGN.md**. `taste-skill` provjerava smjer protiv generičkog izgleda. `pick-ui-library` potvrđuje *Svelte 5 + vlastite komponente (bez UI kita)* unutar JS budgeta → ADR-0005.
-3. **0.3 Brand i ikona:** tri originalna koncepta ikone (SVG) prema smjeru iz `design/references/03-app-icon-direction.png`, ali **bez dva preklopljena kruga** (vidi §16). Export pipeline `tools/icon-export`: Windows `.ico` 16–256, Android adaptive (foreground, background, monochrome za themed icons), iOS 1024 + dark + tinted varijante. `[VLASNIK]` bira koncept.
-4. **0.4 Prototipovi** (`prototype` skill, `design/prototypes/`): New Tab light/dark, desktop chrome (tabovi, omnibox focus s prijedlozima, Shield panel), mobilni donji toolbar + tab switcher. `impeccable critique` na svakom.
-5. **0.5 Spikeovi** (`spikes/`, jednokratni):
-   - **S1 Google prijava** na sva tri enginea → **G1**
-   - **S2 WebView2 Shield:** opcije A/B/C iz §5.4 na 5 teških stranica (npr. index.hr, 24sata.hr, jutarnji.hr, youtube.com, cnn.com) s mjerenjem vremena učitavanja u odnosu na baseline bez blokiranja → **G2**
-   - **S3 GeckoView:** built-in ekstenzija, webRequestBlocking, WASM engine, native messaging s internih stranica → **G3**
-   - **S4 iOS:** kompajliranje ≥ 150k pravila podijeljenih u više lista na simulatoru; mjerenje kompajliranja i keširanog loada → **G4**
-   - **S5 Tauri multiwebview:** 20 tabova na jednom environmentu, prebacivanje, pre-warm popover prozora, Mica, custom titlebar + snap → **G5**
+### Phase 0: Foundations, design and spikes (L) 🔒 gate
+**Steps:**
+1. **0.1 Repo:** structure from §4, pinned toolchains, `CLAUDE.md`, `docs/STATUS.md`, `docs/NETWORK.md`, ADR template, Renovate, basic CI (lint and build of the empty skeleton).
+2. **0.2 Design foundation:** the `impeccable` skill finalises **DESIGN.md**. `taste-skill` checks the direction against a generic look. `pick-ui-library` confirms *Svelte 5 + own components (no UI kit)* within the JS budget → ADR-0005.
+3. **0.3 Brand and icon:** three original icon concepts (SVG) following the direction in `design/references/03-app-icon-direction.png`, but **without two overlapping circles** (see §16). Export pipeline `tools/icon-export`: Windows `.ico` 16–256, Android adaptive (foreground, background, monochrome for themed icons), iOS 1024 + dark + tinted variants. `[OWNER]` chooses the concept.
+4. **0.4 Prototypes** (`prototype` skill, `design/prototypes/`): New Tab light/dark, desktop chrome (tabs, omnibox focus with suggestions, Shield panel), mobile bottom toolbar + tab switcher. `impeccable critique` on each.
+5. **0.5 Spikes** (`spikes/`, one-off):
+   - **S1 Google sign-in** on all three engines → **G1**
+   - **S2 WebView2 Shield:** options A/B/C from §5.4 on 5 heavy sites (e.g. index.hr, 24sata.hr, jutarnji.hr, youtube.com, cnn.com) measuring load time against a baseline without blocking → **G2**
+   - **S3 GeckoView:** built-in extension, webRequestBlocking, WASM engine, native messaging from internal pages → **G3**
+   - **S4 iOS:** compiling ≥ 150k rules split into multiple lists on the simulator; measuring compilation and cached load → **G4**
+   - **S5 Tauri multiwebview:** 20 tabs on one environment, switching, pre-warming popover windows, Mica, custom titlebar + snap → **G5**
 
-**AC / gateovi:**
-- **G1:** Prijava u Google (Gmail, YouTube) radi na WebView2, GeckoView i WKWebViewu (screenshotovi u ADR-0002). Ako ne radi na WebView2, aktiviraj §2.3 i stani.
-- **G2:** Shield na Windowsu dodaje ≤ 3 % (cilj 0) na median vremena učitavanja i blokira ≥ 95 % fixture zahtjeva (`qa/adblock-fixtures`). Odabrana opcija ide u ADR-0003.
-- **G3:** GeckoView ekstenzija blokira fixture, WASM odluka p99 < 200 µs, interne stranice razgovaraju s aplikacijom.
-- **G4:** Rule liste se kompajliraju. Keširani load je < 100 ms. Fixture je blokiran.
-- **G5:** Prebacivanje taba ≤ 16 ms, popover ≤ 16 ms, snap layout radi.
-- DESIGN.md je finaliziran, ikona odabrana, prototipovi odobreni od `[VLASNIK]`.
+**AC / gates:**
+- **G1:** Google sign-in (Gmail, YouTube) works on WebView2, GeckoView and WKWebView (screenshots in ADR-0002). If it does not work on WebView2, activate §2.3 and stop.
+- **G2:** Shield on Windows adds ≤ 3 % (target 0) to the median load time and blocks ≥ 95 % of fixture requests (`qa/adblock-fixtures`). The chosen option goes into ADR-0003.
+- **G3:** The GeckoView extension blocks the fixture, WASM decision p99 < 200 µs, internal pages talk to the app.
+- **G4:** Rule lists compile. Cached load is < 100 ms. The fixture is blocked.
+- **G5:** Tab switch ≤ 16 ms, popover ≤ 16 ms, snap layout works.
+- DESIGN.md is finalised, the icon chosen, prototypes approved by `[OWNER]`.
 
-### Faza 1: Rust jezgra i Shield pipeline (L)
-- Crateovi `shield`, `shield-compiler`, `omnibox`, `places`, `settings`, `theme` i `ffi` (UniFFI → Swift, Kotlin). WASM paket za ekstenziju.
-- `filters.yml` (dnevno, potpis, objava). Golden testovi (fixture liste → očekivani DNR / iOS / kozmetički izlaz).
-- Benchmarki: match latencija, deserijalizacija enginea, veličina bundlea.
-
-**AC:**
-- `cargo test` zelen; clippy bez upozorenja
-- native match p50 < 5 µs, p99 < 50 µs; deserijalizacija < 50 ms (desktop)
-- iOS liste ≤ 150k po listi; DNR izlaz unutar Chromium limita (s izvješćem o odbačenim pravilima)
-- bundle potpisan i potpis provjeren u testu
-- `omnibox` prolazi testove: URL ili pretraga, punycode i konfuzabilni nazivi, fixup (`scyde`, `localhost:3000`, `192.168.1.1`, `ftp://`)
-
-### Faza 2: Web dizajn sustav i interne stranice (L)
-- `web/packages/tokens` (iz Style Dictionaryja), `packages/ui` (Button, IconButton, Chip, Tile, Card, Menu, Popover, Tooltip, Toast, Toggle, Slider, Tabs, Sheet, SearchField, Kbd, Skeleton), `packages/bridge` (tipiziran, s mockom za testove).
-- Aplikacije: `newtab`, `settings`, `shields`, `library`.
-- Skillovi: `emil-design-eng` (detalji komponenti), `animate` + `choreograph` (ulazak New Taba, stagger tileova), `animation-performance`, `mobile-native` (interne stranice na telefonu: safe areas, touch targeti, overscroll, `100dvh`, bez tap highlighta), `awwwards-animations` (samo smjernice za hero i onboarding; implementacija kroz CSS i WAAPI, bez GSAP-a).
-- Playwright vizualni testovi u **Chromiumu, Firefoxu i WebKitu** (sva tri enginea koja koristimo!), light i dark, 3 širine.
+### Phase 1: Rust core and Shield pipeline (L)
+- Crates `shield`, `shield-compiler`, `omnibox`, `places`, `settings`, `theme` and `ffi` (UniFFI → Swift, Kotlin). WASM package for the extension.
+- `filters.yml` (daily, signature, publishing). Golden tests (fixture lists → expected DNR / iOS / cosmetic output).
+- Benchmarks: match latency, engine deserialisation, bundle size.
 
 **AC:**
-- bundle budgeti (§8)
+- `cargo test` green; clippy without warnings
+- native match p50 < 5 µs, p99 < 50 µs; deserialisation < 50 ms (desktop)
+- iOS lists ≤ 150k per list; DNR output within Chromium limits (with a report on dropped rules)
+- bundle signed and signature verified in a test
+- `omnibox` passes tests: URL or search, punycode and confusable names, fixup (`scyde`, `localhost:3000`, `192.168.1.1`, `ftp://`)
+
+### Phase 2: Web design system and internal pages (L)
+- `web/packages/tokens` (from Style Dictionary), `packages/ui` (Button, IconButton, Chip, Tile, Card, Menu, Popover, Tooltip, Toast, Toggle, Slider, Tabs, Sheet, SearchField, Kbd, Skeleton), `packages/bridge` (typed, with a mock for tests).
+- Apps: `newtab`, `settings`, `shields`, `library`.
+- Skills: `emil-design-eng` (component details), `animate` + `choreograph` (New Tab entrance, tile stagger), `animation-performance`, `mobile-native` (internal pages on the phone: safe areas, touch targets, overscroll, `100dvh`, no tap highlight), `awwwards-animations` (guidelines only for the hero and onboarding; implementation via CSS and WAAPI, no GSAP).
+- Playwright visual tests in **Chromium, Firefox and WebKit** (all three engines we use!), light and dark, 3 widths.
+
+**AC:**
+- bundle budgets (§8)
 - Lighthouse a11y ≥ 95
-- svi kontrasti ≥ AA (automatski test)
-- `prefers-reduced-motion` poštovan
-- screenshotovi kao artefakti
+- all contrasts ≥ AA (automated test)
+- `prefers-reduced-motion` respected
+- screenshots as artifacts
 
-### Faza 3: Windows MVP (XL)
-- Tauri ljuska prema §9.1: tabovi, omnibox, navigacija, Shield (odabrana opcija), popup blocker, interne stranice, teme, sleeping tabs, preuzimanja, find, zoom, privatni prozor, prečaci, zadani preglednik, installer + updater.
-- Skillovi: `emil-design-eng` (tab strip, omnibox, meniji), `choreograph` (otvaranje/zatvaranje taba, omnibox expand), `animation-performance`, `break-ui` na kraju.
+### Phase 3: Windows MVP (XL)
+- Tauri shell per §9.1: tabs, omnibox, navigation, Shield (chosen option), popup blocker, internal pages, themes, sleeping tabs, downloads, find, zoom, private window, shortcuts, default browser, installer + updater.
+- Skills: `emil-design-eng` (tab strip, omnibox, menus), `choreograph` (tab open/close, omnibox expand), `animation-performance`, `break-ui` at the end.
 
 **AC:**
-- budgeti §8 (Windows stupac)
-- G1 i dalje zelen
-- 500 tabova bez rušenja (sleeping)
+- §8 budgets (Windows column)
+- G1 still green
+- 500 tabs without crashing (sleeping)
 - `qa/` adblock ≥ 95 %, popup fixture 100 %
-- updater testiran s dvije verzije
-- `break-ui` izvješće bez P1 nalaza
+- updater tested with two versions
+- `break-ui` report with no P1 findings
 
-### Faza 4: iOS MVP (L)
-- §9.3: tabovi, donja traka, tab grid, Shield (rule liste + kozmetika + procjena brojača), popup, interne stranice, teme, privatni tab, dijeljenje, preuzimanja (Files), find, čitač (kasnije).
-- Skillovi: `apple-design` (sheetovi, springovi, materijali, tipografija, geste), `mobile-native` (interne stranice), `break-ui`.
-- CI: unsigned `.ipa` + XCUITest screenshotovi (light/dark, iPhone SE i Pro Max veličine).
+### Phase 4: iOS MVP (L)
+- §9.3: tabs, bottom bar, tab grid, Shield (rule lists + cosmetics + counter estimate), popup, internal pages, themes, private tab, sharing, downloads (Files), find, reader (later).
+- Skills: `apple-design` (sheets, springs, materials, typography, gestures), `mobile-native` (internal pages), `break-ui`.
+- CI: unsigned `.ipa` + XCUITest screenshots (light/dark, iPhone SE and Pro Max sizes).
 
 **AC:**
-- budgeti §8 (iOS)
-- instalacija preko Feathera na stvarnom uređaju `[VLASNIK]` potvrđuje
-- Google prijava radi
+- §8 budgets (iOS)
+- installation via Feather on a real device confirmed by `[OWNER]`
+- Google sign-in works
 - adblock/popup fixture
 
-### Faza 5: Android MVP (XL)
-- §9.2: GeckoView, Compose UI, donji toolbar, tab switcher, Shield ekstenzija, ETP + TCP, popup, interne stranice, teme, privatni tabovi, preuzimanja, predictive back.
-- Skillovi: `apple-design` (principi springova i gesti prevedeni u Compose), `mobile-native`, `animation-performance`, `break-ui`.
+### Phase 5: Android MVP (XL)
+- §9.2: GeckoView, Compose UI, bottom toolbar, tab switcher, Shield extension, ETP + TCP, popup, internal pages, themes, private tabs, downloads, predictive back.
+- Skills: `apple-design` (spring and gesture principles translated to Compose), `mobile-native`, `animation-performance`, `break-ui`.
 
 **AC:**
-- budgeti §8 (Android)
-- Baseline Profile aktivan (Macrobenchmark izvješće)
-- APK po ABI-ju u releaseu
-- Google prijava radi
-- fixturei prolaze
+- §8 budgets (Android)
+- Baseline Profile active (Macrobenchmark report)
+- APK per ABI in the release
+- Google sign-in works
+- fixtures pass
 
-### Faza 6: Premium polish i unikatne značajke (L)
-- Animacijski audit: `find-animation-opportunities` → `improve-animations` → `review-animations` → `remove-animations` (makni sve što ne služi). Pa `impeccable audit` + `polish`, pa `break-ui` na svim platformama.
-- **Unikatne značajke** (redoslijed potvrđuje `[VLASNIK]`):
-  1. **Aura adaptivni tint** chromea prema `theme-color` ili dominantnoj boji favicona (uz zaštitu kontrasta)
-  2. **Shield pill** s morph brojačem i "ušteđeno" statistikom
-  3. **Sleeping tabs** s vidljivom uštedom RAM-a
-  4. **Split view** (2 taba jedan uz drugi) + **command palette** (Ctrl+K: tabovi, povijest, akcije, postavke) na desktopu
-  5. **Web paneli** u lijevom railu (desktop)
-  6. **Peek** (long-press link preview) na mobitelu
-  7. **Zen mod** po stranici (cookie banneri, annoyance liste, čitač)
-  8. **Spaces** (grupe tabova s vlastitom Aura bojom)
-- Onboarding (3 ekrana: tema, tražilica, uvoz), bez dark patterna.
+### Phase 6: Premium polish and unique features (L)
+- Animation audit: `find-animation-opportunities` → `improve-animations` → `review-animations` → `remove-animations` (remove everything that does not serve a purpose). Then `impeccable audit` + `polish`, then `break-ui` on all platforms.
+- **Unique features** (order confirmed by `[OWNER]`):
+  1. **Aura adaptive tint** of the chrome based on `theme-color` or the dominant favicon colour (with contrast protection)
+  2. **Shield pill** with a morphing counter and "saved" statistics
+  3. **Sleeping tabs** with visible RAM savings
+  4. **Split view** (2 tabs side by side) + **command palette** (Ctrl+K: tabs, history, actions, settings) on desktop
+  5. **Web panels** in the left rail (desktop)
+  6. **Peek** (long-press link preview) on mobile
+  7. **Zen mode** per site (cookie banners, annoyance lists, reader)
+  8. **Spaces** (tab groups with their own Aura colour)
+- Onboarding (3 screens: theme, search engine, import), without dark patterns.
 
 **AC:**
-- 0 animacija izvan budgeta
-- `impeccable audit` bez kritičnih nalaza
-- svaka značajka ima on/off i test
+- 0 animations outside the budget
+- `impeccable audit` with no critical findings
+- every feature has an on/off switch and a test
 
-### Faza 7: Podaci, sinkronizacija, izdanje (L)
-- Uvoz s Windowsa iz Chromea, Edgea i Firefoxa (oznake, povijest; lozinke samo ako je sigurno i transparentno, inače se savjetuje izvoz CSV-a).
-- Upravitelj lozinki: v1 koristi OS (Windows Hello / Credential Manager, iOS AutoFill, Android Credential Manager), vlastiti tek nakon sigurnosnog pregleda.
-- **SCYDE Sync** (opcija `[VLASNIK]`): E2E enkriptirana sinkronizacija oznaka, povijesti, postavki i tabova. Self-hosted server kao **Docker Compose** aplikacija (isti obrazac kao Mediarr/Streamero), klijent u `core/sync`.
-- Release hardening: code signing, crash izvješća opt-in (self-hosted), `NOTICE.md` s licencama, privacy policy, pravila izdanja (`docs/release.md`), Play/F-Droid priprema `[VLASNIK]`.
+### Phase 7: Data, sync, release (L)
+- Import on Windows from Chrome, Edge and Firefox (bookmarks, history; passwords only if it is safe and transparent, otherwise exporting a CSV is recommended).
+- Password manager: v1 uses the OS (Windows Hello / Credential Manager, iOS AutoFill, Android Credential Manager), our own only after a security review.
+- **SCYDE Sync** (option `[OWNER]`): E2E-encrypted sync of bookmarks, history, settings and tabs. Self-hosted server as a **Docker Compose** app (the same pattern as Mediarr/Streamero), client in `core/sync`.
+- Release hardening: code signing, opt-in crash reports (self-hosted), `NOTICE.md` with licences, privacy policy, release rules (`docs/release.md`), Play/F-Droid preparation `[OWNER]`.
 
 ---
 
-## 12. Mapa skillova (kada se koji koristi)
+## 12. Skill map (when each one is used)
 
-| Skill | Kada | Rezultat |
+| Skill | When | Result |
 |---|---|---|
-| `impeccable` | Faza 0 (DESIGN.md), **svaki UI PR** (critique), Faza 6 (audit, polish) | DESIGN.md je živi dokument; nalazi idu u PR opis |
-| `taste-skill` (design-taste-frontend) | prototipovi, New Tab, onboarding, marketing stranica | provjera da ništa ne izgleda generički ili "AI-made" |
-| `prototype` | prije svake nove UI značajke | HTML prototip u `design/prototypes/` |
-| `pick-ui-library` | Faza 0 | ADR-0005 (Svelte 5 + vlastite komponente ili obrazložena alternativa) |
-| `emil-design-eng` | komponente: tabovi, omnibox, meniji, toastovi, tooltipovi, sheetovi | mikro-detalji, stanja, fokus, timing |
-| `apple-design` | iOS faza; principi springova i gesti za Android i desktop | sheetovi, materijali, tipografija, geste |
-| `mobile-native` | interne web stranice na Androidu i iOS-u | izgledaju i ponašaju se nativno |
-| `animate` | nova animacija od nule | implementacija prema motion tokenima |
-| `animation-vocabulary` | imenovanje efekata u DESIGN.md i PR-ovima | zajednički jezik |
-| `choreograph` | sekvence više elemenata (New Tab ulaz, tab switcher, omnibox) | stagger i redoslijed |
-| `animation-performance` | svaki PR s animacijom | compositor-only, bez layout thrashinga, u budgetu |
-| `find-animation-opportunities` | Faza 6 | popis mjesta gdje kretanje nedostaje |
-| `improve-animations` | Faza 6 | plan poboljšanja |
-| `review-animations` | Faza 6, prije releasea | kritika |
-| `remove-animations` | Faza 6, power-saver mod | uklanjanje suvišnog |
-| `break-ui` | kraj Faza 3, 4, 5 i 6 | izvješće sa scenarijima iz §14.3 |
-| `awwwards-animations` | New Tab hero, onboarding, reveal kod promjene teme | **samo smjernice**; bez GSAP-a i njegovih biblioteka (nema licence); implementacija kroz CSS, WAAPI i `linear()` springove |
+| `impeccable` | Phase 0 (DESIGN.md), **every UI PR** (critique), Phase 6 (audit, polish) | DESIGN.md is a living document; findings go into the PR description |
+| `taste-skill` (design-taste-frontend) | prototypes, New Tab, onboarding, marketing page | checks that nothing looks generic or "AI-made" |
+| `prototype` | before every new UI feature | HTML prototype in `design/prototypes/` |
+| `pick-ui-library` | Phase 0 | ADR-0005 (Svelte 5 + own components or a justified alternative) |
+| `emil-design-eng` | components: tabs, omnibox, menus, toasts, tooltips, sheets | micro-details, states, focus, timing |
+| `apple-design` | iOS phase; spring and gesture principles for Android and desktop | sheets, materials, typography, gestures |
+| `mobile-native` | internal web pages on Android and iOS | they look and behave natively |
+| `animate` | a new animation from scratch | implementation according to motion tokens |
+| `animation-vocabulary` | naming effects in DESIGN.md and PRs | a shared language |
+| `choreograph` | multi-element sequences (New Tab entrance, tab switcher, omnibox) | stagger and ordering |
+| `animation-performance` | every PR with an animation | compositor-only, no layout thrashing, within budget |
+| `find-animation-opportunities` | Phase 6 | list of places where motion is missing |
+| `improve-animations` | Phase 6 | improvement plan |
+| `review-animations` | Phase 6, before release | critique |
+| `remove-animations` | Phase 6, power-saver mode | removing what is superfluous |
+| `break-ui` | end of Phases 3, 4, 5 and 6 | report with scenarios from §14.3 |
+| `awwwards-animations` | New Tab hero, onboarding, reveal on theme change | **guidelines only**; no GSAP or its libraries (no licence); implementation via CSS, WAAPI and `linear()` springs |
 
 ---
 
-## 13. CI/CD i GitHub
+## 13. CI/CD and GitHub
 
-### 13.1 Workflowi (`.github/workflows/`)
+### 13.1 Workflows (`.github/workflows/`)
 
-| Workflow | Runner | Okidač | Radi |
+| Workflow | Runner | Trigger | Does |
 |---|---|---|---|
-| `core.yml` | ubuntu | promjene u `core/**` | fmt, clippy, test, bench smoke, WASM build |
-| `web.yml` | ubuntu | `web/**`, `shield-extension/**`, `design/tokens/**` | lint, typecheck, vitest, Playwright (3 enginea) + screenshotovi, bundle-size check |
-| `filters.yml` | ubuntu | cron dnevno + ručno | compile, test, sign, publish filter bundle |
-| `windows.yml` | windows | `desktop/**` + ovisnosti; tag `v*` | build NSIS/MSI, smoke start + screenshot; release s updater artefaktima na tagu |
-| `android.yml` | ubuntu | `android/**` + ovisnosti; tag | assemble, unit testovi, (opcija) emulator smoke + screenshotovi; potpisani APK na tagu |
-| `ios.yml` | macos | `ios/**` + ovisnosti; **tag ili ručno** | xcframework, xcodegen, simulator build + XCUITest screenshotovi; unsigned .ipa na tagu |
+| `core.yml` | ubuntu | changes in `core/**` | fmt, clippy, test, bench smoke, WASM build |
+| `web.yml` | ubuntu | `web/**`, `shield-extension/**`, `design/tokens/**` | lint, typecheck, vitest, Playwright (3 engines) + screenshots, bundle-size check |
+| `filters.yml` | ubuntu | daily cron + manual | compile, test, sign, publish filter bundle |
+| `windows.yml` | windows | `desktop/**` + dependencies; tag `v*` | build NSIS/MSI, smoke start + screenshot; release with updater artifacts on tag |
+| `android.yml` | ubuntu | `android/**` + dependencies; tag | assemble, unit tests, (optional) emulator smoke + screenshots; signed APK on tag |
+| `ios.yml` | macos | `ios/**` + dependencies; **tag or manual** | xcframework, xcodegen, simulator build + XCUITest screenshots; unsigned .ipa on tag |
 
-- Path filteri, `concurrency: cancel-in-progress`, keš (rust-cache, Gradle, pnpm, SPM).
-- **Trošak:** na privatnom repou macOS (i Windows) minute se naplaćuju višestruko skuplje od Linuxa, pa iOS build ide samo na tag ili ručno, a PR-ovi grade simulator samo kad se mijenja `ios/**`.
+- Path filters, `concurrency: cancel-in-progress`, caching (rust-cache, Gradle, pnpm, SPM).
+- **Cost:** on a private repo, macOS (and Windows) minutes are billed at a multiple of the Linux rate, so the iOS build runs only on a tag or manually, and PRs build the simulator only when `ios/**` changes.
 
 ### 13.2 Secrets
-`TAURI_SIGNING_PRIVATE_KEY` (+ `_PASSWORD`), `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `FILTERS_SIGNING_KEY`, kasnije Windows code signing. Javni ključevi za provjeru potpisa su u repou (`brand/keys/`).
+`TAURI_SIGNING_PRIVATE_KEY` (+ `_PASSWORD`), `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `FILTERS_SIGNING_KEY`, later Windows code signing. Public keys for signature verification are in the repo (`brand/keys/`).
 
-### 13.3 Vizualna verifikacija bez uređaja
-Svaki UI PR prilaže artefakte: Playwright screenshotove internih stranica (3 enginea × light/dark × 3 širine), Windows smoke screenshot, iOS simulator screenshotove i Android emulator screenshotove (gdje je job aktivan). Claude Code linka artefakte u PR opisu.
+### 13.3 Visual verification without devices
+Every UI PR attaches artifacts: Playwright screenshots of internal pages (3 engines × light/dark × 3 widths), a Windows smoke screenshot, iOS simulator screenshots and Android emulator screenshots (where the job is active). Claude Code links the artifacts in the PR description.
 
-### 13.4 Konvencije
-- Grane `phase/N-naziv`, `feat/…`, `fix/…`. Conventional Commits. Mali PR-ovi. Squash merge.
-- Verzioniranje SemVer `v0.x.y` do javnog izdanja. Jedan tag gradi sve platforme.
-- **ADR predložak:** Kontekst · Opcije · Odluka · Posljedice · Mjerenja/dokazi · Status.
+### 13.4 Conventions
+- Branches `phase/N-name`, `feat/…`, `fix/…`. Conventional Commits. Small PRs. Squash merge.
+- SemVer versioning `v0.x.y` until the public release. One tag builds all platforms.
+- **ADR template:** Context · Options · Decision · Consequences · Measurements/evidence · Status.
 
 ---
 
-## 14. Testiranje i QA
+## 14. Testing and QA
 
-### 14.1 Automatski
-- **core:** unit, property testovi (omnibox parsing), golden testovi kompajlera, benchmarki
-- **web:** vitest, Playwright, axe a11y, vizualni diff
-- **Windows:** integracijski testovi kroz WebView2 CDP u dev buildu (remote debugging port **samo u debugu**)
-- **Android:** JUnit, Compose UI testovi, Macrobenchmark
+### 14.1 Automated
+- **core:** unit, property tests (omnibox parsing), compiler golden tests, benchmarks
+- **web:** vitest, Playwright, axe a11y, visual diff
+- **Windows:** integration tests via WebView2 CDP in the dev build (remote debugging port **only in debug**)
+- **Android:** JUnit, Compose UI tests, Macrobenchmark
 - **iOS:** XCTest, XCUITest
 
-### 14.2 `qa/` fixturei (determinističko, lokalno posluženo)
-- `adblock/`: stranica s poznatim oglasnim i tracker URL-ovima (network), elementima za kozmetiku (`##.ad-banner`, generički i specifični) i scriptlet testom
-- `popup/`: `window.open` bez geste, s gestom, `target=_blank`, popunder, redirect lanac, `window.open` u `setTimeout` nakon klika
-- `perf/`: teška stranica za mjerenje
-- ručni popis stvarnih stranica: youtube.com, index.hr, 24sata.hr, jutarnji.hr, net.hr, cnn.com, forbes.com, reddit.com, twitch.tv, gmail.com
+### 14.2 `qa/` fixtures (deterministic, served locally)
+- `adblock/`: a page with known ad and tracker URLs (network), elements for cosmetics (`##.ad-banner`, generic and specific) and a scriptlet test
+- `popup/`: `window.open` without a gesture, with a gesture, `target=_blank`, popunder, redirect chain, `window.open` in `setTimeout` after a click
+- `perf/`: a heavy page for measurement
+- manual list of real sites: youtube.com, index.hr, 24sata.hr, jutarnji.hr, net.hr, cnn.com, forbes.com, reddit.com, twitch.tv, gmail.com
 
-### 14.3 `break-ui` scenariji (obavezni)
-- 500 tabova; naslov od 300 znakova; RTL i emoji naslovi; nedostaje favicon
-- URL od 4.000 znakova; IDN homograf (npr. ćirilični "а" u `аpple.com`)
-- spora mreža i offline; preuzimanje od 5 GB
-- 0 i 100 speed-dial tileova
-- skaliranje 200 % (Windows), mobilni tekst na 200 %, prozor širine 500 px
-- Windows High Contrast; Dark ↔ Light usred animacije
-- vrlo dugi popisi povijesti (100k zapisa)
+### 14.3 `break-ui` scenarios (mandatory)
+- 500 tabs; a 300-character title; RTL and emoji titles; missing favicon
+- a 4,000-character URL; IDN homograph (e.g. Cyrillic "а" in `аpple.com`)
+- slow network and offline; a 5 GB download
+- 0 and 100 speed-dial tiles
+- 200 % scaling (Windows), mobile text at 200 %, a 500 px wide window
+- Windows High Contrast; Dark ↔ Light in the middle of an animation
+- very long history lists (100k entries)
 
 ---
 
-## 15. Rizici
+## 15. Risks
 
-| Rizik | Vjerojatnost | Utjecaj | Mitigacija |
+| Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Google blokira prijavu u WebView2 | srednja | kritičan | G1 u Fazi 0; Edge-identičan UA; fallback §2.3 |
-| DNR u WebView2 ekstenziji ograničen ili nestabilan | srednja | visok | S2 mjeri opcije A/B/C; odluka u ADR |
-| Tauri multiwebview (feature `unstable`) se mijenja | srednja | srednji | pin verzije, escape hatch na sirovi WebView2 COM, testovi u S5 |
-| GeckoView API promjene između verzija | srednja | srednji | Renovate + CI smoke, `EngineSession` apstrakcija |
-| YouTube i anti-adblock skripte | visoka | srednji | dnevni bundle, scriptleti, brzi hotfix kanal |
-| iOS sideload ograničenja | sigurno | nizak/srednji | dokumentirano (§9.3), bez ovisnosti o entitlementima |
-| Opseg (3 platforme, 1 developer) | visoka | visok | stroge faze, AC, MVP prije polisha, paralelizacija Faza 4 i 5 |
-| Licence (liste, scriptleti, font) | srednja | srednji | §16, `NOTICE.md`, odluka o open-sourceu |
+| Google blocks sign-in in WebView2 | medium | critical | G1 in Phase 0; Edge-identical UA; fallback §2.3 |
+| DNR in the WebView2 extension is limited or unstable | medium | high | S2 measures options A/B/C; decision in an ADR |
+| Tauri multiwebview (feature `unstable`) changes | medium | medium | version pinning, escape hatch to raw WebView2 COM, tests in S5 |
+| GeckoView API changes between versions | medium | medium | Renovate + CI smoke, `EngineSession` abstraction |
+| YouTube and anti-adblock scripts | high | medium | daily bundle, scriptlets, fast hotfix channel |
+| iOS sideloading limitations | certain | low/medium | documented (§9.3), no dependency on entitlements |
+| Scope (3 platforms, 1 developer) | high | high | strict phases, AC, MVP before polish, parallelising Phases 4 and 5 |
+| Licences (lists, scriptlets, font) | medium | medium | §16, `NOTICE.md`, open-source decision |
 
 ---
 
-## 16. Licence i pravno
+## 16. Licences and legal
 
-- **adblock-rust:** MPL-2.0 (copyleft na razini datoteke; izmjene u MPL datotekama se objavljuju). **GeckoView:** MPL-2.0.
-- **Filter liste:** EasyList i EasyPrivacy su dvojno licencirane (GPLv3 / CC BY-SA). uBlock filteri i **scriptlet resursi su GPLv3**. Ako aplikacija ostane zatvorenog koda, liste i resursi se distribuiraju kao **zaseban podatkovni bundle** s atribucijom i linkom na izvor. Prije javnog izdanja potreban je pravni pregled `[VLASNIK]`.
-- **Font Aeonik** (CoType Foundry) je komercijalan; za ugradnju u aplikaciju treba app licenca. Do tada se koristi OFL zamjena (DESIGN.md §3).
-- **Ikone:** Lucide (ISC) ili vlastite.
-- **Referentne slike** u `design/references/` su inspiracija. **Ne kopiraj** crveni logo ni točan layout tuđeg Dribbble/Behance rada, i ne koristi njihove assete.
-- **Ikona:** dva preklopljena narančasto-crvena kruga su vizualno vrlo blizu poznatom zaštitnom znaku kartične kuće. Zadrži osjećaj (meki conic gradijent, bijela squircle pločica), a oblik napravi originalnim (Faza 0, korak 0.3).
-- Prije javnog izdanja provjeri zaštitni znak za naziv "SCYDE Browser".
+- **adblock-rust:** MPL-2.0 (file-level copyleft; changes to MPL files are published). **GeckoView:** MPL-2.0.
+- **Filter lists:** EasyList and EasyPrivacy are dual-licensed (GPLv3 / CC BY-SA). uBlock filters and **scriptlet resources are GPLv3**. If the app remains closed source, the lists and resources are distributed as a **separate data bundle** with attribution and a link to the source. A legal review is required before the public release `[OWNER]`.
+- **Aeonik font** (CoType Foundry) is commercial; embedding it in the app requires an app licence. Until then, an OFL substitute is used (DESIGN.md §3).
+- **Icons:** Lucide (ISC) or our own.
+- **Reference images** in `design/references/` are inspiration. **Do not copy** the red logo or the exact layout of someone else's Dribbble/Behance work, and do not use their assets.
+- **Icon:** two overlapping orange-red circles are visually very close to a well-known card company's trademark. Keep the feel (soft conic gradient, white squircle tile), but make the shape original (Phase 0, step 0.3).
+- Before the public release, check the trademark for the name "SCYDE Browser".
 
 ---
 
-## 17. Otvorena pitanja za vlasnika (`[VLASNIK]`)
+## 17. Open questions for the owner (`[OWNER]`)
 
-Zadane vrijednosti vrijede dok vlasnik ne odluči.
+Default values apply until the owner decides.
 
-1. **Naziv i label na home screenu.** Default: "SCYDE Browser". Pazi na sukob s postojećom aplikacijom čiji je label "SCYDE".
-2. **Zadana tražilica.** Default: DuckDuckGo. Alternative: Brave Search, Startpage, Google, Bing, Ecosia.
-3. **Open source ili zatvoreni kod?** Utječe na §16.
-4. **Aeonik licenca ili OFL zamjena?**
-5. **Windows code signing** (budžet, SmartScreen).
-6. **SCYDE Sync** self-hosted na vlastitoj infrastrukturi: da/ne.
-7. **Izvori za Top Stories** (HR + svjetski), opt-in.
-8. **Distribucija za Android:** samo GitHub Releases ili i Play/F-Droid.
+1. **Name and home screen label.** Default: "SCYDE Browser". Watch out for a clash with an existing app whose label is "SCYDE".
+2. **Default search engine.** Default: DuckDuckGo. Alternatives: Brave Search, Startpage, Google, Bing, Ecosia.
+3. **Open source or closed source?** Affects §16.
+4. **Aeonik licence or OFL substitute?**
+5. **Windows code signing** (budget, SmartScreen).
+6. **SCYDE Sync** self-hosted on own infrastructure: yes/no.
+7. **Sources for Top Stories** (HR + international), opt-in.
+8. **Distribution for Android:** GitHub Releases only, or also Play/F-Droid.

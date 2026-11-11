@@ -1,0 +1,23 @@
+{
+  "$comment": "Single source for the product identity. A rebrand is an edit here plus design/tokens.",
+  "name": "SCYDE Browser",
+  "shortName": "SCYDE",
+  "homeScreenLabel": "SCYDE Browser",
+  "codename": "scyde-browser",
+  "appId": "dev.scyde.browser",
+  "scheme": "scyde",
+  "publisher": "SCYDE",
+  "website": "https://github.com/scyde-browser/scyde",
+  "colors": {
+    "brand": "#F2603F",
+    "iconTileLight": "#F2603F",
+    "iconTileDark": "#0A0A0A",
+    "brandInk": "#0A0A0A"
+  },
+  "icon": {
+    "concept": "owner-s",
+    "master": "brand/icon/scyde.svg",
+    "chosen": "2026-11-11",
+    "note": "Owner's mark (shape rebuilt from the owner's construction drawing) in Ember (#F2603F + ink #0A0A0A), letter only, no plate or background (owner, 2026-11-11). Replaces Aura S."
+  }
+}

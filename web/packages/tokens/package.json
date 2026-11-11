@@ -1,0 +1,22 @@
+{
+  "name": "@scyde/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Aura design tokens: design/tokens (DTCG) -> CSS custom properties, Kotlin and Swift",
+  "exports": {
+    "./tokens.css": "./dist/css/tokens.css",
+    "./tokens.json": "./dist/json/tokens.json"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node --test"
+  },
+  "dependencies": {
+    "@scyde/springs": "workspace:*"
+  },
+  "devDependencies": {
+    "style-dictionary": "5.8.0"
+  }
+}

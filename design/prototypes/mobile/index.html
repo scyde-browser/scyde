@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-accent="ember" data-density="comfortable" data-motion="full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: file:; connect-src 'none'">
+  <title>SCYDE · Island · mobile (prototype)</title>
+  <link rel="stylesheet" href="../../../web/packages/tokens/dist/css/tokens.css">
+  <link rel="stylesheet" href="../_shared/base.css">
+  <script src="../_shared/strings.js"></script>
+  <script src="../_shared/proto.js"></script>
+  <style>
+    html, body { height: 100%; }
+    body { overflow: hidden; -webkit-tap-highlight-color: transparent; }
+    .icon { width: var(--size-icon-mobile); height: var(--size-icon-mobile); }
+    .screen { position: relative; height: 100dvh; padding-top: max(env(safe-area-inset-top), var(--space-48)); }
+
+    /* New Tab */
+    .nt { height: 100%; display: flex; flex-direction: column; justify-content: center; gap: var(--space-24); padding: 0 var(--space-24) calc(var(--size-island-mobile-height) + var(--space-48)); }
+    .shield-line { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-12); align-items: center; margin: 0; font-family: var(--font-family-mono); font-size: var(--type-caption-size); line-height: var(--type-data-line-height); color: var(--text-secondary); }
+    .shield-line b { color: var(--text-primary); font-weight: var(--font-weight-medium); font-variant-numeric: tabular-nums; }
+    .lamp { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-full); background: var(--status-shield); box-shadow: 0 0 0 var(--space-4) color-mix(in oklab, var(--status-shield) 18%, transparent); }
+    .ask { margin: 0; font-family: var(--font-family-brand); font-size: calc(var(--type-hero-size) * 0.52); line-height: calc(var(--type-hero-line-height) * 0.54); letter-spacing: var(--type-hero-tracking); font-weight: var(--font-weight-display); font-variation-settings: "opsz" 72; }
+    .recent h2 { margin: 0 0 var(--space-8); font-family: var(--font-family-mono); font-size: var(--type-caption-size); font-weight: var(--font-weight-regular); color: var(--text-tertiary); }
+    .recent ol { list-style: none; margin: 0; padding: 0; }
+    .recent a { display: grid; grid-template-columns: var(--space-32) 1fr auto; align-items: center; gap: var(--space-4); min-height: var(--size-hit-android); border-top: 1px solid var(--border-hairline); color: var(--text-primary); text-decoration: none; font-size: calc(var(--type-body-lg-size) + 1px); }
+    .recent li:last-child a { border-bottom: 1px solid var(--border-hairline); }
+    .recent time { font-family: var(--font-family-mono); font-size: var(--type-caption-size); color: var(--text-tertiary); }
+    .fav { display: inline-grid; place-items: center; width: var(--space-24); height: var(--space-24); border-radius: var(--radius-xs); background: var(--fill, var(--accent-fill)); color: var(--accent-on-fill); font-size: var(--type-micro-size); font-weight: var(--font-weight-medium); }
+
+    /* page stand-in */
+    .web { position: absolute; inset: 0; padding: max(env(safe-area-inset-top), var(--space-48)) var(--space-16) 0; background: var(--surface-raised); }
+    .ph { background: var(--surface-sunken); border-radius: var(--radius-xs); height: var(--space-12); margin-bottom: var(--space-12); }
+    .ph.h { height: var(--space-24); width: 75%; margin: var(--space-16) 0 var(--space-20); }
+    .ph.img { height: calc(var(--space-80) * 2.6); border-radius: var(--radius-md); margin: var(--space-20) 0; }
+
+    /* the island (thumb zone) */
+    .island { position: absolute; left: var(--size-island-mobile-inset); right: var(--size-island-mobile-inset); bottom: max(env(safe-area-inset-bottom), var(--size-island-mobile-inset)); z-index: 20; height: var(--size-island-mobile-height); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-6); border-radius: var(--radius-island); background: var(--island-bg); color: var(--island-text); box-shadow: var(--elev-island), inset 0 0 0 1px var(--island-border); }
+    .ib { flex: none; width: var(--size-hit-android); height: var(--size-hit-android); display: grid; place-items: center; border: 0; border-radius: var(--radius-full); background: transparent; color: var(--island-text-secondary); }
+    .ib .brand-mark { width: var(--space-24); height: var(--space-24); }
+    .ib:active { transform: scale(var(--motion-press-scale)); }
+    .addr { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: var(--space-6); font-size: var(--type-address-size); letter-spacing: var(--type-address-tracking); white-space: nowrap; overflow: hidden; }
+    .addr .ghost { color: var(--island-text-secondary); }
+    .addr .icon { width: var(--space-16); height: var(--space-16); color: var(--island-text-secondary); }
+    .pebble { flex: none; display: flex; align-items: center; gap: var(--space-6); height: var(--space-40); padding: 0 var(--space-12); border: 0; border-radius: var(--radius-full); background: var(--island-raised); color: var(--island-text); font-family: var(--font-family-mono); font-size: var(--type-data-size); }
+    .pebble .lamp { background: var(--island-shield); box-shadow: none; }
+    .pebble[aria-expanded="true"] { box-shadow: inset 0 0 0 var(--size-focus-ring) var(--accent-island); }
+    .count { flex: none; display: grid; place-items: center; width: var(--size-hit-android); height: var(--size-hit-android); border: 0; background: transparent; color: var(--island-text); }
+    .count span { display: grid; place-items: center; width: calc(var(--space-24) + var(--space-2)); height: calc(var(--space-24) + var(--space-2)); border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1.5px currentColor; font-family: var(--font-family-mono); font-size: var(--type-caption-size); }
+
+    /* sheets grow out of the island */
+    @keyframes up { from { opacity: 0; transform: translateY(calc(var(--space-24) * var(--motion-distance-scale))); } to { opacity: 1; transform: none; } }
+    .scrim { position: absolute; inset: 0; z-index: 15; background: var(--scrim); }
+    .sheet { position: absolute; left: var(--size-island-mobile-inset); right: var(--size-island-mobile-inset); bottom: calc(max(env(safe-area-inset-bottom), var(--size-island-mobile-inset)) + var(--size-island-mobile-height) + var(--space-8)); z-index: 18; border-radius: var(--radius-xl); background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--elev-3); animation: up var(--motion-spring-smooth-duration) var(--motion-spring-smooth) both; }
+    [data-motion="reduced"] .sheet { animation: fade var(--motion-duration-reduced) linear both; }
+    .sheet header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-16) var(--space-20) var(--space-8); font-family: var(--font-family-mono); font-size: var(--type-caption-size); color: var(--text-tertiary); }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12); list-style: none; margin: 0; padding: 0 var(--space-12) var(--space-16); }
+    .card { position: relative; border-radius: var(--radius-lg); background: var(--surface-sunken); overflow: hidden; animation: rise var(--motion-duration-base) var(--motion-ease-out) both; animation-delay: calc(var(--i) * var(--motion-stagger-min)); }
+    .card.on { box-shadow: 0 0 0 var(--size-focus-ring) var(--accent-ring); }
+    .card .snap { aspect-ratio: 1 / 1.1; margin: var(--space-6); border-radius: var(--radius-md); background: var(--surface-raised); padding: var(--space-8); }
+    .card .snap i { display: block; height: var(--space-6); border-radius: var(--space-2); background: var(--surface-sunken); margin-bottom: var(--space-6); }
+    .card .snap i.img { height: 40%; }
+    .card .t { display: flex; align-items: center; gap: var(--space-6); padding: 0 var(--space-12) var(--space-8); font-size: var(--type-label-size); white-space: nowrap; overflow: hidden; mask-image: linear-gradient(90deg, black 75%, transparent); }
+    .card .t .fav { flex: none; width: var(--space-16); height: var(--space-16); }
+    .card .x { position: absolute; top: 0; right: 0; width: var(--size-hit-ios); height: var(--size-hit-ios); display: grid; place-items: center; border: 0; background: transparent; color: var(--text-secondary); }
+    .card .x .icon { width: var(--space-16); height: var(--space-16); }
+    .card.sleep .snap { opacity: var(--motion-sleep-opacity); }
+
+    .shield { padding: var(--space-8) var(--space-20) var(--space-20); display: grid; gap: var(--space-16); }
+    .shield .grabber { width: var(--space-40); height: var(--space-4); border-radius: var(--radius-full); background: var(--border-strong); justify-self: center; margin-top: var(--space-4); }
+    .shield h2 { margin: 0; display: flex; justify-content: space-between; align-items: center; gap: var(--space-12); font-size: var(--type-title-size); line-height: var(--type-title-line-height); font-weight: var(--font-weight-medium); }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border-hairline); border-bottom: 1px solid var(--border-hairline); }
+    .stat { padding: var(--space-12) 0; } .stat + .stat { padding-left: var(--space-16); border-left: 1px solid var(--border-hairline); }
+    .stat b { display: block; font-size: var(--type-headline-size); line-height: var(--type-headline-line-height); font-weight: var(--font-weight-medium); font-variant-numeric: tabular-nums; }
+    .stat span { display: block; min-height: calc(var(--type-caption-line-height) * 2); font-family: var(--font-family-mono); font-size: var(--type-caption-size); line-height: var(--type-caption-line-height); color: var(--text-secondary); }
+    .field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); min-height: var(--size-hit-android); font-size: var(--type-body-lg-size); }
+    .toggle { position: relative; flex: none; width: var(--size-toggle-width); height: var(--size-toggle-height); border: 0; border-radius: var(--radius-full); background: var(--border-strong); padding: 0; }
+    .toggle::after { content: ""; position: absolute; top: calc((var(--size-toggle-height) - var(--size-toggle-knob)) / 2); left: calc((var(--size-toggle-height) - var(--size-toggle-knob)) / 2); width: var(--size-toggle-knob); height: var(--size-toggle-knob); border-radius: var(--radius-full); background: var(--surface-raised); box-shadow: var(--elev-1); }
+    .toggle[aria-checked="true"] { background: var(--status-shield); }
+    .toggle[aria-checked="true"]::after { transform: translateX(calc(var(--size-toggle-width) - var(--size-toggle-height))); }
+  </style>
+</head>
+<body>
+  <div class="screen" id="screen"></div>
+  <script>
+    const S = new URLSearchParams(location.search).get('state') || 'newtab';
+    const fills = ['sky', 'periwinkle', 'lavender', 'mint', 'ember'];
+    const fav = (m, c) => `<span class="fav" style="--fill:var(--aura-${fills[c]}-fill)" aria-hidden="true">${m}</span>`;
+    const island = (addr, shield = false) => `<nav class="island" aria-label="${t('island.label')}">
+      <button class="ib" type="button" aria-label="${t('island.menu')}"><span class="brand-mark"></span></button>
+      <div class="addr" role="button" tabindex="0">${addr}</div>
+      <button class="pebble" type="button" aria-expanded="${shield}" aria-label="${t('island.shield', { n: 23 })}"><span class="lamp"></span>23</button>
+      <button class="count" type="button" aria-label="${t('mobile.tabs.count', { n: 7 })}"><span>7</span></button></nav>`;
+    const web = `<div class="web" aria-hidden="true"><div class="ph h"></div><div class="ph"></div><div class="ph" style="width:90%"></div><div class="ph img"></div><div class="ph"></div><div class="ph" style="width:75%"></div><div class="ph"></div><div class="ph" style="width:60%"></div></div>`;
+    const domain = `<span class="icon" data-icon="lock"></span><span>index.hr</span>`;
+    let html = '';
+    if (S === 'newtab') {
+      const recent = [['index.hr', 'I', 0, t('time.min', { n: 2 })], ['github.com/scyde-browser', 'G', 3, t('time.min', { n: 18 })], ['youtube.com', 'Y', 1, t('time.h', { n: 1 })], ['hr.wikipedia.org', 'W', 0, t('time.h', { n: 3 })], ['jutarnji.hr', 'J', 4, t('time.yesterday')]];
+      html = `<main class="nt">
+        <p class="shield-line rise" style="--i:0"><span class="lamp"></span><span>${t('newtab.shield_today')}</span><span><b>${fmtNum(1284)}</b> ${t('newtab.shield.blocked')}</span><span><b>42 MB</b> ${t('newtab.shield.saved')}</span></p>
+        <h1 class="ask rise" style="--i:1">${t('newtab.ask.1')}<br>${t('newtab.ask.2')}<span class="caret"></span></h1>
+        <section class="recent"><h2>${t('newtab.recent')}</h2><ol>${recent.map(([h, m, c, tm], i) => `<li class="rise" style="--i:${i + 2}"><a href="#">${fav(m, c)}<span>${h}</span><time>${tm}</time></a></li>`).join('')}</ol></section>
+      </main>` + island(`<span class="ghost">${t('island.new_tab')}</span>`);
+    } else if (S === 'tabs') {
+      const tabs = [['Index.hr – Latest news', 'I', 0, 'on'], ['Jutarnji list', 'J', 4], ['GitHub – scyde-browser', 'G', 3], ['YouTube', 'Y', 1, 'sleep'], ['Recipe: sourdough bread', 'K', 2], ['hr.wikipedia.org', 'W', 0]];
+      html = web + `<div class="scrim"></div><section class="sheet" aria-label="${t('tabs.shelf')}"><header><span>${t('mobile.tabs.count', { n: 7 })}</span><span>${t('mobile.tabs.close_all')}</span></header>
+        <ul class="grid">${tabs.map(([tt, m, c, cls], i) => `<li class="card ${cls || ''}" style="--i:${i}"><div class="snap"><i style="width:70%"></i><i></i><i class="img"></i><i style="width:60%"></i></div><div class="t">${fav(m, c)}${tt}</div><button class="x" type="button" aria-label="${t('tab.close')}"><span class="icon" data-icon="x"></span></button></li>`).join('')}</ul></section>` + island(domain);
+    } else if (S === 'shield') {
+      html = web + `<div class="scrim"></div><section class="sheet shield" role="dialog" aria-label="${t('shield.panel.title', { site: 'index.hr' })}"><span class="grabber"></span>
+        <h2>${t('shield.panel.title', { site: 'index.hr' })}<button class="toggle" role="switch" aria-checked="true" aria-label="${t('shield.on_for_site')}"></button></h2>
+        <div class="stats"><div class="stat"><b>23</b><span>${t('shield.panel.blocked')}</span></div><div class="stat"><b>1,8 MB</b><span>${t('shield.panel.saved')}</span></div></div>
+        <div class="field"><span>${t('shield.panel.zen')}</span><button class="toggle" role="switch" aria-checked="false" aria-label="${t('shield.panel.zen')}"></button></div></section>` + island(domain, true);
+    } else {
+      html = web + island(domain);
+    }
+    document.getElementById('screen').innerHTML = html;
+  </script>
+</body>
+</html>
