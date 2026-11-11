@@ -1,0 +1,66 @@
+/* Shared prototype base. Tokens only (DESIGN §12); literals allowed: 0, 1px hairlines, percentages. */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  -webkit-font-smoothing: antialiased;
+  font-weight: var(--font-weight-regular);
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible {
+  outline: var(--size-focus-ring) solid var(--accent-ring);
+  outline-offset: var(--size-focus-offset);
+}
+.icon { display: inline-flex; width: var(--size-icon-desktop); height: var(--size-icon-desktop); flex: none; }
+.icon svg { width: 100%; height: 100%; }
+.num { font-variant-numeric: tabular-nums; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.brand-mark {
+  display: inline-block;
+  background: var(--gradient-ember);
+  -webkit-mask: var(--brand-mark-mask) center / contain no-repeat;
+  mask: var(--brand-mark-mask) center / contain no-repeat;
+}
+
+/* Prototype-only switcher, hidden with ?clean */
+.proto-switcher {
+  position: fixed;
+  right: var(--space-12);
+  bottom: var(--space-12);
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  max-width: calc(100% - var(--space-24));
+  padding: var(--space-8) var(--space-12);
+  background: var(--surface-raised);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-2);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--text-secondary);
+}
+.proto-switcher select {
+  background: var(--surface-sunken);
+  border: 0;
+  border-radius: var(--radius-xs);
+  padding: var(--space-2) var(--space-4);
+}
+
+/* Named effects (DESIGN §6.3) */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(calc(var(--motion-rise-distance) * var(--motion-distance-scale))); }
+  to { opacity: 1; transform: none; }
+}
+.rise { animation: rise var(--motion-duration-base) var(--motion-ease-out) both; animation-delay: calc(var(--i, 0) * var(--motion-stagger-min)); }
+[data-motion="reduced"] .rise { animation-name: fade; animation-delay: 0ms; }
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion="full"]) .rise { animation-name: fade; animation-delay: 0ms; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }

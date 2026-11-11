@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="hr" data-accent="sky" data-density="comfortable" data-motion="full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: file:; connect-src 'none'">
+  <title>SCYDE · mobile (prototip)</title>
+  <link rel="stylesheet" href="../../../web/packages/tokens/dist/css/tokens.css">
+  <link rel="stylesheet" href="../_shared/base.css">
+  <script src="../_shared/strings.js"></script>
+  <script src="../_shared/proto.js"></script>
+  <style>
+    html, body { height: 100%; }
+    body { overflow: hidden; font-size: var(--type-body-lg-size); line-height: var(--type-body-lg-line-height); -webkit-tap-highlight-color: transparent; }
+    .icon { width: var(--size-icon-mobile); height: var(--size-icon-mobile); }
+    .screen { position: relative; height: 100dvh; display: flex; flex-direction: column; background: var(--surface-canvas); }
+    .safe-top { height: max(env(safe-area-inset-top), var(--space-48)); background: var(--surface-raised); }
+
+    /* ---------- browse ---------- */
+    .web { flex: 1; overflow: hidden; background: var(--surface-raised); padding: var(--space-16); }
+    .ph { background: var(--surface-sunken); border-radius: var(--radius-xs); height: var(--space-12); margin-bottom: var(--space-12); }
+    .ph.h { height: var(--space-24); width: 70%; margin-bottom: var(--space-20); }
+    .ph.img { height: calc(var(--space-80) * 2.5); border-radius: var(--radius-media); margin: var(--space-20) 0; }
+
+    .bar {
+      display: grid; gap: var(--space-8);
+      padding: var(--space-8) var(--space-12) max(env(safe-area-inset-bottom), var(--space-20));
+      background: var(--surface-chrome);
+      box-shadow: inset 0 1px 0 var(--border-hairline);
+    }
+    .omni {
+      display: flex; align-items: center; gap: var(--space-8);
+      height: var(--size-mobile-omnibox);
+      padding: 0 var(--space-6) 0 var(--space-16);
+      border-radius: var(--radius-full);
+      background: var(--surface-sunken);
+      color: var(--text-secondary);
+    }
+    .omni .icon { width: var(--space-16); height: var(--space-16); }
+    .omni .host { flex: 1; text-align: center; color: var(--text-primary); }
+    .omni .shield { display: inline-flex; align-items: center; gap: var(--space-4); height: var(--space-32); padding: 0 var(--space-12); border: 0; border-radius: var(--radius-full); background: var(--surface-raised); color: var(--status-shield); font-size: var(--type-caption-size); }
+    .omni .shield .num { color: var(--text-secondary); }
+    .actions { display: grid; grid-template-columns: repeat(5, 1fr); }
+    .act { display: grid; place-items: center; height: var(--size-hit-android); border: 0; background: transparent; color: var(--text-primary); border-radius: var(--radius-full); transition: transform var(--motion-duration-instant) var(--motion-ease-out); }
+    .act:active { transform: scale(var(--motion-press-scale)); }
+    .act[disabled] { color: var(--text-tertiary); }
+    .tabcount { display: grid; place-items: center; width: var(--size-icon-mobile); height: var(--size-icon-mobile); border-radius: var(--radius-xs); box-shadow: inset 0 0 0 1.5px currentColor; font-size: var(--type-micro-size); font-weight: var(--font-weight-medium); }
+
+    /* ---------- tab switcher ---------- */
+    .switcher { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .sw-head { display: flex; align-items: center; justify-content: center; padding: var(--space-12) var(--space-16); }
+    .seg { display: inline-grid; grid-auto-flow: column; padding: var(--space-2); border-radius: var(--radius-full); background: var(--surface-sunken); }
+    .seg button { display: inline-flex; align-items: center; gap: var(--space-6); height: var(--space-32); padding: 0 var(--space-16); border: 0; border-radius: var(--radius-full); background: transparent; color: var(--text-secondary); font-size: var(--type-body-size); }
+    .seg button .icon { width: var(--space-16); height: var(--space-16); }
+    .seg button[aria-pressed="true"] { background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--elev-1); }
+    .grid { flex: 1; overflow: hidden; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: var(--space-12); padding: var(--space-4) var(--space-16) var(--space-16); list-style: none; margin: 0; }
+    .card { position: relative; display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--elev-1), inset 0 0 0 1px var(--border-hairline); overflow: hidden; }
+    .card.active { box-shadow: 0 0 0 var(--size-focus-ring) var(--accent-ring); }
+    .card header { display: flex; align-items: center; gap: var(--space-8); height: var(--space-40); padding: 0 var(--space-4) 0 var(--space-12); font-size: var(--type-caption-size); line-height: var(--type-caption-line-height); }
+    .card .fav { flex: none; display: grid; place-items: center; width: var(--space-16); height: var(--space-16); border-radius: var(--radius-xs); background: var(--fav); color: var(--accent-on-fill); font-size: var(--type-micro-size); }
+    .card .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(90deg, black 75%, transparent); }
+    .card .x { display: grid; place-items: center; width: var(--size-hit-ios); height: var(--size-hit-ios); margin: calc(var(--space-2) * -1) 0; border: 0; background: transparent; color: var(--text-secondary); }
+    .card .x .icon { width: var(--space-16); height: var(--space-16); }
+    .snap { aspect-ratio: 1 / var(--size-mobile-tab-card-ratio); background: var(--surface-canvas); padding: var(--space-12); }
+    .snap .ph { height: var(--space6, var(--space-6)); margin-bottom: var(--space-6); }
+    .snap .ph.h { height: var(--space-12); }
+    .snap .ph.img { height: 45%; margin: var(--space-8) 0; border-radius: var(--radius-sm); }
+    .card.sleeping .snap { opacity: var(--motion-sleep-opacity); }
+
+    .sw-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: var(--space-8) var(--space-16) max(env(safe-area-inset-bottom), var(--space-20)); background: var(--surface-chrome); box-shadow: inset 0 1px 0 var(--border-hairline); }
+    .text-btn { justify-self: start; height: var(--size-hit-android); padding: 0 var(--space-4); border: 0; background: transparent; color: var(--text-secondary); font-size: var(--type-body-size); }
+    .text-btn.end { justify-self: end; color: var(--accent-ink); font-weight: var(--font-weight-medium); }
+    .fab { display: grid; place-items: center; width: var(--size-newtab-tile-icon); height: var(--size-newtab-tile-icon); border: 0; border-radius: var(--radius-full); background: var(--gradient-ember); color: var(--cta-text); box-shadow: var(--elev-2); transition: transform var(--motion-duration-instant) var(--motion-ease-out); }
+    .fab:active { transform: scale(var(--motion-press-scale)); }
+    .fab .icon { filter: drop-shadow(0 0 var(--space-2) var(--ember-800)); }
+  </style>
+</head>
+<body>
+  <div class="screen" id="screen"></div>
+  <template id="browse">
+    <div class="safe-top"></div>
+    <div class="web" aria-hidden="true"><div class="ph h"></div><div class="ph"></div><div class="ph" style="width:90%"></div><div class="ph img"></div><div class="ph"></div><div class="ph" style="width:75%"></div><div class="ph"></div><div class="ph" style="width:60%"></div></div>
+    <div class="bar">
+      <div class="omni">
+        <span class="icon" data-icon="lock"></span>
+        <span class="host">index.hr</span>
+        <button class="shield" type="button" data-i18n-attr="aria-label:shield.label"><span class="icon" data-icon="shield-check"></span><span class="num">23</span></button>
+      </div>
+      <nav class="actions">
+        <button class="act" type="button" data-i18n-attr="aria-label:nav.back"><span class="icon" data-icon="back"></span></button>
+        <button class="act" type="button" disabled data-i18n-attr="aria-label:nav.forward"><span class="icon" data-icon="forward"></span></button>
+        <button class="act" type="button" data-i18n-attr="aria-label:mobile.share"><span class="icon" data-icon="share"></span></button>
+        <button class="act" type="button" data-i18n-attr="aria-label:mobile.tabs"><span class="tabcount num">6</span></button>
+        <button class="act" type="button" data-i18n-attr="aria-label:mobile.menu"><span class="icon" data-icon="more"></span></button>
+      </nav>
+    </div>
+  </template>
+  <template id="tabs">
+    <div class="safe-top" style="background:var(--surface-canvas)"></div>
+    <div class="switcher">
+      <div class="sw-head">
+        <div class="seg"><button aria-pressed="true"><span class="icon" data-icon="tabs"></span><span id="count"></span></button><button aria-pressed="false"><span class="icon" data-icon="eye-off"></span><span data-i18n="mobile.tabs.private"></span></button></div>
+      </div>
+      <ul class="grid" id="grid"></ul>
+    </div>
+    <div class="sw-bar">
+      <button class="text-btn" type="button" data-i18n="mobile.tabs.close_all"></button>
+      <button class="fab" type="button" data-i18n-attr="aria-label:tab.new"><span class="icon" data-icon="plus"></span></button>
+      <button class="text-btn end" type="button" data-i18n="mobile.tabs.done"></button>
+    </div>
+  </template>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const state = new URLSearchParams(location.search).get('state') || 'browse';
+      const screen = document.getElementById('screen');
+      screen.appendChild(document.getElementById(state).content.cloneNode(true));
+      if (state === 'tabs') {
+        document.getElementById('count').textContent = t('mobile.tabs.count', { n: 6 });
+        const fill = (n) => `var(--aura-${['sky', 'periwinkle', 'lavender', 'mint', 'ember'][n]}-fill)`;
+        const tabs = [
+          ['index.hr', 'I', 0, 'active'], ['jutarnji.hr – Vijesti', 'J', 4], ['GitHub – scyde-browser', 'G', 3],
+          ['YouTube', 'Y', 1, 'sleeping'], ['Recept: domaći kruh od kiselog tijesta', 'K', 2], ['hr.wikipedia.org', 'W', 0],
+        ];
+        document.getElementById('grid').innerHTML = tabs.map(([title, m, c, cls]) => `
+          <li class="card ${cls || ''}">
+            <header><span class="fav" style="--fav:${fill(c)}">${m}</span><span class="title">${title}</span>
+              <button class="x" type="button" aria-label="${t('tab.close')}"><span class="icon" data-icon="x"></span></button></header>
+            <div class="snap" aria-hidden="true"><div class="ph h" style="width:70%"></div><div class="ph"></div><div class="ph" style="width:80%"></div><div class="ph img"></div><div class="ph"></div></div>
+          </li>`).join('');
+      }
+      applyProto();
+    });
+  </script>
+</body>
+</html>

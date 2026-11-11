@@ -33,10 +33,10 @@
 - [x] Ikona odabrana: **Aura S** (`brand/icon/scyde.svg`, `brand.json → icon`). Vlasnik je nakon dva kruga (6 koncepata) prepustio izbor; znak je doveden do kraja kroz `taste-skill` + `impeccable` critique (vidi dolje).
 
 ### 0.4 Prototipovi
-- [ ] New Tab light/dark
-- [ ] Desktop chrome: tabovi, omnibox focus s prijedlozima, Shield panel
-- [ ] Mobilni donji toolbar + tab switcher
-- [ ] Critique svakog prototipa i popravci
+- [x] New Tab light/dark (`design/prototypes/newtab/`)
+- [x] Desktop chrome: tabovi, omnibox focus s prijedlozima, Shield panel (`design/prototypes/desktop-chrome/`)
+- [x] Mobilni donji toolbar + tab switcher (`design/prototypes/mobile/`)
+- [x] `taste-skill` + `impeccable` critique svakog prototipa; svi P1/P2 popravljeni (vidi `notes.md` u svakoj mapi)
 - [ ] `[VLASNIK]` odobrava prototipove
 
 ### 0.5 Spikeovi
