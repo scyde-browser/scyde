@@ -88,11 +88,14 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - **AC:** ✅ 10 tests; every hue × 4 lightness × 4 chroma (576 seeds) derives a valid accent; Ember's pastel is kept unchanged
 
 ### 1.9 `core/ffi`
-- [ ] UniFFI → Swift and Kotlin
-- [ ] CI: `.so` per ABI (cargo-ndk), `ScydeCore.xcframework` (macOS, tag/manual)
+- [x] UniFFI 0.32 (proc macros) → `libscyde_core`: `ShieldEngine`, `verify_filter_bundle`, omnibox (`omnibox_classify`, `omnibox_display_url`, `omnibox_elide_host`, `omnibox_search_url`), `PlacesStore`, `SettingsStore`, `theme_derive_accent`, `theme_contrast_ratio`, `core_version`; errors as `CoreError`; stores are `Send + Sync`
+- [x] CI `android` → `core-ndk`: `ffi/build-android.sh` → `.so` for arm64-v8a, armeabi-v7a and x86_64 + Kotlin bindings (artifact `scyde-core-android`). The Kotlin bindings are compiled for real with the Android project in Phase 5.
+- [x] CI `ios` → `core-apple` (tag/manual/`ios/**`/`core/ffi/**`): `ffi/build-apple.sh` → `ScydeCore.xcframework` + Swift package, and an XCTest that calls the core from Swift on the simulator (artifact `scyde-core-apple`)
+- Note: bindings are generated from an unstripped host build, because the release profile strips the UniFFI metadata symbols. The shipped libraries stay stripped.
 
 ### 1.10 Measurement
-- [ ] `perf.json` artifact from benchmarks; a regression > 10 % fails the job (PLAN §8.2)
+- [x] `perf.json` from benchmarks (`shield`, `shield-wasm`), uploaded as artifacts
+- [x] CI `core` → `perf` (PRs): the base commit's Shield bench and the PR's bench are alternated 3× on the same runner; a budgeted metric whose median is > 10 % worse fails (`tools/perf/compare.mjs`, with tests). A same-runner A/B, because absolute µs numbers swing ±50 % between shared runners.
 
 **Phase 1 AC (PLAN §11):** `cargo test` green, clippy without warnings, budgets from 1.1, lists within limits, signature verified, omnibox tests pass.
 

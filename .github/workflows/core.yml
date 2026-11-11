@@ -91,3 +91,51 @@ jobs:
           path: |
             core/target/shield-wasm/web/
             core/target/perf/shield-wasm.json
+
+  perf:
+    # Regression gate (PLAN §8.2, Phase 1.10): the PR's Shield bench against the base commit's,
+    # alternated 3× on the same runner; a budgeted metric > 10 % worse (median) fails.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          key: perf
+      - name: Base worktree
+        run: git worktree add ../base "${{ github.event.pull_request.base.sha }}"
+      - name: Build both benches
+        run: |
+          (cd core && cargo bench -p shield --bench match --no-run)
+          if [ -f ../base/core/shield/benches/match.rs ]; then
+            (cd ../base/core && CARGO_TARGET_DIR="$GITHUB_WORKSPACE/core/target" cargo bench -p shield --bench match --no-run) \
+              && echo "HAS_BASE=yes" >> "$GITHUB_ENV"
+          fi
+      - name: Run base and head alternately
+        run: |
+          mkdir -p perf
+          for i in 1 2 3; do
+            if [ "${HAS_BASE:-}" = yes ]; then
+              (cd ../base/core && CARGO_TARGET_DIR="$GITHUB_WORKSPACE/core/target" SHIELD_PERF_OUT="$GITHUB_WORKSPACE/perf/base-$i.json" \
+                cargo bench -q -p shield --bench match) || true
+            fi
+            (cd core && SHIELD_PERF_OUT="$GITHUB_WORKSPACE/perf/head-$i.json" cargo bench -q -p shield --bench match)
+          done
+      - name: Compare (threshold 10 %)
+        run: |
+          base=$(ls perf/base-*.json 2>/dev/null | paste -sd, -)
+          head=$(ls perf/head-*.json | paste -sd, -)
+          node tools/perf/compare.mjs --base "$base" --head "$head" --threshold 0.10
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-ab
+          path: perf/
