@@ -42,4 +42,6 @@ jobs:
           name: perf-shield
           path: core/target/perf/
           if-no-files-found: warn
+      - name: Compile the fixture bundle (smoke)
+        run: cargo run --release -p shield-compiler -- --lists ../qa/lists --out target/bundle-fixture --version ci
       # WASM build lands with Phase 1.3

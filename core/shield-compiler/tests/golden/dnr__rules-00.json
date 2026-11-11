@@ -1,0 +1,81 @@
+[
+  {
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "resourceTypes": [
+        "image",
+        "script"
+      ],
+      "urlFilter": "/ad-network/*"
+    },
+    "id": 1,
+    "priority": 1
+  },
+  {
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "excludedResourceTypes": [
+        "main_frame"
+      ],
+      "urlFilter": "/tracker/pixel.gif"
+    },
+    "id": 2,
+    "priority": 1
+  },
+  {
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "excludedResourceTypes": [
+        "main_frame"
+      ],
+      "urlFilter": "/analytics/collect.js"
+    },
+    "id": 3,
+    "priority": 1
+  },
+  {
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "resourceTypes": [
+        "sub_frame"
+      ],
+      "urlFilter": "/ad-network/frame.html"
+    },
+    "id": 4,
+    "priority": 1
+  },
+  {
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "resourceTypes": [
+        "script"
+      ],
+      "urlFilter": "/cdn/prebid*.js"
+    },
+    "id": 5,
+    "priority": 1
+  },
+  {
+    "action": {
+      "type": "allow"
+    },
+    "condition": {
+      "excludedResourceTypes": [
+        "main_frame"
+      ],
+      "urlFilter": "/cdn/prebid-allowed.js"
+    },
+    "id": 6,
+    "priority": 2
+  }
+]

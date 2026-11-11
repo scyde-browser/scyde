@@ -1,12 +1,26 @@
 [package]
 name = "shield-compiler"
-description = "Compiles filter lists into per-platform bundles (DNR, WKContentRuleList, engine.dat)"
+description = "Compiles filter lists into per-platform Shield bundles (engine.dat, DNR, WKContentRuleList, cosmetics)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
+
+[dependencies]
+shield = { path = "../shield" }
+# `content-blocking` is adblock-rust's WKContentRuleList conversion (ADR-0006).
+adblock = { version = "=0.13.5", default-features = false, features = [
+    "embedded-domain-resolver",
+    "full-regex-handling",
+    "content-blocking",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11"
+ed25519-dalek = "3"
+base64 = "0.23"
 
 [lints]
 workspace = true

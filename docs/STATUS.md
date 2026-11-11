@@ -43,15 +43,15 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - [x] benchmark `cargo bench -p shield --bench match`: a percentile harness instead of criterion (ADR-0010), gated in CI, `perf.json` artifact
 - **AC:** ✅ p50 1.6–3.3 µs, p99 2.5–4.4 µs (best of 3), deserialization ≈ 1 ms for 80k rules; fixture tests pass (6 blocked, 1 exception, 3 cosmetic)
 
-### 1.2 `core/shield-compiler`: one source, all formats (PLAN §5.2)
-- [ ] `engine.dat`
-- [ ] DNR rulesets ≤ 30k rules, with a report of dropped rules (`$popup`, cosmetics, regex…)
-- [ ] iOS lists ≤ 150k, with a filter for regexes WebKit does not support (ADR-0006) and a report
-- [ ] cosmetic indexes, `resources.json`
-- [ ] `manifest.json` with hashes and an ed25519 signature
-- [ ] Golden tests: `qa/lists/fixture.txt` → expected DNR / iOS / cosmetic output
-- [ ] macOS CI job that compiles the iOS output on the simulator (tag/manual)
-- **AC:** DNR and iOS output are within limits, dropped rules are reported, the signature is verified in a test
+### 1.2 `core/shield-compiler`: one source, all formats (PLAN §5.2, ADR-0011)
+- [x] `engine.dat`
+- [x] DNR rulesets ≤ 30k rules (our own converter), with a report of dropped rules (`$popup`, cosmetics, regex…)
+- [x] iOS lists ≤ 150k, with a filter for regexes WebKit does not support (ADR-0006) and a report
+- [x] cosmetic indexes, `resources.json`
+- [x] `manifest.json` with hashes and an ed25519 signature; `verify` and `keygen` subcommands
+- [x] Golden tests: `qa/lists/fixture.txt` → expected DNR / iOS / cosmetic output (`tests/golden/`); bundles are reproducible
+- [x] macOS CI job `ios` → `shield-rulelists`: compiles the iOS output of real lists and the fixture on the simulator (tag/manual/`ios/**`)
+- **AC:** ✅ DNR and iOS output within limits (tested), dropped rules reported in `report.json`, signature verified in a test (wrong key, tampered file and tampered manifest all rejected)
 
 ### 1.3 `shield-wasm`: package for the GeckoView extension
 - [ ] wasm32 build + wasm-bindgen (from S3), size within budget, p99 test in CI

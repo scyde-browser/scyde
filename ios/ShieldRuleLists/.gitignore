@@ -1,0 +1,4 @@
+.build/
+.swiftpm/
+Tests/ShieldRuleListsTests/Resources/rulelists/*
+!Tests/ShieldRuleListsTests/Resources/rulelists/.gitkeep
