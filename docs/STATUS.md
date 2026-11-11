@@ -29,6 +29,15 @@
 - iOS list compilation only in the background, and shipping a precompiled snapshot → Phase 4
 - GeckoView 160 requires compileSdk 37.2, AGP 9.5, Kotlin 2.4 → Phase 5
 
+## Pending: release v0.1.0
+Everything for v0.1.0 is merged on `main` (release notes: `docs/releases/v0.1.0.md`, workflow: `.github/workflows/release.yml`).
+The previous session could not publish it: its GitHub proxy rejected tag pushes (HTTP 403) and release creation ("not permitted for this session type").
+**Next session: push the tag and let the workflow publish the release:**
+```bash
+git fetch origin main && git tag v0.1.0 origin/main && git push origin v0.1.0
+```
+Then watch the `release` workflow; it creates the pre-release and attaches icons, tokens, fonts, prototypes and docs.
+
 ## Phase 1: plan (proposal)
 Branch `phase/1-core`, one PR per logical unit, CI green. The order was chosen so that the Shield pipeline (the riskiest part) is done first.
 
