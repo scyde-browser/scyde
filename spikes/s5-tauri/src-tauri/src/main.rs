@@ -1,7 +1,8 @@
 //! Spikes on WebView2 via Tauri 2 multiwebview (feature `unstable`):
 //! - S5 / G5 (`--mode bench`): 20 tab webviews on one environment, tab switch and popover timings, Mica, custom titlebar.
-//! - S2 / G2 (`--mode shield --shield none|b`): page load times with no blocking vs option B
-//!   (`WebResourceRequested` + adblock-rust in the host), plus the qa/adblock fixture score.
+//! - S2 / G2 (`--mode shield --shield none|a|b`): page load times with no blocking vs option A
+//!   (MV3 DNR extension, `--ext <dir>`) vs option B (`WebResourceRequested` + adblock-rust in the host),
+//!   plus the qa/adblock fixture score.
 //! - S1 / G1 (`--mode signin`): opens Google sign-in, Gmail and YouTube with the stock WebView2 UA for a manual test.
 //! Results are written as JSON to `--out` (default `spike-results.json`) and the app exits by itself in bench/shield modes.
 
@@ -21,6 +22,17 @@ use tauri::{
 const W: f64 = 1280.0;
 const H: f64 = 800.0;
 const CHROME_H: f64 = 92.0; // tab strip 44 + toolbar 48 (DESIGN §4)
+
+/// S2 option A: unpacked MV3 DNR extension. Set once before any webview exists, because every webview
+/// must share the same WebView2 environment options.
+static EXT_DIR: std::sync::OnceLock<Option<std::path::PathBuf>> = std::sync::OnceLock::new();
+
+fn with_ext(b: WebviewBuilder<tauri::Wry>) -> WebviewBuilder<tauri::Wry> {
+    match EXT_DIR.get().cloned().flatten() {
+        Some(dir) => b.browser_extensions_enabled(true).extensions_path(dir),
+        None => b,
+    }
+}
 
 #[derive(Default)]
 struct Tabs {
@@ -75,7 +87,7 @@ fn tab_builder(label: String, url: &str, loads: Arc<Mutex<Loads>>) -> WebviewBui
     let l1 = loads.clone();
     let l2 = loads;
     let lbl = label.clone();
-    WebviewBuilder::new(label, WebviewUrl::External(url.parse().expect("url")))
+    with_ext(WebviewBuilder::new(label, WebviewUrl::External(url.parse().expect("url"))))
         .on_page_load(move |wv, payload| {
             let mut l = l1.lock().unwrap();
             match payload.event() {
@@ -161,7 +173,7 @@ fn build_window(app: &AppHandle) -> tauri::Result<Window> {
         .effects(effects)
         .build()?;
     window.add_child(
-        WebviewBuilder::new("chrome", WebviewUrl::App("index.html".into())).transparent(true),
+        with_ext(WebviewBuilder::new("chrome", WebviewUrl::App("index.html".into()))).transparent(true),
         LogicalPosition::new(0.0, 0.0),
         LogicalSize::new(W, CHROME_H),
     )?;
@@ -420,6 +432,12 @@ fn main() {
         .map(|s| s.split(',').filter(|x| !x.is_empty()).map(String::from).collect())
         .unwrap_or_default();
     let hold: u64 = arg(&args, "--hold").and_then(|h| h.parse().ok()).unwrap_or(6);
+    let ext = if shield == "a" {
+        arg(&args, "--ext").map(|p| std::fs::canonicalize(p).expect("--ext dir"))
+    } else {
+        None
+    };
+    EXT_DIR.set(ext).unwrap();
 
     tauri::Builder::default()
         .manage(AppState { tabs: Mutex::new(Tabs::default()), loads: Arc::new(Mutex::new(Loads::default())), blocked: Arc::new(Mutex::new(0)) })
@@ -428,8 +446,11 @@ fn main() {
             let handle = app.handle().clone();
             build_window(&handle)?;
             // Popover: separate, pre-created, hidden transparent window (CLAUDE.md desktop notes).
-            tauri::WebviewWindowBuilder::new(&handle, "popover", WebviewUrl::App("popover.html".into()))
-                .transparent(true)
+            let mut pop = tauri::WebviewWindowBuilder::new(&handle, "popover", WebviewUrl::App("popover.html".into()));
+            if let Some(dir) = EXT_DIR.get().cloned().flatten() {
+                pop = pop.browser_extensions_enabled(true).extensions_path(dir);
+            }
+            pop.transparent(true)
                 .decorations(false)
                 .skip_taskbar(true)
                 .always_on_top(true)

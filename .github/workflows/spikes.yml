@@ -249,6 +249,14 @@ jobs:
         env:
           SITES: https://www.index.hr/,https://www.24sata.hr/,https://www.jutarnji.hr/,https://www.youtube.com/,https://edition.cnn.com/
           LISTFILES: qa/lists/fixture.txt,lists/easylist.txt,lists/easyprivacy.txt,lists/filters.txt
+      - name: S2 option A (MV3 DNR extension)
+        shell: pwsh
+        run: |
+          node spikes/s2-dnr/convert.mjs --out dnr-ext qa/lists/fixture.txt lists/easylist.txt lists/easyprivacy.txt lists/filters.txt
+          ./spikes/s5-tauri/ci/run.ps1 -Exe spikes/s5-tauri/src-tauri/target/release/scyde-spike-s5.exe -Name s2-a -AppArgs '--mode','shield','--shield','a','--ext','dnr-ext','--out','s2-a.json','--rounds','3','--sites',$env:SITES -ShotAfter 20
+          Copy-Item dnr-ext/stats.json s2-a-dnr-stats.json
+        env:
+          SITES: https://www.index.hr/,https://www.24sata.hr/,https://www.jutarnji.hr/,https://www.youtube.com/,https://edition.cnn.com/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -260,6 +268,9 @@ jobs:
             s2-none.png
             s2-b.json
             s2-b.png
+            s2-a.json
+            s2-a.png
+            s2-a-dnr-stats.json
       - uses: actions/upload-artifact@v4
         with:
           name: s1-windows-exe
