@@ -1,0 +1,342 @@
+// Generates the three original icon concept masters (DESIGN.md §7, PLAN §16) as SVG.
+// Each concept produces:
+//   <id>.mark.svg   colour mark on a transparent 1024 canvas (Android foreground, compositing)
+//   <id>.mono.svg   single-colour mark (Android themed icon, iOS tinted)
+//   <id>.light.svg  mark on the white squircle tile (preview / Windows)
+//   <id>.dark.svg   mark on the #17181E squircle tile (iOS 18+ dark variant)
+// SVG has no conic gradient, so the soft Ember conic is drawn as overlapping wedges and masked.
+// Never two equal overlapping circles.
+
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, '../..');
+const outDir = path.join(root, 'brand/icon/concepts');
+const brand = JSON.parse(readFileSync(path.join(root, 'brand/brand.json'), 'utf8'));
+
+export const SIZE = 1024;
+const C = SIZE / 2;
+const [E300, E400, E500] = ['#FFB27A', '#FF8E5C', '#F2603F']; // Ember (older concepts)
+const TILE_LIGHT = brand.colors.iconTileLight;
+const TILE_DARK = brand.colors.iconTileDark;
+const MONO = '#111216';
+
+// ---------- colour helpers ----------
+const hex2rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const rgb2hex = (c) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+const mix = (a, b, t) => rgb2hex(hex2rgb(a).map((v, i) => v + (hex2rgb(b)[i] - v) * t));
+function sampleStops(stops, t) {
+  const seg = (stops.length - 1) * t;
+  const i = Math.min(Math.floor(seg), stops.length - 2);
+  return mix(stops[i], stops[i + 1], seg - i);
+}
+
+/** Wedges emulating `conic-gradient(from <fromDeg>, stops…)` around (cx, cy). */
+function conic(cx, cy, fromDeg, stops, steps = 180) {
+  const R = SIZE * 1.5;
+  const out = [`<rect x="${-SIZE}" y="${-SIZE}" width="${SIZE * 3}" height="${SIZE * 3}" fill="${sampleStops(stops, 0.5)}"/>`];
+  for (let i = 0; i < steps; i++) {
+    // CSS conic: 0deg = up, clockwise. SVG angle: 0 = right, clockwise (y down).
+    const a0 = ((fromDeg + (i / steps) * 360 - 90 - 0.6) * Math.PI) / 180;
+    const a1 = ((fromDeg + ((i + 1) / steps) * 360 - 90 + 0.6) * Math.PI) / 180;
+    const p = (a) => `${(cx + R * Math.cos(a)).toFixed(1)} ${(cy + R * Math.sin(a)).toFixed(1)}`;
+    out.push(`<path d="M${cx} ${cy}L${p(a0)}L${p(a1)}Z" fill="${sampleStops(stops, (i + 0.5) / steps)}"/>`);
+  }
+  return out.join('');
+}
+
+/** Superellipse squircle path (n = 5) filling the canvas with a small inset. */
+export function squircle(inset = 0) {
+  const n = 5;
+  const r = C - inset;
+  const pts = [];
+  for (let i = 0; i < 360; i++) {
+    const t = (i / 360) * 2 * Math.PI;
+    const ct = Math.cos(t);
+    const st = Math.sin(t);
+    const x = C + r * Math.sign(ct) * Math.abs(ct) ** (2 / n);
+    const y = C + r * Math.sign(st) * Math.abs(st) ** (2 / n);
+    pts.push(`${x.toFixed(1)} ${y.toFixed(1)}`);
+  }
+  return `M${pts.join('L')}Z`;
+}
+
+const polar = (cx, cy, r, deg) => {
+  const a = (deg * Math.PI) / 180;
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+};
+/** SVG arc path from a0 to a1 (degrees, SVG orientation), sweeping clockwise if cw. */
+function arc(cx, cy, r, a0, a1, cw) {
+  const [x0, y0] = polar(cx, cy, r, a0);
+  const [x1, y1] = polar(cx, cy, r, a1);
+  const sweepDeg = cw ? (a1 - a0 + 360) % 360 : (a0 - a1 + 360) % 360;
+  const large = sweepDeg > 180 ? 1 : 0;
+  return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${large} ${cw ? 1 : 0} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+}
+
+const GRAD = [E300, E400, E500, E300];
+
+// ---------- concepts ----------
+// Each returns { colour: svg fragment, mono: svg fragment } drawn on a 1024 canvas, mark within ~640 px.
+
+const concepts = {
+  orbit: {
+    name: 'Orbit',
+    blurb: 'A single ring with a gap that a smaller sphere passes through: motion and protection, the sphere is "let through" the shield.',
+    draw() {
+      const r = 250;
+      const sw = 92;
+      const gapFrom = -78;
+      const gapTo = -12;
+      const ring = arc(C, C, r, gapTo, gapFrom + 360, true);
+      const [bx, by] = polar(C, C, r, -45);
+      const br = 70;
+      const mask = `<mask id="m-orbit" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}"><path d="${ring}" fill="none" stroke="#fff" stroke-width="${sw}" stroke-linecap="round"/></mask>`;
+      const ball = `<radialGradient id="g-ball" cx="0.35" cy="0.32" r="0.75"><stop offset="0" stop-color="${E300}"/><stop offset="1" stop-color="${E500}"/></radialGradient>`;
+      return {
+        defs: mask + ball,
+        colour: `<g mask="url(#m-orbit)">${conic(C, C, 210, GRAD)}</g><circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="${br}" fill="url(#g-ball)"/>`,
+        mono: `<path d="${ring}" fill="none" stroke="${MONO}" stroke-width="${sw}" stroke-linecap="round"/><circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="${br}" fill="${MONO}"/>`,
+      };
+    },
+  },
+  'twin-arc': {
+    name: 'Twin Arc',
+    blurb: 'An abstract "S" from two arcs of different radii (smaller on top, larger below). Reads as a letter, not as circles.',
+    draw() {
+      const sw = 96;
+      const r1 = 112;
+      const r2 = 150;
+      const total = 2 * r1 + 2 * r2 + sw;
+      const cy1 = C - total / 2 + sw / 2 + r1;
+      const cy2 = cy1 + r1 + r2;
+      const cx = C + 6;
+      // top: from upper-right (-28°) counter-clockwise over the top to the bottom point (90°)
+      const top = arc(cx, cy1, r1, -28, 90, false);
+      // bottom: from its top point (-90°) clockwise round the right to lower-left (152°)
+      const bottom = arc(cx, cy2, r2, -90, 152, true).replace(/^M[^A]+/, '');
+      const d = `${top}${bottom}`;
+      const mask = `<mask id="m-twin" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}"><path d="${d}" fill="none" stroke="#fff" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/></mask>`;
+      return {
+        defs: mask,
+        colour: `<g mask="url(#m-twin)">${conic(C, C, 210, GRAD)}</g>`,
+        mono: `<path d="${d}" fill="none" stroke="${MONO}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`,
+      };
+    },
+  },
+  'aura-drop': {
+    name: 'Aura Drop',
+    blurb: 'One circle with an offset inner light. The soft Aura glow; at 16 px it becomes an eccentric ring.',
+    draw() {
+      const R = 290;
+      const [lx, ly] = [C - 70, C - 78];
+      const lr = 138;
+      const defs =
+        `<clipPath id="c-drop"><circle cx="${C}" cy="${C}" r="${R}"/></clipPath>` +
+        `<radialGradient id="g-light" cx="${lx}" cy="${ly}" r="${lr * 1.35}" gradientUnits="userSpaceOnUse">` +
+        `<stop offset="0" stop-color="#FFF4EC"/><stop offset="0.8" stop-color="#FFF4EC"/>` +
+        `<stop offset="0.82" stop-color="#FFE6D6" stop-opacity="0.5"/><stop offset="0.9" stop-color="#FFD9C4" stop-opacity="0"/></radialGradient>` +
+        `<mask id="m-drop-mono" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}"><circle cx="${C}" cy="${C}" r="${R}" fill="#fff"/><circle cx="${lx}" cy="${ly}" r="${lr}" fill="#000"/></mask>`;
+      return {
+        defs,
+        colour: `<g clip-path="url(#c-drop)">${conic(C, C, 210, GRAD)}<circle cx="${lx}" cy="${ly}" r="${lr * 1.35}" fill="url(#g-light)"/></g>`,
+        mono: `<circle cx="${C}" cy="${C}" r="${R}" fill="${MONO}" mask="url(#m-drop-mono)"/>`,
+      };
+    },
+  },
+  // ---------- round 2 (owner asked for new directions, 2026-11-11) ----------
+  petal: {
+    round: 2,
+    name: 'Petal',
+    blurb: 'A drop/petal: three rounded corners and one sharp one pointing up-right. Forward, light, protected.',
+    draw() {
+      const s = 300; // half-size of the bounding square
+      const R = s; // full rounding on three corners
+      const r = 46; // the one sharp-ish corner (top-right)
+      const [x0, y0, x1, y1] = [C - s, C - s, C + s, C + s];
+      const d =
+        `M${x0 + R} ${y0}L${x1 - r} ${y0}A${r} ${r} 0 0 1 ${x1} ${y0 + r}` +
+        `L${x1} ${y1 - R}A${R} ${R} 0 0 1 ${x1 - R} ${y1}` +
+        `L${x0 + R} ${y1}A${R} ${R} 0 0 1 ${x0} ${y1 - R}` +
+        `L${x0} ${y0 + R}A${R} ${R} 0 0 1 ${x0 + R} ${y0}Z`;
+      const k = 0.94;
+      const t = `translate(${C * (1 - k)} ${C * (1 - k)}) scale(${k})`;
+      return {
+        defs: `<clipPath id="c-petal"><path d="${d}" transform="${t}"/></clipPath>`,
+        colour: `<g clip-path="url(#c-petal)">${conic(C + s * k, C - s * k, 180, [E300, E500, E500, E400, E300])}</g>`,
+        mono: `<path d="${d}" transform="${t}" fill="${MONO}"/>`,
+      };
+    },
+  },
+  portal: {
+    round: 2,
+    name: 'Portal',
+    blurb: 'An arch as a doorway to the web, with a point of light on the threshold. One shape and one dot.',
+    draw() {
+      const w = 236; // half width to stroke centre
+      const sw = 96;
+      const top = C - 150; // centre of the arch
+      const foot = C + 250; // bottom of the legs
+      const d = `M${C - w} ${foot}L${C - w} ${top}A${w} ${w} 0 0 1 ${C + w} ${top}L${C + w} ${foot}`;
+      const dot = { x: C, y: foot - 36, r: 62 };
+      const bboxTop = top - w - sw / 2;
+      const bboxBottom = foot + sw / 2;
+      const lift = `translate(0 ${C - (bboxTop + bboxBottom) / 2})`;
+      const shapes = (fill) =>
+        `<g transform="${lift}"><path d="${d}" fill="none" stroke="${fill}" stroke-width="${sw}" stroke-linecap="round"/><circle cx="${dot.x}" cy="${dot.y}" r="${dot.r}" fill="${fill}"/></g>`;
+      return {
+        defs: `<mask id="m-portal" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}">${shapes('#fff')}</mask>`,
+        colour: `<g mask="url(#m-portal)">${conic(C, C, 210, GRAD)}</g>`,
+        mono: shapes(MONO),
+      };
+    },
+  },
+  'fold-s': {
+    round: 2,
+    name: 'Fold S',
+    blurb: 'An S from two solid half-ring bands with a small "fold" in the middle. A monogram that holds at 16 px.',
+    draw() {
+      const Ro = 158;
+      const Ri = 66;
+      const fold = 26; // horizontal step where the two halves meet
+      const cy1 = C - (Ro + Ri) / 2;
+      const cy2 = cy1 + Ro + Ri;
+      const left = (cx, cy) => `M${cx} ${cy - Ro}A${Ro} ${Ro} 0 0 0 ${cx} ${cy + Ro}L${cx} ${cy + Ri}A${Ri} ${Ri} 0 0 1 ${cx} ${cy - Ri}Z`;
+      const right = (cx, cy) => `M${cx} ${cy - Ro}A${Ro} ${Ro} 0 0 1 ${cx} ${cy + Ro}L${cx} ${cy + Ri}A${Ri} ${Ri} 0 0 0 ${cx} ${cy - Ri}Z`;
+      const d = left(C - fold / 2, cy1) + right(C + fold / 2, cy2);
+      return {
+        defs: `<clipPath id="c-fold"><path d="${d}"/></clipPath>`,
+        colour: `<g clip-path="url(#c-fold)">${conic(C, C, 210, GRAD)}</g>`,
+        mono: `<path d="${d}" fill="${MONO}"/>`,
+      };
+    },
+  },
+  // ---------- round 3: final mark, refined from Fold S after taste-skill + impeccable critique ----------
+  'aura-s': {
+    round: 3,
+    name: 'Aura S',
+    blurb: 'An S from two equal half-circle strokes with rounded ends and a thin "fold" in the middle. Reads as a clean S at 16 px.',
+    draw() {
+      const sw = 118; // stroke width
+      const Rm = 128; // centre-line radius of each half
+      const fold = 24; // slit where the halves meet (detail at large sizes, vanishes at 16 px)
+      const top = { x: C - fold / 2, y: C - Rm };
+      const bot = { x: C + fold / 2, y: C + Rm };
+      const dTop = `M${top.x} ${top.y - Rm}A${Rm} ${Rm} 0 0 0 ${top.x} ${top.y + Rm}`;
+      const dBot = `M${bot.x} ${bot.y - Rm}A${Rm} ${Rm} 0 0 1 ${bot.x} ${bot.y + Rm}`;
+      const shapes = (fill) =>
+        `<path d="${dTop}" fill="none" stroke="${fill}" stroke-width="${sw}"/>` +
+        `<path d="${dBot}" fill="none" stroke="${fill}" stroke-width="${sw}"/>` +
+        `<circle cx="${top.x}" cy="${top.y - Rm}" r="${sw / 2}" fill="${fill}"/>` +
+        `<circle cx="${bot.x}" cy="${bot.y + Rm}" r="${sw / 2}" fill="${fill}"/>`;
+      return {
+        defs: `<mask id="m-aura-s" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}">${shapes('#fff')}</mask>`,
+        colour: `<g mask="url(#m-aura-s)">${conic(C - 340, C - 340, 90, [E300, E500, E500, E400, E300])}</g>`,
+        mono: shapes(MONO),
+      };
+    },
+  },
+  // ---------- round 4: the owner's own mark (2026-11-11), rebuilt as vectors from the construction drawing ----------
+  'owner-s': {
+    round: 4,
+    name: 'SCYDE S',
+    blurb: "Owner's mark: an S from two mirrored halves split by a diagonal cut (a lightning bolt). The letter only, in Ember, no plate or background.",
+    palette: { tileLight: '#F2603F', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#F2603F', radius: 230, unplated: true, iosLightBg: '#FFFFFF' },
+    draw() {
+      // Points read from the owner's construction drawing (539 x 584 artboard). The lower half is the upper
+      // half rotated 180 degrees about the centre of the mark, so the S is exactly point-symmetric.
+      const cx = 263.5;
+      const cy = 284;
+      const half = 'M400 82 L251 82 C110 82 68 101 68 241 C68 328 160 382 160 382 L243 308.5 L214 242 Z';
+      const at = (height) => `translate(${C} ${C}) scale(${(height / 404).toFixed(4)}) translate(${-cx} ${-cy})`;
+      const shapesAt = (fill, height) =>
+        `<g transform="${at(height)}" fill="${fill}"><path d="${half}"/><path d="${half}" transform="rotate(180 ${cx} ${cy})"/></g>`;
+      const shapes = (fill) => shapesAt(fill, 590); // mark height = 590 / 1024 of the tile
+      return {
+        defs: '',
+        colour: shapes(this.palette.markOnLight),
+        colourDark: shapes(this.palette.markOnDark),
+        mono: shapes(MONO),
+        // Windows taskbar style: no plate, no border, transparent; the glyph fills the icon (owner, 2026-11-11).
+        unplated: shapesAt(this.palette.markOnDark, 940),
+        ember: shapesAt(this.palette.markOnDark, 590),
+        shapes,
+      };
+    },
+  },
+};
+
+const svg = (defs, body) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}"><defs>${defs}</defs>${body}</svg>\n`;
+
+export function buildConcept(id) {
+  const c = concepts[id];
+  const { defs, colour, mono, colourDark, unplated, ember } = c.draw();
+  const tile = (fill) => `<path d="${squircle(0)}" fill="${fill}"/>`;
+  if (c.palette?.unplated) {
+    // Owner: "bez backgrounda, samo slovo". Transparent wherever the platform allows it.
+    const p = c.palette;
+    return {
+      id,
+      name: c.name,
+      blurb: c.blurb,
+      mark: svg(defs, ember), // Android adaptive foreground (inside the safe zone)
+      mono: svg(defs, mono),
+      light: svg(defs, unplated), // previews, Android legacy launcher icon, Windows
+      dark: svg(defs, unplated),
+      fullBleedLight: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="${p.iosLightBg}"/>` + ember), // iOS light must be opaque
+      fullBleedDark: svg(defs, ember), // iOS 18+ dark icon may be transparent
+      tinted: svg(defs, mono.replaceAll(MONO, '#FFFFFF')),
+      androidBackground: '#00000000',
+      windows: svg(defs, unplated),
+    };
+  }
+  if (c.palette) {
+    // Concepts with their own tile colours (owner's mark): rounded-square tile, solid colours, no gradient.
+    const p = c.palette;
+    const rr = (fill, stroke) =>
+      `<rect x="${stroke ? 5 : 0}" y="${stroke ? 5 : 0}" width="${SIZE - (stroke ? 10 : 0)}" height="${SIZE - (stroke ? 10 : 0)}" rx="${p.radius}" fill="${fill}"${stroke ? ` stroke="${stroke}" stroke-width="10"` : ''}/>`;
+    return {
+      id,
+      name: c.name,
+      blurb: c.blurb,
+      mark: svg(defs, colour),
+      mono: svg(defs, mono),
+      light: svg(defs, rr(p.tileLight) + colour),
+      dark: svg(defs, rr(p.tileDark, p.darkStroke) + colourDark),
+      fullBleedLight: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="${p.tileLight}"/>` + colour),
+      fullBleedDark: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="${p.tileDark}"/>` + colourDark),
+      tinted: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="#000"/>` + mono.replaceAll(MONO, '#FFFFFF')),
+      androidBackground: p.tileLight,
+      windows: svg(defs, unplated),
+    };
+  }
+  return {
+    id,
+    name: c.name,
+    blurb: c.blurb,
+    mark: svg(defs, colour),
+    mono: svg(defs, mono),
+    light: svg(defs, tile(TILE_LIGHT) + colour),
+    dark: svg(defs, tile(TILE_DARK) + colour),
+    // variants for platform exports
+    fullBleedLight: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="${TILE_LIGHT}"/>` + colour),
+    fullBleedDark: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="${TILE_DARK}"/>` + colour),
+    tinted: svg(defs, `<rect width="${SIZE}" height="${SIZE}" fill="#000"/>` + mono.replaceAll(MONO, '#FFFFFF')),
+  };
+}
+
+export const conceptIds = Object.keys(concepts);
+export const roundOf = (id) => concepts[id].round ?? 1;
+export const latestRound = Math.max(...conceptIds.map(roundOf));
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  mkdirSync(outDir, { recursive: true });
+  for (const id of conceptIds) {
+    const c = buildConcept(id);
+    for (const v of ['mark', 'mono', 'light', 'dark']) writeFileSync(path.join(outDir, `${id}.${v}.svg`), c[v]);
+    console.log(`concept ${id}: ${c.name}`);
+  }
+}

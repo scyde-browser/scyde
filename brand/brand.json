@@ -9,9 +9,15 @@
   "publisher": "SCYDE",
   "website": "https://github.com/scyde-browser/scyde",
   "colors": {
-    "brand": "{ember.700}",
-    "iconGradient": ["#FFB27A", "#FF8E5C", "#F2603F"],
-    "iconTileLight": "#FFFFFF",
-    "iconTileDark": "#17181E"
+    "brand": "#F2603F",
+    "iconTileLight": "#F2603F",
+    "iconTileDark": "#0A0A0A",
+    "brandInk": "#0A0A0A"
+  },
+  "icon": {
+    "concept": "owner-s",
+    "master": "brand/icon/scyde.svg",
+    "chosen": "2026-11-11",
+    "note": "Owner's mark (shape rebuilt from the owner's construction drawing) in Ember (#F2603F + ink #0A0A0A), letter only, no plate or background (owner, 2026-11-11). Replaces Aura S."
   }
 }

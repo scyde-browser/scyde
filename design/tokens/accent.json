@@ -2,7 +2,7 @@
   "accent": {
     "$type": "color",
     "$extensions": {
-      "dev.scyde.default": "sky"
+      "dev.scyde.default": "ember"
     },
     "sky": {
       "light": {
@@ -13,10 +13,13 @@
           "$value": "{aura.sky.ink}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
           "$value": "{aura.sky.ink}"
+        },
+        "island": {
+          "$value": "{aura.sky.fill}"
         }
       },
       "dark": {
@@ -27,9 +30,12 @@
           "$value": "{aura.sky.fill}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
+          "$value": "{aura.sky.fill}"
+        },
+        "island": {
           "$value": "{aura.sky.fill}"
         }
       }
@@ -43,10 +49,13 @@
           "$value": "{aura.periwinkle.ink}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
           "$value": "{aura.periwinkle.ink}"
+        },
+        "island": {
+          "$value": "{aura.periwinkle.fill}"
         }
       },
       "dark": {
@@ -57,9 +66,12 @@
           "$value": "{aura.periwinkle.fill}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
+          "$value": "{aura.periwinkle.fill}"
+        },
+        "island": {
           "$value": "{aura.periwinkle.fill}"
         }
       }
@@ -73,10 +85,13 @@
           "$value": "{aura.lavender.ink}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
           "$value": "{aura.lavender.ink}"
+        },
+        "island": {
+          "$value": "{aura.lavender.fill}"
         }
       },
       "dark": {
@@ -87,9 +102,12 @@
           "$value": "{aura.lavender.fill}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
+          "$value": "{aura.lavender.fill}"
+        },
+        "island": {
           "$value": "{aura.lavender.fill}"
         }
       }
@@ -103,10 +121,13 @@
           "$value": "{aura.mint.ink}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
           "$value": "{aura.mint.ink}"
+        },
+        "island": {
+          "$value": "{aura.mint.fill}"
         }
       },
       "dark": {
@@ -117,9 +138,12 @@
           "$value": "{aura.mint.fill}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
+          "$value": "{aura.mint.fill}"
+        },
+        "island": {
           "$value": "{aura.mint.fill}"
         }
       }
@@ -133,10 +157,13 @@
           "$value": "{aura.ember.ink}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
           "$value": "{aura.ember.ink}"
+        },
+        "island": {
+          "$value": "{aura.ember.fill}"
         }
       },
       "dark": {
@@ -147,9 +174,12 @@
           "$value": "{aura.ember.fill}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ring": {
+          "$value": "{aura.ember.fill}"
+        },
+        "island": {
           "$value": "{aura.ember.fill}"
         }
       }
@@ -157,16 +187,19 @@
     "onyx": {
       "light": {
         "fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "ink": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
         },
         "on-fill": {
-          "$value": "{neutral.dark.50}"
+          "$value": "{neutral.light.50}"
         },
         "ring": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.light.900}"
+        },
+        "island": {
+          "$value": "{neutral.light.50}"
         }
       },
       "dark": {
@@ -177,9 +210,12 @@
           "$value": "{neutral.dark.50}"
         },
         "on-fill": {
-          "$value": "{neutral.light.950}"
+          "$value": "{neutral.dark.900}"
         },
         "ring": {
+          "$value": "{neutral.dark.50}"
+        },
+        "island": {
           "$value": "{neutral.dark.50}"
         }
       }

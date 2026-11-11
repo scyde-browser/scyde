@@ -4,16 +4,16 @@
       "$type": "fontFamily",
       "brand": {
         "$value": [
-          "Geist",
+          "Bricolage Grotesque",
           "Segoe UI Variable",
           "system-ui",
           "sans-serif"
         ],
-        "$description": "Aeonik replaces Geist once the app licence is confirmed [VLASNIK]."
+        "$description": "OFL. Hero, wordmark, UI."
       },
       "ui": {
         "$value": [
-          "Geist",
+          "Bricolage Grotesque",
           "Segoe UI Variable",
           "system-ui",
           "sans-serif"
@@ -25,7 +25,8 @@
           "Cascadia Code",
           "ui-monospace",
           "monospace"
-        ]
+        ],
+        "$description": "OFL. Data: numbers, times, addresses' paths, hints."
       }
     },
     "weight": {
@@ -43,6 +44,21 @@
     "$description": "DESIGN.md §3. Two weights per view at most (400/500, 600 only for display)."
   },
   "type": {
+    "hero": {
+      "$description": "New Tab question. Optical size 96.",
+      "size": {
+        "$type": "dimension",
+        "$value": "104px"
+      },
+      "line-height": {
+        "$type": "dimension",
+        "$value": "102px"
+      },
+      "tracking": {
+        "$type": "dimension",
+        "$value": "-0.045em"
+      }
+    },
     "display": {
       "size": {
         "$type": "dimension",
@@ -154,6 +170,36 @@
       "tracking": {
         "$type": "dimension",
         "$value": "0.02em"
+      }
+    },
+    "data": {
+      "$description": "Mono data line (Shield stats, times, hints).",
+      "size": {
+        "$type": "dimension",
+        "$value": "13px"
+      },
+      "line-height": {
+        "$type": "dimension",
+        "$value": "20px"
+      },
+      "tracking": {
+        "$type": "dimension",
+        "$value": "0em"
+      }
+    },
+    "address": {
+      "$description": "Address in the island.",
+      "size": {
+        "$type": "dimension",
+        "$value": "16px"
+      },
+      "line-height": {
+        "$type": "dimension",
+        "$value": "22px"
+      },
+      "tracking": {
+        "$type": "dimension",
+        "$value": "-0.01em"
       }
     }
   }

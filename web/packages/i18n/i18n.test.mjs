@@ -1,12 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { locales } from './index.mjs';
+import { locales, defaultLocale } from './index.mjs';
 
-test('hr and en have identical keys', () => {
-  assert.deepEqual(Object.keys(locales.hr).sort(), Object.keys(locales.en).sort());
+test('English is the only shipped locale (ADR-0009)', () => {
+  assert.deepEqual(Object.keys(locales), ['en']);
+  assert.equal(defaultLocale, 'en');
 });
 
 test('no empty strings', () => {
-  for (const [lang, dict] of Object.entries(locales))
-    for (const [k, v] of Object.entries(dict)) assert.ok(v.trim().length > 0, `${lang}:${k}`);
+  for (const [k, v] of Object.entries(locales.en)) assert.ok(v.trim().length > 0, k);
+});
+
+test('no Croatian diacritics left in UI copy', () => {
+  for (const [k, v] of Object.entries(locales.en)) assert.doesNotMatch(v, /[čćđšžČĆĐŠŽ]/, k);
 });

@@ -1,3 +1,3 @@
 # ios
 
-Swift (SwiftUI + UIKit) + WKWebView, unsigned .ipa za Feather (PLAN §9.3). Gradi se u Fazi 4. Tokeni: `web/packages/tokens/dist/swift/ScydeTokens.swift`.
+Swift (SwiftUI + UIKit) + WKWebView, unsigned .ipa for Feather (PLAN §9.3). Built in Phase 4. Tokens: `web/packages/tokens/dist/swift/ScydeTokens.swift`.

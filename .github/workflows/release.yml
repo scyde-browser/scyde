@@ -1,0 +1,61 @@
+name: release
+
+# On a version tag: build the design system and icons, package them and publish a GitHub Release.
+# Browser binaries (Windows installer, APK, IPA) join this workflow from Phases 3–5.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)publish, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build tokens and gate contrast
+        run: |
+          pnpm tokens
+          pnpm contrast
+          pnpm test
+      - name: Export app icons (Windows, Android, iOS)
+        run: node tools/icon-export/export.mjs --out dist/icons
+      - name: Package release assets
+        run: |
+          mkdir -p dist/release
+          V="${TAG}"
+          (cd dist/icons && zip -qr "../release/scyde-icons-${V}.zip" .)
+          cp dist/icons/owner-s/windows/scyde.ico "dist/release/scyde-${V}.ico"
+          cp brand/icon/scyde.svg "dist/release/scyde-mark-${V}.svg"
+          (cd web/packages/tokens/dist && zip -qr "../../../../dist/release/scyde-design-tokens-${V}.zip" .)
+          zip -qr "dist/release/scyde-fonts-ofl-${V}.zip" design/fonts
+          zip -qr "dist/release/scyde-prototypes-${V}.zip" design/prototypes design/fonts web/packages/tokens/dist/css
+          zip -qr "dist/release/scyde-docs-${V}.zip" PLAN.md DESIGN.md CLAUDE.md README.md docs
+          ls -la dist/release
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="docs/releases/${TAG}.md"
+          [ -f "$NOTES" ] || NOTES=/dev/null
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/release/* --clobber
+          else
+            gh release create "$TAG" dist/release/* --title "SCYDE ${TAG}" --notes-file "$NOTES" --prerelease
+          fi
