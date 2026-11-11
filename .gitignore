@@ -26,3 +26,9 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+# spikes
+spikes/**/pkg/
+spikes/**/Resources/rulelists/*.json
+spikes/**/fixture-out/
+spikes/**/.build/
+spikes/**/.swiftpm/

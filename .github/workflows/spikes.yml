@@ -1,0 +1,107 @@
+name: spikes
+
+# Phase 0.5 engine spikes (S1–S5). Deleted together with spikes/ once ADRs 0002–0007 are written.
+on:
+  pull_request:
+    paths: ["spikes/**", "qa/**", ".github/workflows/spikes.yml"]
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which spike to run (all, s3-wasm, s4-ios-rulelists)"
+        default: all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  LISTS: |
+    https://easylist.to/easylist/easylist.txt
+    https://easylist.to/easylist/easyprivacy.txt
+    https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt
+
+jobs:
+  s3-wasm:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all' || inputs.job == 's3-wasm'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: spikes/s3-geckoview/wasm-engine
+      - name: Download filter lists
+        run: |
+          mkdir -p lists
+          for u in $LISTS; do curl -sSfL --retry 3 -o "lists/$(basename "$u")" "$u"; done
+          wc -l lists/*
+      - name: Build WASM engine
+        working-directory: spikes/s3-geckoview/wasm-engine
+        run: |
+          cargo build --release --target wasm32-unknown-unknown
+          v=$(grep -A1 'name = "wasm-bindgen"' Cargo.lock | grep version | cut -d'"' -f2)
+          cargo install wasm-bindgen-cli --version "$v" --locked
+          wasm-bindgen --target nodejs --out-dir pkg target/wasm32-unknown-unknown/release/scyde_shield_wasm_spike.wasm
+          echo '{"type":"commonjs"}' > pkg/package.json
+          echo "wasm gz bytes: $(gzip -9c pkg/*.wasm | wc -c)"
+      - name: Benchmark (G3 WASM part)
+        working-directory: spikes/s3-geckoview/wasm-engine
+        run: node bench.mjs ../../../lists/*.txt --json ../../../s3-wasm.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: s3-wasm
+          path: s3-wasm.json
+
+  s4-ios-rulelists:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all' || inputs.job == 's4-ios-rulelists'
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: spikes/s4-ios-rulelists/converter
+      - name: Download filter lists
+        run: |
+          mkdir -p lists
+          for u in $LISTS; do curl -sSfL --retry 3 -o "lists/$(basename "$u")" "$u"; done
+      - name: Convert lists to WKContentRuleList JSON (>= 150k rules, split)
+        working-directory: spikes/s4-ios-rulelists/converter
+        run: |
+          R=../RuleListSpike/Tests/RuleListSpikeTests/Resources/rulelists
+          cargo run --release -- --out "$R" --repeat 2 ../../../lists/*.txt
+          cargo run --release -- --out fixture-out ../../../qa/lists/fixture.txt
+          cp fixture-out/scyde-00.json "$R/fixture.json"
+          ls -la "$R"
+      - name: Serve qa fixtures
+        run: node qa/serve.mjs 8787 &
+      - name: Test on iOS simulator
+        working-directory: spikes/s4-ios-rulelists/RuleListSpike
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          echo "simulator: $UDID"
+          set -o pipefail
+          xcodebuild test -scheme RuleListSpike -destination "id=$UDID" 2>&1 | tee ../../../s4.log | grep -E "SCYDE_RESULT|Test Case|error:|TEST (SUCCEEDED|FAILED)"
+      - name: Collect results
+        if: always()
+        run: grep -h "SCYDE_RESULT" s4.log | sed 's/^.*SCYDE_RESULT //' > s4-results.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: s4-results
+          path: |
+            s4-results.txt
+            s4.log
