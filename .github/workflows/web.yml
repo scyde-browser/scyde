@@ -41,4 +41,20 @@ jobs:
         with:
           name: icons
           path: brand/icon/export
-      # Playwright (chromium + firefox + webkit) screenshots and bundle-size budgets start in Phase 2
+      - name: Build internal pages
+        run: pnpm -r --filter "./web/apps/*" build
+      - name: Bundle budgets (PLAN §8.1)
+        run: pnpm size
+      - name: Playwright browsers (chromium, firefox, webkit)
+        working-directory: web/e2e
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Playwright (3 engines × light/dark × 1440/390, axe)
+        working-directory: web/e2e
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: |
+            web/e2e/screenshots/
+            web/e2e/report/

@@ -1,0 +1,20 @@
+{
+  "name": "@scyde/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SCYDE Island components (Svelte 5 runes, no UI kit, ADR-0005)",
+  "svelte": "./src/index.ts",
+  "exports": {
+    ".": { "svelte": "./src/index.ts", "default": "./src/index.ts" },
+    "./base.css": "./src/base.css"
+  },
+  "scripts": {
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@scyde/i18n": "workspace:*",
+    "@scyde/tokens": "workspace:*"
+  }
+}

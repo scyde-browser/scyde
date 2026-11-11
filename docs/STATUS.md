@@ -2,7 +2,7 @@
 
 > At the start of every session, read this file and continue from the first open task of the current phase.
 
-**Current phase:** Phase 1, Rust core and Shield pipeline (PLAN §11) · **done 2026-11-11** (PRs #5–#12), except the `[OWNER]` items below · next: Phase 2 (web design system and internal pages) once the owner confirms
+**Current phase:** Phase 2, web design system and internal pages (PLAN §11) · in progress (owner, 2026-11-11: "continue with all phases"). Phase 1 done (PRs #5–#12), owner items listed below.
 **Last updated:** 2026-11-11
 
 ## Phase 0: CLOSED (2026-11-11)
@@ -111,6 +111,16 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - `FILTERS_SIGNING_KEY` and `brand/keys/filters.pub` (docs/filters-signing.md)
 - the scriptlet resources source (resources.json, GPLv3; open question 3)
 - default search engine (open question 2; DuckDuckGo until then)
+
+## Phase 2: web design system and internal pages
+- [x] `@scyde/ui`: Svelte 5 components from the Island prototype (BrandMark, Icon, Button, IconButton, Toggle, Segmented, Tabs, Favicon monogram, Kbd, Stat, Card, Skeleton, Toast), `base.css` (OFL fonts, tokens, focus, Rise), `applyAppearance` (data-theme/accent/density/motion), formatters
+- [x] `@scyde/bridge`: typed API (13 methods, one allowlist), transports Tauri / WKWebView reply handler / GeckoView native messaging, trusted-origin check, timeouts, in-memory mock for dev and tests
+- [x] Apps `newtab`, `settings` (rendered from `core/settings/schema/settings.schema.json`), `shields`, `library` (history + bookmarks); strict CSP meta in production builds
+- [x] `@scyde/i18n`: `t()` with ICU plurals; all copy in `en.json`
+- [x] Playwright (`web/e2e`): Chromium, Firefox, WebKit × light/dark × 1440/390 screenshots, axe (no serious/critical), no console/CSP errors, interaction tests; CI artifact `screenshots`
+- [x] `pnpm size`: JS gz newtab 20.5 KB, settings 21.4 KB, shields 19.8 KB, library 24.7 KB (budget 120 KB)
+- [ ] Lighthouse a11y ≥ 95: covered by axe in 3 engines for now; Lighthouse CI to be added
+- Skills `emil-design-eng`, `animate`, `mobile-native` are not installed; DESIGN.md was followed directly
 
 ## Skills
 `impeccable`, `taste-skill`, `prototype` and `pick-ui-library` do not exist in the plugin catalog, so they are **implemented as project skills** in `.claude/skills/` (2026-11-11) and are loaded in every session in this repo:

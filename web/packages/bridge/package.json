@@ -1,0 +1,12 @@
+{
+  "name": "@scyde/bridge",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed IPC between internal scyde:// pages and the native host (CLAUDE.md rule 6)",
+  "exports": { ".": "./src/index.ts", "./mock": "./src/mock.ts" },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p ."
+  }
+}
