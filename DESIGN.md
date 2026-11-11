@@ -148,7 +148,7 @@ Trajanja (`instant 90`, `fast 140`, `base 200`, `slow 300`, `choreo-max 420`) i 
 ## 7. Ikonografija
 - Linijske ikone, potez 1,5 px, grid 20/24, Lucide (ISC) + vlastite.
 - Favicon bez slike dobiva **monogram u Aura pastelu** po hostu (stabilno).
-- Ikona aplikacije: **SCYDE S**, vlasnikov znak (2026-11-11). Light: Ember pločica + crni S. Dark: crna pločica s tankim svijetlim rubom + Ember S. Android adaptive pozadina je Ember; monochrome i tinted su crni ili bijeli S. **Windows (`.ico`, taskbar):** bez pločice, ruba i pozadine, samo Ember S preko ~92 % površine, kao ostale ikone na taskbaru (vlasnik, 2026-11-11). Na svijetlom taskbaru kontrast je slabiji; ako zatreba, MSIX paket dobiva `altform-lightunplated` varijantu s crnim S-om. Exporti: `node tools/icon-export/export.mjs` (`brand.json → icon.concept = owner-s`). Aura S je povučen.
+- Ikona aplikacije: **SCYDE S**, vlasnikov znak (2026-11-11). Light: Ember pločica + crni S. Dark: crna pločica bez ruba + Ember S. Android adaptive pozadina je Ember; monochrome i tinted su crni ili bijeli S. **Windows (`.ico`, taskbar):** bez pločice, ruba i pozadine, samo Ember S preko ~92 % površine, kao ostale ikone na taskbaru (vlasnik, 2026-11-11). Na svijetlom taskbaru kontrast je slabiji; ako zatreba, MSIX paket dobiva `altform-lightunplated` varijantu s crnim S-om. Exporti: `node tools/icon-export/export.mjs` (`brand.json → icon.concept = owner-s`). Aura S je povučen.
 
 ---
 

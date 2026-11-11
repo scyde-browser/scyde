@@ -243,7 +243,7 @@ const concepts = {
     round: 4,
     name: 'SCYDE S',
     blurb: 'Vlasnikov znak: S od dva zrcalna dijela s dijagonalnim rezom (munja). Ember pločica s crnim znakom; tamna varijanta s Ember znakom.',
-    palette: { tileLight: '#F2603F', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#F2603F', darkStroke: '#D4D4D4', radius: 230 },
+    palette: { tileLight: '#F2603F', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#F2603F', radius: 230 },
     draw() {
       // Points read from the owner's construction drawing (539 x 584 artboard). The lower half is the upper
       // half rotated 180 degrees about the centre of the mark, so the S is exactly point-symmetric.
