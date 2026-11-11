@@ -10,7 +10,7 @@
 
 **Sadržaj od ruba do ruba, sučelje kao jedan predmet.** SCYDE nema traku s tabovima ni toolbar na vrhu. Cijelo sučelje je **otok**: jedan plutajući objekt na dnu prozora koji nosi znak, navigaciju, adresu, Shield i tabove, a širi se kad ga trebaš.
 
-- **Papir i tinta.** Stranica počiva na toplom papiru (light) ili gotovo crnoj tinti (dark). **Otok je uvijek inverz:** tinta na papiru, papir na tinti. Zato ga se uvijek odmah nađe.
+- **Papir i tinta.** Stranica počiva na toplom papiru (light) ili gotovo crnoj tinti (dark). **Otok je uvijek taman:** u light temi je tinta na papiru, a u dark temi tamni otok s tankim svijetlim rubom i sjenom, bez svijetle trake koja noću bljesne u oči (vlasnik, 2026-11-11).
 - **Ember je energija.** Narančasto-crveni Ember pojavljuje se samo tamo gdje je radnja: kursor, aktivni tab, glavni gumb, znak.
 - **Riječi umjesto pločica.** New Tab ne počinje mrežom ikona nego pitanjem "Kamo danas?", u koje se izravno tipka.
 - **Stvarne brojke.** Shield statistika dolazi iz enginea i stoji uz otok, mono fontom.
@@ -41,16 +41,19 @@
 | `text.secondary` | `#5B5A57` | `#A6A39C` | opisi, meta |
 | `text.tertiary` | `#66645F` | `#8E8B84` | hintovi, vremena |
 
-### 2.2 Otok (inverzna površina)
+### 2.2 Otok (uvijek taman)
 
-| Token | Light (tinta) | Dark (papir) |
+| Token | Light | Dark |
 |---|---|---|
-| `island.bg` | `#121214` | `#F1EEE7` |
-| `island.raised` | `#2A2A2E` | `#DAD6CD` |
-| `island.text` | `#F3F1EC` | `#121214` |
-| `island.text-secondary` | `#A8A6A0` | `#5B5A57` |
-| `island.shield` | `#3DDC97` | `#0B5E33` |
-| `elev.island` | `0 18 50 -18 rgba(0,0,0,.45)` | `… rgba(0,0,0,.60)` |
+| `island.bg` | `#121214` | `#232328` |
+| `island.raised` | `#2A2A2E` | `#313137` |
+| `island.text` | `#F3F1EC` | `#F1EEE7` |
+| `island.text-secondary` | `#A8A6A0` | `#A6A39C` |
+| `island.shield` | `#3DDC97` | `#3DDC97` |
+| `island.border` (rub) | – | papir 22 % (1 px) |
+| `elev.island` | `0 18 50 -18 rgba(0,0,0,.45)` | `0 18 50 -12 rgba(0,0,0,.70)` |
+
+Otok ima `box-shadow: var(--elev-island), inset 0 0 0 1px var(--island-border)`.
 
 ### 2.3 Accent (korisnik bira, default **Ember**)
 Accent obilježava "ovdje si": kursor, aktivni tab, fokus prsten i odabrani redak. Svaki accent ima ulogu po površini:
@@ -59,7 +62,7 @@ Accent obilježava "ovdje si": kursor, aktivni tab, fokus prsten i odabrani reda
 |---|---|---|---|
 | `accent.ink` (tekst, ikone) | tamna ink varijanta | pastel | – |
 | `accent.fill` + `accent.on-fill` | pastel + `#121214` | pastel + `#121214` | – |
-| `accent.island` | – | – | light: pastel na tinti; dark: ink na papiru (≥ 3:1) |
+| `accent.island` | – | – | pastel na tamnom otoku u obje teme (≥ 3:1) |
 
 Predlošci: **Ember** (default), Sky, Periwinkle, Lavender, Mint, Onyx. Kod vlastite boje `core/theme` izvodi sve uloge u OKLCH-u i odbija kombinacije ispod AA.
 
@@ -203,5 +206,6 @@ Izlazi: `web/packages/tokens/dist/{css,kotlin,swift,json}`. Generator: `pnpm tok
   - Novi efekti Swell, Pebble, Fan i Caret.
   - Aura mesh pozadine su uklonjene.
   - Contrast gate je proširen na parove na otoku (204 para).
+  - Otok u dark temi ostaje taman s rubom (umjesto svijetlog otoka), na zahtjev vlasnika.
   - Ikona i znak: vlasnikov **SCYDE S** zamjenjuje Aura S; po želji vlasnika je u **Ember** boji (prvo lime, pa prebačeno), tokeni `brand.mark` i `brand.ink`.
 - **v1.0 (Faza 0.2):** "Aura" (u git povijesti).

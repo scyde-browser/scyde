@@ -36,7 +36,7 @@
           "$value": "{aura.sky.fill}"
         },
         "island": {
-          "$value": "{aura.sky.ink}"
+          "$value": "{aura.sky.fill}"
         }
       }
     },
@@ -72,7 +72,7 @@
           "$value": "{aura.periwinkle.fill}"
         },
         "island": {
-          "$value": "{aura.periwinkle.ink}"
+          "$value": "{aura.periwinkle.fill}"
         }
       }
     },
@@ -108,7 +108,7 @@
           "$value": "{aura.lavender.fill}"
         },
         "island": {
-          "$value": "{aura.lavender.ink}"
+          "$value": "{aura.lavender.fill}"
         }
       }
     },
@@ -144,7 +144,7 @@
           "$value": "{aura.mint.fill}"
         },
         "island": {
-          "$value": "{aura.mint.ink}"
+          "$value": "{aura.mint.fill}"
         }
       }
     },
@@ -180,7 +180,7 @@
           "$value": "{aura.ember.fill}"
         },
         "island": {
-          "$value": "{aura.ember.ink}"
+          "$value": "{aura.ember.fill}"
         }
       }
     },
@@ -216,7 +216,7 @@
           "$value": "{neutral.dark.50}"
         },
         "island": {
-          "$value": "{neutral.dark.900}"
+          "$value": "{neutral.dark.50}"
         }
       }
     },

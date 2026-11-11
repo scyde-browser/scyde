@@ -217,6 +217,10 @@
         },
         "shield": {
           "$value": "{status-raw.shield-bright}"
+        },
+        "border": {
+          "$value": "#00000000",
+          "$description": "Light theme: the ink island needs no rim on paper."
         }
       }
     },
@@ -353,8 +357,8 @@
               "offsetX": "0px",
               "offsetY": "18px",
               "blur": "50px",
-              "spread": "-18px",
-              "color": "#00000099"
+              "spread": "-12px",
+              "color": "#000000B3"
             }
           ]
         }
@@ -428,23 +432,27 @@
       },
       "island": {
         "$type": "color",
+        "$description": "Dark theme: the island stays dark (no bright bar at night, owner 2026-11-11) and is separated by a light rim + shadow.",
         "bg": {
-          "$value": "{neutral.dark.50}"
+          "$value": "#232328"
         },
         "raised": {
-          "$value": "#DAD6CD"
+          "$value": "#313137"
         },
         "text": {
-          "$value": "{neutral.dark.900}"
+          "$value": "{neutral.dark.50}"
         },
         "text-secondary": {
-          "$value": "{neutral.dark.600}"
+          "$value": "{neutral.dark.300}"
         },
         "hairline": {
-          "$value": "#1212142E"
+          "$value": "#F1EEE72E"
         },
         "shield": {
-          "$value": "{status-raw.shield-deep}"
+          "$value": "{status-raw.shield-bright}"
+        },
+        "border": {
+          "$value": "#F1EEE738"
         }
       }
     },
