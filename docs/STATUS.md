@@ -37,15 +37,17 @@
 - [x] Desktop chrome: tabovi, omnibox focus s prijedlozima, Shield panel (`design/prototypes/desktop-chrome/`)
 - [x] Mobilni donji toolbar + tab switcher (`design/prototypes/mobile/`)
 - [x] `taste-skill` + `impeccable` critique svakog prototipa; svi P1/P2 popravljeni (vidi `notes.md` u svakoj mapi)
-- [ ] `[VLASNIK]` odobrava prototipove
+- [ ] `[VLASNIK]` odobrava prototipove (screenshotovi u `design/prototypes/*/shots/`)
 
 ### 0.5 Spikeovi
 CI: `.github/workflows/spikes.yml` (pokreće se na PR-u ili ručno). Fixturei: `qa/` (`node qa/serve.mjs 8787`).
-- [ ] S1 Google prijava na WebView2, GeckoView i WKWebView → **G1** (`[VLASNIK]`, ručni test: koraci ispod)
-- [ ] S2 WebView2 Shield → **G2**: baseline i opcija B automatizirani (`s5-windows`); opcije A (DNR ekstenzija) i C (CDP) još nisu napravljene
-- [ ] S3 GeckoView → **G3**: WASM dio ✅ (CI p99 14,8 µs, fixture 8/8); aplikacija + emulator test u izradi (`s3-geckoview-app`)
-- [ ] S4 iOS rule liste ≥ 150k pravila → **G4**: konverter ✅ (132k stvarnih / 264k stres), XCTest na simulatoru u CI-ju (`s4-ios-rulelists`)
-- [ ] S5 Tauri multiwebview → **G5**: 20 tabova, prebacivanje, popover, Mica, titlebar u CI-ju (`s5-windows`); Snap Layouts ručno
+- [ ] S1 Google prijava na WebView2, GeckoView i WKWebView → **G1**: buildovi su spremni (`s1-windows-exe`, `s3-geckoview-apk`, `s1-ios-ipa`), čeka se ručni test `[VLASNIK]` (koraci ispod) → ADR-0002
+- [x] S2 WebView2 Shield → **G2 ✅**: A i B blokiraju 6/6 mrežnih fixture zahtjeva; učitavanje je brže nego bez blokiranja (index.hr 1102 → 229 ms). Odluka: **opcija A (DNR)**, B rezerva → ADR-0003
+- [x] S3 GeckoView → **G3 ✅**: GeckoView 160, fixture 10/11 (6/6 mreža), WASM p99 40 µs u SpiderMonkeyju (14,8 µs u V8), interna stranica ↔ aplikacija radi → ADR-0004
+- [x] S4 iOS rule liste → **G4 ✅**: 263.790 pravila u 2 liste, keširani load 6 ms, fixture 6/6 mreža; kompajliranje 83 s + 133 s → samo u pozadini → ADR-0006
+- [x] S5 Tauri multiwebview → **G5 ✅** (osim Snap Layouts): prebacivanje taba p95 0,16–0,39 ms, popover p95 0,10 ms, 20/20 tabova, Mica i titlebar; Snap Layouts otvoren (ručno, Faza 3) → ADR-0007
+
+**Nakon G1:** ako vlasnik potvrdi prijavu na sva tri enginea, Faza 0 se zatvara (prompt 2 iz `docs/KICKOFF.md`): ADR-ovi idu u "Prihvaćeno", `spikes/` se briše, a plan Faze 1 se predlaže.
 
 #### S1: koraci za vlasnika (Google prijava) `[VLASNIK]`
 Cilj G1: prijava radi na sva tri enginea (screenshotovi idu u ADR-0002). Koristi **testni Google račun** s uključenom 2FA, ako ga imaš.
