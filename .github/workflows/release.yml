@@ -8,8 +8,12 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to (re)publish, e.g. v0.1.0"
+        description: "Tag to (re)publish, e.g. v0.1.0. Created on `target` if it does not exist yet."
         required: true
+      target:
+        description: "Branch or commit for a new tag (ignored if the tag already exists)"
+        required: false
+        default: main
 
 permissions:
   contents: write
@@ -20,6 +24,20 @@ jobs:
     env:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
+      # A tag push can be refused from some environments; a manual run creates the tag on GitHub instead.
+      - name: Create tag if missing (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ github.event.inputs.target || 'main' }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} exists"
+          else
+            SHA=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TARGET}" --jq .sha)
+            gh api "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${TAG}" -f sha="${SHA}"
+            echo "Created ${TAG} at ${SHA}"
+          fi
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
