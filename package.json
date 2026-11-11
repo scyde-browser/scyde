@@ -1,0 +1,16 @@
+{
+  "name": "scyde-browser",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "tokens": "pnpm --filter @scyde/tokens build",
+    "contrast": "node tools/contrast-check/index.mjs",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", ":dependencyDashboard"],
+  "timezone": "Europe/Zagreb",
+  "schedule": ["before 6am on monday"],
+  "rangeStrategy": "pin",
+  "lockFileMaintenance": { "enabled": true },
+  "packageRules": [
+    {
+      "description": "GeckoView: bump every 4 weeks (security bumps are handled as vulnerability alerts, merge within 48 h)",
+      "matchPackageNames": ["org.mozilla.geckoview:**"],
+      "schedule": ["before 6am on the first day of the month"],
+      "labels": ["engine", "security-sensitive"]
+    },
+    {
+      "description": "Tauri multiwebview uses the unstable feature: keep Tauri pinned, review manually",
+      "matchPackageNames": ["tauri", "tauri-build", "@tauri-apps/**"],
+      "automerge": false,
+      "labels": ["engine"]
+    },
+    {
+      "description": "adblock-rust is the Shield engine: always run benches before merging",
+      "matchPackageNames": ["adblock"],
+      "labels": ["shield", "hot-path"]
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true
+    }
+  ],
+  "vulnerabilityAlerts": { "labels": ["security"], "schedule": ["at any time"] }
+}

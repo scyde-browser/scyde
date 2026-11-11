@@ -1,0 +1,17 @@
+{
+  "$comment": "Single source for the product identity. A rebrand is an edit here plus design/tokens.",
+  "name": "SCYDE Browser",
+  "shortName": "SCYDE",
+  "homeScreenLabel": "SCYDE Browser",
+  "codename": "scyde-browser",
+  "appId": "dev.scyde.browser",
+  "scheme": "scyde",
+  "publisher": "SCYDE",
+  "website": "https://github.com/scyde-browser/scyde",
+  "colors": {
+    "brand": "{ember.700}",
+    "iconGradient": ["#FFB27A", "#FF8E5C", "#F2603F"],
+    "iconTileLight": "#FFFFFF",
+    "iconTileDark": "#17181E"
+  }
+}
