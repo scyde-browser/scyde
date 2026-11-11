@@ -51,7 +51,9 @@ gh run download <run-id> -n screenshots      # visual check
 # core
 cargo fmt --all && cargo clippy --workspace -- -D warnings && cargo test --workspace
 cargo bench -p shield --bench match            # Shield latency
-cargo run -p shield-compiler -- --lists qa/lists --out dist/filters
+cargo run -p shield-compiler -- --lists ../qa/lists --out dist/filters   # FILTERS_SIGNING_KEY signs
+cargo run -p shield-compiler -- verify dist/filters --pubkey ../brand/keys/filters.pub
+UPDATE_GOLDEN=1 cargo test -p shield-compiler --test golden      # after an intended output change
 
 # web (pnpm workspace)
 pnpm i && pnpm -r lint && pnpm -r typecheck && pnpm -r test

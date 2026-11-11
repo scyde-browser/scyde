@@ -1,0 +1,27 @@
+{
+  "cosmetic": {
+    "dropped": {},
+    "generic": 2,
+    "host_rules": 3,
+    "hosts": 3,
+    "scriptlets": 0
+  },
+  "dnr": {
+    "converted": 6,
+    "dropped": {
+      "cosmetic": 5
+    },
+    "duplicates": 0,
+    "filter_lines": 11,
+    "over_limit": 0,
+    "regex_rules": 0,
+    "rulesets": 1
+  },
+  "ios": {
+    "dropped": {},
+    "filters_used": 11,
+    "lists": 1,
+    "rules": 12
+  },
+  "resources": 0
+}

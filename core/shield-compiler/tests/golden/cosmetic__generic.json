@@ -1,0 +1,12 @@
+{
+  "classes": {
+    "ad-banner": [
+      ".ad-banner"
+    ]
+  },
+  "exceptions": [],
+  "ids": {},
+  "other": [
+    "div[id^=\"sponsor-\"]"
+  ]
+}

@@ -35,3 +35,49 @@ jobs:
           cargo build --workspace --lib --target aarch64-apple-ios-sim
       # Phase 4: ScydeCore.xcframework, xcodegen, simulator build + XCUITest screenshots,
       # unsigned .ipa (Payload/SCYDE.app zipped) on tags for Feather.
+
+  shield-rulelists:
+    # shield-compiler iOS output must compile in WebKit and block the fixture (Phase 1.2, ADR-0006).
+    # Real lists are compiled too, so a WebKit regression shows up here before filters.yml ships it.
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Download filter lists (fall back to the fixture if offline)
+        run: |
+          mkdir -p lists
+          for u in https://easylist.to/easylist/easylist.txt https://easylist.to/easylist/easyprivacy.txt \
+                   https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt; do
+            curl -sSfL --retry 3 -o "lists/$(basename "$u")" "$u" || echo "::warning::could not download $u"
+          done
+          ls lists/*.txt >/dev/null 2>&1 || cp qa/lists/fixture.txt lists/
+      - name: Compile bundles
+        working-directory: core
+        run: |
+          R=../ios/ShieldRuleLists/Tests/ShieldRuleListsTests/Resources/rulelists
+          cargo run --release -p shield-compiler -- --lists ../lists --out ../out/real --version ci
+          cargo run --release -p shield-compiler -- --lists ../qa/lists --out ../out/fixture --version ci
+          mkdir -p "$R/bundle" "$R/fixture"
+          cp ../out/real/ios/*.json "$R/bundle/"
+          cp ../out/fixture/ios/scyde-00.json "$R/fixture/"
+          cp -R ../qa/adblock "$R/qa-adblock"
+          cat ../out/real/report.json
+      - name: Test on iOS simulator
+        working-directory: ios/ShieldRuleLists
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          echo "simulator: $UDID"
+          set -o pipefail
+          xcodebuild test -scheme ShieldRuleLists -destination "id=$UDID" 2>&1 | tee ../../rulelists.log | grep -E "SCYDE_RESULT|Test Case|error:|TEST (SUCCEEDED|FAILED)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shield-rulelists
+          path: |
+            rulelists.log
+            out/real/report.json
+            out/real/manifest.json

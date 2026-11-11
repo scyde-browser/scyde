@@ -1,0 +1,128 @@
+[
+  {
+    "action": {
+      "type": "block"
+    },
+    "trigger": {
+      "resource-type": [
+        "image",
+        "script"
+      ],
+      "url-filter": "/ad-network/"
+    }
+  },
+  {
+    "action": {
+      "type": "block"
+    },
+    "trigger": {
+      "url-filter": "/tracker/pixel\\.gif"
+    }
+  },
+  {
+    "action": {
+      "type": "block"
+    },
+    "trigger": {
+      "url-filter": "/analytics/collect\\.js"
+    }
+  },
+  {
+    "action": {
+      "type": "block"
+    },
+    "trigger": {
+      "resource-type": [
+        "document"
+      ],
+      "url-filter": "/ad-network/frame\\.html"
+    }
+  },
+  {
+    "action": {
+      "type": "block"
+    },
+    "trigger": {
+      "resource-type": [
+        "script"
+      ],
+      "url-filter": "/cdn/prebid.*\\.js"
+    }
+  },
+  {
+    "action": {
+      "selector": ".ad-banner",
+      "type": "css-display-none"
+    },
+    "trigger": {
+      "url-filter": ".*"
+    }
+  },
+  {
+    "action": {
+      "selector": "div[id^=\"sponsor-\"]",
+      "type": "css-display-none"
+    },
+    "trigger": {
+      "url-filter": ".*"
+    }
+  },
+  {
+    "action": {
+      "selector": ".scyde-specific-ad",
+      "type": "css-display-none"
+    },
+    "trigger": {
+      "if-domain": [
+        "127.0.0.1"
+      ],
+      "url-filter": ".*"
+    }
+  },
+  {
+    "action": {
+      "selector": ".scyde-specific-ad",
+      "type": "css-display-none"
+    },
+    "trigger": {
+      "if-domain": [
+        "localhost"
+      ],
+      "url-filter": ".*"
+    }
+  },
+  {
+    "action": {
+      "selector": ".scyde-specific-ad",
+      "type": "css-display-none"
+    },
+    "trigger": {
+      "if-domain": [
+        "10.0.2.2"
+      ],
+      "url-filter": ".*"
+    }
+  },
+  {
+    "action": {
+      "type": "ignore-previous-rules"
+    },
+    "trigger": {
+      "url-filter": "/cdn/prebid-allowed\\.js"
+    }
+  },
+  {
+    "action": {
+      "type": "ignore-previous-rules"
+    },
+    "trigger": {
+      "load-type": [
+        "first-party"
+      ],
+      "resource-type": [
+        "document"
+      ],
+      "url-filter": ".*"
+    }
+  }
+]
