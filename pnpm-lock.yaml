@@ -37,6 +37,8 @@ importers:
 
   tools/filters: {}
 
+  tools/i18n-native: {}
+
   tools/icon-export:
     devDependencies:
       '@resvg/resvg-js':

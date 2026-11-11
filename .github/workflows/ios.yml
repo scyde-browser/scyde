@@ -5,7 +5,7 @@ on:
   push:
     tags: ["v*"]
   pull_request:
-    paths: ["ios/**", "core/ffi/**", ".github/workflows/ios.yml"]
+    paths: ["ios/**", "core/ffi/**", "tools/i18n-native/**", ".github/workflows/ios.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -94,3 +94,89 @@ jobs:
             rulelists.log
             out/real/report.json
             out/real/manifest.json
+
+  app:
+    # SCYDE for iOS (Phase 4): simulator screenshots + unsigned .ipa for Feather (PLAN §9.3).
+    runs-on: macos-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Web pages, tokens, strings, icons
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm tokens
+          for a in newtab settings shields library; do pnpm --filter "@scyde/app-$a" build; done
+          R=ios/SCYDE
+          mkdir -p $R/Resources/pages $R/Sources/Generated
+          for a in newtab settings shields library; do cp -R web/apps/$a/dist $R/Resources/pages/$a; done
+          cp web/packages/tokens/dist/swift/ScydeTokens.swift $R/Sources/Generated/
+          node tools/i18n-native/build.mjs --ios $R/Sources/Generated/Localizable.xcstrings
+          node tools/icon-export/export.mjs --out dist/icons
+          cp -R dist/icons/owner-s/ios/AppIcon.appiconset/. $R/Resources/Assets.xcassets/AppIcon.appiconset/
+      - name: Filter bundle (iOS rule lists, ADR-0006)
+        run: |
+          node tools/filters/fetch.mjs --out lists || { echo "::warning::list download failed, using the fixture"; rm -rf lists; mkdir lists; }
+          cp qa/lists/fixture.txt lists/zz-fixture.txt
+          (cd core && cargo run --release -p shield-compiler -- --lists ../lists --out ../bundle --version "$(date -u +%Y%m%d)")
+          mkdir -p ios/SCYDE/Resources/filters
+          cp -R bundle/ios bundle/manifest.json ios/SCYDE/Resources/filters/
+      - name: ScydeCore.xcframework (core/ffi)
+        working-directory: core
+        run: ffi/build-apple.sh target/ffi-apple
+      - name: Xcode project
+        working-directory: ios/SCYDE
+        run: |
+          brew install xcodegen
+          xcodegen
+      - name: Simulator build and screenshots
+        working-directory: ios/SCYDE
+        run: |
+          set -o pipefail
+          xcodebuild build -project SCYDE.xcodeproj -scheme SCYDE -sdk iphonesimulator -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO | tail -30
+          APP=$(find build/sim -name SCYDE.app -type d | head -1)
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p ../../shots
+          (cd ../.. && node qa/serve.mjs 8787 > /dev/null 2>&1 &)
+          for mode in light dark; do
+            xcrun simctl ui "$UDID" appearance $mode
+            xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser
+            sleep 12
+            xcrun simctl io "$UDID" screenshot ../../shots/newtab-$mode.png
+          done
+          xcrun simctl ui "$UDID" appearance light
+          xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -open http://127.0.0.1:8787/adblock/index.html
+          sleep 25
+          xcrun simctl io "$UDID" screenshot ../../shots/qa-adblock.png
+          xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -open scyde://settings/
+          sleep 8
+          xcrun simctl io "$UDID" screenshot ../../shots/settings.png
+      - name: Unsigned .ipa (Feather signs it)
+        working-directory: ios/SCYDE
+        run: |
+          set -o pipefail
+          xcodebuild archive -project SCYDE.xcodeproj -scheme SCYDE -sdk iphoneos -configuration Release \
+            -archivePath build/SCYDE.xcarchive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -20
+          mkdir -p build/Payload
+          cp -R build/SCYDE.xcarchive/Products/Applications/SCYDE.app build/Payload/
+          (cd build && zip -qry SCYDE-unsigned.ipa Payload)
+          ls -la build/SCYDE-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scyde-ios
+          path: |
+            ios/SCYDE/build/SCYDE-unsigned.ipa
+            shots/
