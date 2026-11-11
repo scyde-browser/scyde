@@ -27,7 +27,18 @@ fn main() {
         set.add_filter_list(fs::read_to_string(l).expect("read list"), ParseOptions::default());
     }
     let (rules, used_filters) = set.into_content_blocking().expect("debug filter set");
-    let mut json: Vec<serde_json::Value> = rules.iter().map(|r| serde_json::to_value(r).unwrap()).collect();
+    let mut dropped_regex = 0usize;
+    let mut json: Vec<serde_json::Value> = rules
+        .iter()
+        .map(|r| serde_json::to_value(r).unwrap())
+        .filter(|v| {
+            let ok = v.pointer("/trigger/url-filter").and_then(|f| f.as_str()).is_none_or(webkit_regex_ok);
+            if !ok {
+                dropped_regex += 1;
+            }
+            ok
+        })
+        .collect();
     let base = json.len();
     if repeat > 1 {
         // Stress mode: clone network rules with a unique query marker so WebKit cannot dedupe them.
@@ -57,10 +68,27 @@ fn main() {
         "lists": lists,
         "filters_used": used_filters.len(),
         "cb_rules_base": base,
+        "dropped_unsupported_regex": dropped_regex,
         "cb_rules_total": json.len(),
         "max_per_list": max,
         "chunks": manifest,
     });
     fs::write(out.join("manifest.json"), serde_json::to_string_pretty(&summary).unwrap()).unwrap();
     println!("{}", serde_json::to_string_pretty(&summary).unwrap());
+}
+
+/// WebKit content blockers accept only a small regex subset: no alternation, no counted repetition,
+/// no shorthand classes, no lookaround or backreferences, ASCII only, and no literal `\^` (an ABP
+/// separator that was not translated).
+fn webkit_regex_ok(f: &str) -> bool {
+    if !f.is_ascii() || f.contains('|') || f.contains('{') || f.contains('}') || f.contains("(?") || f.contains("\\^") {
+        return false;
+    }
+    let b = f.as_bytes();
+    for i in 0..b.len().saturating_sub(1) {
+        if b[i] == b'\\' && matches!(b[i + 1], b'd' | b'D' | b'w' | b'W' | b's' | b'S' | b'b' | b'B' | b'1'..=b'9') {
+            return false;
+        }
+    }
+    true
 }

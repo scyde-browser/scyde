@@ -61,8 +61,11 @@ final class RuleListSpikeTests: XCTestCase {
         window.addSubview(web)
         window.makeKeyAndVisible()
 
-        let base = ProcessInfo.processInfo.environment["SCYDE_QA_URL"] ?? "http://127.0.0.1:8787"
-        web.load(URLRequest(url: URL(string: "\(base)/adblock/")!))
+        // qa/adblock is bundled as a test resource (copied by CI): no network and no ATS exception needed.
+        let page = try resource("qa-adblock/index.html")
+        let nav = NavRecorder()
+        web.navigationDelegate = nav
+        web.loadFileURL(page, allowingReadAccessTo: page.deletingLastPathComponent())
 
         var result: [String: Any]?
         for _ in 0..<60 {
@@ -73,7 +76,7 @@ final class RuleListSpikeTests: XCTestCase {
                 break
             }
         }
-        let r = try XCTUnwrap(result, "fixture page did not report (is qa/serve.mjs running?)")
+        let r = try XCTUnwrap(result, "fixture page did not report; navigation log: \(nav.log)")
         print("SCYDE_RESULT fixture \(String(decoding: try JSONSerialization.data(withJSONObject: r), as: UTF8.self))")
         let results = r["results"] as? [String: Bool] ?? [:]
         for key in results.keys where key.hasPrefix("net:") {
@@ -82,4 +85,12 @@ final class RuleListSpikeTests: XCTestCase {
         XCTAssertEqual(results["allow:exception"], true)
         XCTAssertEqual(results["keep:content"], true)
     }
+}
+
+@MainActor
+final class NavRecorder: NSObject, WKNavigationDelegate {
+    var log: [String] = []
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { log.append("finish \(webView.url?.absoluteString ?? "")") }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { log.append("fail \(error)") }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { log.append("provisional fail \(error)") }
 }

@@ -305,6 +305,7 @@ mod option_b {
             let env: ICoreWebView2Environment = pw.environment();
             core.AddWebResourceRequestedFilter(&HSTRING::from("*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL).expect("filter");
             let mut token: i64 = 0;
+            let core_for_handler = core.clone();
             let handler = WebResourceRequestedEventHandler::create(Box::new(
                 move |_sender, args: Option<ICoreWebView2WebResourceRequestedEventArgs>| {
                     let Some(args) = args else { return Ok(()) };
@@ -314,9 +315,15 @@ mod option_b {
                     let uri = take(uri);
                     let mut ctx = COREWEBVIEW2_WEB_RESOURCE_CONTEXT::default();
                     args.ResourceContext(&mut ctx)?;
-                    let kind = ctx_type(ctx);
+                    let mut kind = ctx_type(ctx);
                     if kind == "main_frame" {
-                        return Ok(());
+                        // WebView2 reports iframes as DOCUMENT too: only the top-level document passes untouched.
+                        let mut top = PWSTR::null();
+                        core_for_handler.Source(&mut top)?;
+                        if take(top) == uri {
+                            return Ok(());
+                        }
+                        kind = "sub_frame";
                     }
                     let mut referer = PWSTR::null();
                     let source = match req.Headers().and_then(|h| h.GetHeader(&HSTRING::from("Referer"), &mut referer)) {

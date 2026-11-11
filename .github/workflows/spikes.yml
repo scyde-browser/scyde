@@ -192,9 +192,9 @@ jobs:
           cargo run --release -- --out "$R" --repeat 2 ../../../lists/*.txt
           cargo run --release -- --out fixture-out ../../../qa/lists/fixture.txt
           cp fixture-out/scyde-00.json "$R/fixture.json"
+          cp -R ../../../qa/adblock "$R/qa-adblock"
+          cat "$R/manifest.json"
           ls -la "$R"
-      - name: Serve qa fixtures
-        run: node qa/serve.mjs 8787 &
       - name: Test on iOS simulator
         working-directory: spikes/s4-ios-rulelists/RuleListSpike
         run: |
@@ -253,9 +253,10 @@ jobs:
       - name: S2 option A (MV3 DNR extension)
         shell: pwsh
         run: |
-          node spikes/s2-dnr/convert.mjs --out dnr-ext qa/lists/fixture.txt lists/easylist.txt lists/easyprivacy.txt lists/filters.txt
+          # extensions_path loads every *subfolder* as an unpacked extension
+          node spikes/s2-dnr/convert.mjs --out dnr-ext/scyde-dnr qa/lists/fixture.txt lists/easylist.txt lists/easyprivacy.txt lists/filters.txt
           ./spikes/s5-tauri/ci/run.ps1 -Exe spikes/s5-tauri/src-tauri/target/release/scyde-spike-s5.exe -Name s2-a -AppArgs '--mode','shield','--shield','a','--ext','dnr-ext','--out','s2-a.json','--rounds','3','--sites',$env:SITES -ShotAfter 20
-          Copy-Item dnr-ext/stats.json s2-a-dnr-stats.json
+          Copy-Item dnr-ext/scyde-dnr/stats.json s2-a-dnr-stats.json
         env:
           SITES: https://www.index.hr/,https://www.24sata.hr/,https://www.jutarnji.hr/,https://www.youtube.com/,https://edition.cnn.com/
       - uses: actions/upload-artifact@v4
