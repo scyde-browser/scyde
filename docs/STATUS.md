@@ -2,7 +2,7 @@
 
 > At the start of every session, read this file and continue from the first open task of the current phase.
 
-**Current phase:** Phase 1, Rust core and Shield pipeline (PLAN §11) · **plan proposed, awaiting confirmation `[OWNER]`**
+**Current phase:** Phase 1, Rust core and Shield pipeline (PLAN §11) · **in progress** (plan confirmed by the owner 2026-11-11)
 **Last updated:** 2026-11-11
 
 ## Phase 0: CLOSED (2026-11-11)
@@ -29,23 +29,19 @@
 - iOS list compilation only in the background, and shipping a precompiled snapshot → Phase 4
 - GeckoView 160 requires compileSdk 37.2, AGP 9.5, Kotlin 2.4 → Phase 5
 
-## Pending: release v0.1.0
-Everything for v0.1.0 is merged on `main` (release notes: `docs/releases/v0.1.0.md`, workflow: `.github/workflows/release.yml`).
-The previous session could not publish it: its GitHub proxy rejected tag pushes (HTTP 403) and release creation ("not permitted for this session type").
-**Next session: push the tag and let the workflow publish the release:**
-```bash
-git fetch origin main && git tag v0.1.0 origin/main && git push origin v0.1.0
-```
-Then watch the `release` workflow; it creates the pre-release and attaches icons, tokens, fonts, prototypes and docs.
+## Release v0.1.0: published (2026-11-11)
+[SCYDE v0.1.0](https://github.com/scyde-browser/scyde/releases/tag/v0.1.0), a pre-release with 7 assets (icons, `.ico`, mark, tokens, fonts, prototypes, docs).
+Tag pushes from the agent environment are still refused (HTTP 403), so `release.yml` gained a manual path: `workflow_dispatch` with `tag` (and optional `target`, default `main`) creates the tag through the API, then publishes (PR #4).
+To release from an agent session, run the `release` workflow with `tag=vX.Y.Z` instead of pushing a tag.
 
-## Phase 1: plan (proposal)
-Branch `phase/1-core`, one PR per logical unit, CI green. The order was chosen so that the Shield pipeline (the riskiest part) is done first.
+## Phase 1: plan (confirmed)
+Branch: the session's designated branch (agent sessions may only push there), one PR per logical unit, one PR per logical unit, CI green. The order was chosen so that the Shield pipeline (the riskiest part) is done first.
 
 ### 1.1 `core/shield`: engine
-- [ ] Wrapper around adblock-rust: `should_block`, cosmetics (`url_cosmetic_resources`, `hidden_class_id_selectors`), scriptlets
-- [ ] `engine.dat`: serialization and deserialization with a format version
-- [ ] criterion benchmark `cargo bench -p shield --bench match`
-- **AC:** native match p50 < 5 µs, p99 < 50 µs; deserialization < 50 ms (desktop); fixture `qa/lists/fixture.txt` yields correct decisions
+- [x] Wrapper around adblock-rust: `check`/`should_block`, cosmetics (`cosmetics`, `hidden_selectors`), scriptlets (`use_resources_json`)
+- [x] `engine.dat`: SCYDE container (magic, format version, matcher tag) with typed errors
+- [x] benchmark `cargo bench -p shield --bench match`: a percentile harness instead of criterion (ADR-0010), gated in CI, `perf.json` artifact
+- **AC:** ✅ p50 1.6–3.3 µs, p99 2.5–4.4 µs (best of 3), deserialization ≈ 1 ms for 80k rules; fixture tests pass (6 blocked, 1 exception, 3 cosmetic)
 
 ### 1.2 `core/shield-compiler`: one source, all formats (PLAN §5.2)
 - [ ] `engine.dat`
