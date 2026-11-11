@@ -80,8 +80,10 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - [ ] default search engine DuckDuckGo `[OWNER]`
 
 ### 1.8 `core/theme`
-- [ ] custom accent: OKLCH → fill/ink, rejection below AA, nearest acceptable shade (DESIGN §2.2)
-- [ ] same result as `tools/contrast-check`
+- [x] tokens compiled in from `design/tokens/*.json` and resolved at runtime (the same source as CSS, Kotlin and Swift)
+- [x] custom accent: seed → OKLCH → every role (light ink/ring, fill/island, dark ink = ring = fill, on-fill); if the seed fails, the **nearest passing lightness** (same hue, chroma clamped to sRGB) is used; `validate` rejects explicit roles below AA
+- [x] same result as `tools/contrast-check`: all 204 pairs mirrored with the same labels and thresholds; in CI each pair is compared with the Node output (`THEME_CONTRAST_JSON`)
+- **AC:** ✅ 10 tests; every hue × 4 lightness × 4 chroma (576 seeds) derives a valid accent; Ember's pastel is kept unchanged
 
 ### 1.9 `core/ffi`
 - [ ] UniFFI → Swift and Kotlin

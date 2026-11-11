@@ -1,9 +1,14 @@
-//! Token resolution, accent scale generation and WCAG contrast checks.
+//! Token resolution, custom accents and WCAG contrast checks (DESIGN.md §2).
 //!
-//! Phase 0 ships the contrast primitives that `tools/contrast-check` mirrors,
-//! so the browser can reject custom accents below AA at runtime (DESIGN.md §2.2).
+//! - [`tokens`]: `design/tokens/*.json` compiled in and resolved
+//! - [`contrast`]: the same pairs and thresholds as `tools/contrast-check`
+//! - [`accent`]: one picked colour → every accent role, nearest passing shade in OKLCH
 
 use std::fmt;
+
+pub mod accent;
+pub mod contrast;
+pub mod tokens;
 
 /// An sRGB colour with 8-bit channels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,6 +99,122 @@ mod tests {
         assert!(cr("#FFFFFF", "#C93A33") >= AA_NORMAL);
         // ember.600 is large-text only.
         assert!(cr("#FFFFFF", "#D9433A") < AA_NORMAL);
+    }
+
+    #[test]
+    fn gate_mirrors_contrast_check() {
+        // Same pair count and result as `tools/contrast-check` (204 pairs, 0 failing).
+        let checks = contrast::all_checks(tokens::Tokens::get());
+        assert_eq!(checks.len(), 204);
+        let failing: Vec<_> = checks
+            .iter()
+            .filter(|c| !c.passes())
+            .map(|c| &c.label)
+            .collect();
+        assert!(failing.is_empty(), "{failing:?}");
+    }
+
+    /// With `THEME_CONTRAST_JSON` pointing at `node tools/contrast-check/index.mjs --json`
+    /// output (CI does this), every pair must match label, colours and ratio.
+    #[test]
+    fn gate_matches_node_output() {
+        let Ok(path) = std::env::var("THEME_CONTRAST_JSON") else {
+            return;
+        };
+        let node: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        let ours = contrast::all_checks(tokens::Tokens::get());
+        let theirs = node["checks"].as_array().unwrap();
+        assert_eq!(ours.len(), theirs.len());
+        for n in theirs {
+            let label = n["label"].as_str().unwrap();
+            let o = ours
+                .iter()
+                .find(|c| c.label == label)
+                .unwrap_or_else(|| panic!("missing {label}"));
+            assert_eq!(
+                o.fg,
+                Rgb::from_hex(&n["fg"].as_str().unwrap()[..7]).unwrap(),
+                "{label}"
+            );
+            assert_eq!(
+                o.bg,
+                Rgb::from_hex(&n["bg"].as_str().unwrap()[..7]).unwrap(),
+                "{label}"
+            );
+            assert!(
+                (o.ratio - n["ratio"].as_f64().unwrap()).abs() < 1e-9,
+                "{label}"
+            );
+        }
+    }
+
+    #[test]
+    fn oklch_round_trip() {
+        for hex in [
+            "#FF9F7E", "#236F93", "#121214", "#FFFFFF", "#3DDC97", "#853BE5",
+        ] {
+            let c = Rgb::from_hex(hex).unwrap();
+            assert_eq!(accent::Oklch::from_rgb(c).to_rgb(), c, "{hex}");
+        }
+    }
+
+    #[test]
+    fn passing_seed_is_kept() {
+        // Ember's pastel already passes as a fill.
+        let seed = Rgb::from_hex("#FF9F7E").unwrap();
+        let a = accent::derive(seed);
+        assert_eq!(a.light.fill, seed);
+        assert!(!a.fill_adjusted);
+        assert!(accent::is_valid(&a));
+    }
+
+    #[test]
+    fn failing_seed_moves_to_nearest_shade() {
+        // A saturated mid blue fails as a fill (dark text on it) and as light ink? → adjusted.
+        let seed = Rgb::from_hex("#2F6BFF").unwrap();
+        let a = accent::derive(seed);
+        assert!(a.fill_adjusted);
+        assert!(accent::is_valid(&a));
+        let (s, f) = (
+            accent::Oklch::from_rgb(seed),
+            accent::Oklch::from_rgb(a.light.fill),
+        );
+        assert!((s.h - f.h).abs() < 3.0, "hue kept: {} vs {}", s.h, f.h);
+        assert!(f.l > s.l, "the fill got lighter");
+    }
+
+    #[test]
+    fn every_hue_derives_a_valid_accent() {
+        for h in (0..360).step_by(10) {
+            for l in [0.25, 0.5, 0.7, 0.9] {
+                for c in [0.0, 0.08, 0.2, 0.35] {
+                    #[allow(clippy::cast_lossless)]
+                    let seed = accent::Oklch {
+                        l,
+                        c,
+                        h: f64::from(h),
+                    }
+                    .to_rgb();
+                    let a = accent::derive(seed);
+                    assert!(accent::is_valid(&a), "seed {seed:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn explicit_roles_below_aa_are_rejected() {
+        let t = tokens::Tokens::get();
+        let good_l = contrast::preset(t, "ember", "light");
+        let good_d = contrast::preset(t, "ember", "dark");
+        assert!(accent::validate(&good_l, &good_d).is_ok());
+        let bad = contrast::AccentMode {
+            ink: Rgb::from_hex("#FFB27A").unwrap(),
+            ..good_l
+        };
+        let err = accent::validate(&bad, &good_d).unwrap_err();
+        assert!(err.iter().any(|c| c.label.contains("ink on surface")));
     }
 
     #[test]
