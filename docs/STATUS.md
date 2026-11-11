@@ -11,7 +11,7 @@
 |---|---|
 | 0.1 Repo | struktura, pinani toolchainovi, Renovate, CI skeleton, ADR-0001 · PR #1 |
 | 0.2 Dizajn | DESIGN.md v1.0, DTCG tokeni → CSS/Kotlin/Swift, contrast gate 168/168, ADR-0005 · PR #1 |
-| 0.3 Ikona | vlasnikov **SCYDE S** (lime + ink), rekonstruiran kao vektor; `tools/icon-export` · PR #2 |
+| 0.3 Ikona | vlasnikov **SCYDE S** u Ember boji, rekonstruiran kao vektor; `tools/icon-export` · PR #2 |
 | 0.4 Prototipovi | v1 "Aura" odbijen → tri nova smjera → vlasnik je izabrao **Otok** (ADR-0008, DESIGN.md v2.0); prototipovi `design/prototypes/{desktop,mobile}` · PR #2 |
 | 0.5 Spikeovi | svi gateovi prošli, spike kod obrisan (git `23451d6`) · PR #2 |
 
@@ -117,8 +117,8 @@ Zadane vrijednosti vrijede dok vlasnik ne odluči (PLAN §17).
 | 6 | SCYDE Sync self-hosted | – | otvoreno (Faza 7) |
 | 7 | Izvori za Top Stories | isključeno (opt-in) | otvoreno |
 | 8 | Distribucija za Android | GitHub Releases | otvoreno |
-| 9 | Ikona | – | **odlučeno 2026-11-11**: vlasnikov SCYDE S (lime #C4F014 + ink) |
-| 12 | Energija brenda: Ember (narančasta) ili lime iz logotipa za kursor, aktivni tab i CTA? | Ember | **otvoreno** |
+| 9 | Ikona | – | **odlučeno 2026-11-11**: vlasnikov SCYDE S u Ember boji (#F2603F + ink) |
+| 12 | Energija brenda: Ember ili lime? | Ember | **odlučeno 2026-11-11**: Ember, i logo je prebačen u Ember |
 | 11 | Pravilo "čisti naš kod": GeckoView i adblock-rust? | – | **odlučeno 2026-11-11**: GeckoView ostaje (Android engine kao biblioteka), adblock-rust ostaje (Shield matcher). Bez forka preglednika. |
 | 10 | Regionalne HR/EU filter liste | isključeno | otvoreno |
 

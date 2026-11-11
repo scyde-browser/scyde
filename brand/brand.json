@@ -9,8 +9,8 @@
   "publisher": "SCYDE",
   "website": "https://github.com/scyde-browser/scyde",
   "colors": {
-    "brand": "#C4F014",
-    "iconTileLight": "#C4F014",
+    "brand": "#F2603F",
+    "iconTileLight": "#F2603F",
     "iconTileDark": "#0A0A0A",
     "brandInk": "#0A0A0A"
   },
@@ -18,6 +18,6 @@
     "concept": "owner-s",
     "master": "brand/icon/scyde.svg",
     "chosen": "2026-11-11",
-    "note": "Vlasnikov znak (lime #C4F014 + ink #0A0A0A), rekonstruiran kao vektor iz konstrukcijskog crteža. Zamjenjuje Aura S."
+    "note": "Vlasnikov znak (oblik iz konstrukcijskog crteža) u Ember boji (#F2603F + ink #0A0A0A), po želji vlasnika 2026-11-11. Zamjenjuje Aura S."
   }
 }

@@ -162,9 +162,9 @@
   },
   "brand": {
     "$type": "color",
-    "$description": "Owner's mark (brand/icon/scyde.svg). Lime is a fill colour only: never text on paper.",
-    "lime": {
-      "$value": "#C4F014"
+    "$description": "Owner's mark (brand/icon/scyde.svg) in Ember. A fill colour for the mark only; text in Ember uses accent ink / ember.800.",
+    "mark": {
+      "$value": "{ember.500}"
     },
     "ink": {
       "$value": "#0A0A0A"

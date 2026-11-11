@@ -65,7 +65,7 @@ Predlošci: **Ember** (default), Sky, Periwinkle, Lavender, Mint, Onyx. Kod vlas
 
 ### 2.4 Brend
 - **Ember:** `ember.300 #FFB27A` → `ember.800 #B8322C`. CTA je `ember.700` s bijelim tekstom (5,08:1), a hover `ember.800`.
-- **Znak SCYDE S** (vlasnikov logo, `brand/icon/scyde.svg`): S od dva zrcalna dijela s dijagonalnim rezom (munja). Boje su `brand.lime #C4F014` i `brand.ink #0A0A0A`. U sučelju je to uvijek **limun pločica (radijus 28 %) s crnim S-om**, 32 px u otoku, pa je čitljiv i na tamnom i na svijetlom otoku. Lime je samo boja ispune, nikad tekst na papiru.
+- **Znak SCYDE S** (vlasnikov logo, `brand/icon/scyde.svg`): S od dva zrcalna dijela s dijagonalnim rezom (munja). Boje su `brand.mark` = `ember.500 #F2603F` i `brand.ink #0A0A0A`, pa Ember ostaje jedina boja energije u cijelom brendu. U sučelju je znak uvijek **Ember pločica (radijus 28 %) s crnim S-om**, 32 px u otoku, čitljiv i na tamnom i na svijetlom otoku.
 - **Bez Aura mesh pozadina.** Papir je čist; boja dolazi samo od faviconâ, accenta i Embera.
 
 ### 2.5 Semantičke
@@ -148,7 +148,7 @@ Trajanja (`instant 90`, `fast 140`, `base 200`, `slow 300`, `choreo-max 420`) i 
 ## 7. Ikonografija
 - Linijske ikone, potez 1,5 px, grid 20/24, Lucide (ISC) + vlastite.
 - Favicon bez slike dobiva **monogram u Aura pastelu** po hostu (stabilno).
-- Ikona aplikacije: **SCYDE S**, vlasnikov znak (2026-11-11). Light: limun pločica + crni S. Dark: crna pločica s tankim svijetlim rubom + limun S. Android adaptive pozadina je lime; monochrome i tinted su crni ili bijeli S. **Windows (`.ico`, taskbar):** bez pločice, ruba i pozadine, samo limun S preko ~92 % površine, kao ostale ikone na taskbaru (vlasnik, 2026-11-11). Na svijetlom taskbaru kontrast je slabiji; ako zatreba, MSIX paket dobiva `altform-lightunplated` varijantu s crnim S-om. Exporti: `node tools/icon-export/export.mjs` (`brand.json → icon.concept = owner-s`). Aura S je povučen.
+- Ikona aplikacije: **SCYDE S**, vlasnikov znak (2026-11-11). Light: Ember pločica + crni S. Dark: crna pločica s tankim svijetlim rubom + Ember S. Android adaptive pozadina je Ember; monochrome i tinted su crni ili bijeli S. **Windows (`.ico`, taskbar):** bez pločice, ruba i pozadine, samo Ember S preko ~92 % površine, kao ostale ikone na taskbaru (vlasnik, 2026-11-11). Na svijetlom taskbaru kontrast je slabiji; ako zatreba, MSIX paket dobiva `altform-lightunplated` varijantu s crnim S-om. Exporti: `node tools/icon-export/export.mjs` (`brand.json → icon.concept = owner-s`). Aura S je povučen.
 
 ---
 
@@ -203,5 +203,5 @@ Izlazi: `web/packages/tokens/dist/{css,kotlin,swift,json}`. Generator: `pnpm tok
   - Novi efekti Swell, Pebble, Fan i Caret.
   - Aura mesh pozadine su uklonjene.
   - Contrast gate je proširen na parove na otoku (204 para).
-  - Ikona i znak: vlasnikov **SCYDE S** (lime + ink) zamjenjuje Aura S; tokeni `brand.lime` i `brand.ink`.
+  - Ikona i znak: vlasnikov **SCYDE S** zamjenjuje Aura S; po želji vlasnika je u **Ember** boji (prvo lime, pa prebačeno), tokeni `brand.mark` i `brand.ink`.
 - **v1.0 (Faza 0.2):** "Aura" (u git povijesti).

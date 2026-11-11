@@ -25,13 +25,13 @@ button { cursor: pointer; }
 .num { font-variant-numeric: tabular-nums; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .brand-mark {
-  /* Lime tile with the ink S: readable on both the ink island and the paper island. */
+  /* Ember tile with the ink S: readable on both the ink island and the paper island. */
   position: relative;
   display: inline-block;
   width: var(--space-32);
   height: var(--space-32);
   border-radius: 28%;
-  background: var(--brand-lime);
+  background: var(--brand-mark);
 }
 .brand-mark::after {
   content: "";

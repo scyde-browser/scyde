@@ -14,7 +14,7 @@ v1 "Aura" prototipovi i istraživanje tri smjera su u git povijesti (`4922b7d`, 
 ## taste check: Otok
 Generic tells found: none. Nema tab stripa, toolbara ni mreže pločica; nema gradijentnih pozadina ni stakla.
 Scores: distinctiveness 5/5, restraint 5/5, specificity 4/5, craft 4/5, coherence 5/5
-Signature moves: otok kao jedini predmet sučelja, New Tab kao pitanje u koje se tipka, papir i tinta s inverznim otokom, mono za podatke, vlasnikov lime znak.
+Signature moves: otok kao jedini predmet sučelja, New Tab kao pitanje u koje se tipka, papir i tinta s inverznim otokom, mono za podatke, vlasnikov S znak u Emberu.
 Verdict: pass
 
 ## impeccable critique: Otok (desktop + mobile)
@@ -24,7 +24,7 @@ Machines: contrast 204/204 AA; nijedna hardkodirana vrijednost u CSS-u prototipo
 |---|---|---|---|---|---|
 | 1 | P1 | 6 parova teksta ispod AA na novoj paleti (sunken, tertiary, Shield na svijetlom otoku) | §2, §10 | sunken `#EEEBE5`, tertiary `#66645F`, `island.shield` dark `#0B5E33` | ✅ |
 | 2 | P2 | Opisi ispod Shield brojki različite visine | ritam | fiksno 2 reda | ✅ |
-| 3 | P2 | Znak (gradijent na tinti) nestaje na svijetlom otoku u dark temi | §2.4 | znak kao limun pločica s crnim S-om, iz tokena | ✅ |
-| 4 | P3 | Ember accent (kursor, linkovi) i lime znak su dvije "energije" | §1 | `[VLASNIK]`: zamijeniti Ember s lime kao energiju? (vidi STATUS) | otvoreno |
+| 3 | P2 | Znak (gradijent na tinti) nestaje na svijetlom otoku u dark temi | §2.4 | znak kao Ember pločica s crnim S-om, iz tokena | ✅ |
+| 4 | P3 | Ember accent i lime znak bili su dvije "energije" | §1 | vlasnik: logo prebačen u Ember | ✅ |
 | 5 | P3 | Desktop New Tab ima puno praznog prostora ispod hinta | §1 tišina | namjerno; u Fazi 6 razmotriti vijesti kao drugi stupac kad su uključene | – |
 Verdict: ship
