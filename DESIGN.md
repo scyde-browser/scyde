@@ -1,8 +1,9 @@
 # DESIGN.md: "Aura", vizualni jezik SCYDE Browsera
 
-> Ovo je početna verzija. U Fazi 0 je finalizira skill `impeccable`, a nakon toga je **jedini izvor istine** za izgled i kretanje.
+> **v1.0, finalizirano u Fazi 0.2** (2026-11-11). Od sada je ovo **jedini izvor istine** za izgled i kretanje.
 > Svaka vrijednost ovdje postoji kao token u `design/tokens/*.json` (DTCG). Kod nikad ne hardkodira vrijednosti.
-> Svi kontrasti u ovom dokumentu su izračunati (WCAG 2.x). Nakon promjene tokena pokreni `tools/contrast-check`.
+> Svi kontrasti u ovom dokumentu su izračunati (WCAG 2.x) i provjerava ih CI: `pnpm tokens && pnpm contrast` (168 parova).
+> Skill `impeccable` nije bio dostupan pri finalizaciji; dokument je finaliziran ručno, a svaka brojka provjerena alatom (vidi §12, changelog).
 
 ---
 
@@ -38,13 +39,15 @@
 | `surface.sunken` | `#E9EBEF` | `#23252D` | tileovi, polje pretrage, omnibox, chipovi |
 | `surface.raised` | `#FFFFFF` | `#2A2C35` | popoveri, meniji, sheetovi, kartice vijesti |
 | `border.hairline` | `rgba(17,18,22,.08)` | `rgba(255,255,255,.07)` | 1 px rubovi |
+| `border.strong` | `rgba(17,18,22,.20)` | `rgba(255,255,255,.20)` | hairline kad je uključen Increase Contrast (`prefers-contrast: more`) |
+| `scrim` | `rgba(17,18,22,.40)` | `rgba(0,0,0,.50)` | ispod sheetova i dijaloga |
 | `text.primary` | `#111216` | `#F2F3F5` | naslovi, tekst |
 | `text.secondary` | `#545866` | `#A3A7B3` | opisi, meta |
 | `text.tertiary` | `#626777` | `#9398A6` | placeholder, hintovi |
 
 Izmjereni kontrasti (najgori slučaj po površini):
-- Light: primary ≥ 15,7:1, secondary ≥ 5,9:1, tertiary ≥ 4,7:1.
-- Dark: primary ≥ 12,5:1, secondary ≥ 5,8:1, tertiary ≥ 4,8:1.
+- Light: primary ≥ 15,68:1, secondary ≥ 5,93:1, tertiary ≥ 4,72:1 (sve na `sunken`).
+- Dark: primary ≥ 12,52:1, secondary ≥ 5,78:1, tertiary ≥ 4,82:1 (sve na `raised`).
 
 Sve je **AA i za normalni tekst**.
 
@@ -55,14 +58,16 @@ Pastelne boje imaju nizak kontrast na svijetloj pozadini (Sky na `#F1F2F5` je sa
 > **Light mod:** pastel je **ispuna** (fill) s tamnim tekstom, a za tekst i ikone u accent boji koristi se **ink** varijanta.
 > **Dark mod:** pastel se koristi direktno kao tekst i ikona (8–13:1) i kao ispuna s tamnim tekstom.
 
-| Accent | Fill (pastel) | Ink (light: tekst i ikone) | Ink na `sunken` | Tamni tekst na fillu |
-|---|---|---|---|---|
-| **Sky** (default) | `#ABD5E9` | `#236F93` | 4,67:1 | 12,6:1 |
-| **Periwinkle** | `#A6C0F1` | `#1E60DE` | 4,65:1 | 10,7:1 |
-| **Lavender** | `#C6A5F1` | `#853BE5` | 4,69:1 | 9,4:1 |
-| **Mint** | `#A6F1C9` | `#107640` | 4,77:1 | 15,0:1 |
-| **Ember** | `#FF9F7E` | `#B8322C` | 4,98:1 | 9,8:1 |
-| **Onyx** (#000 iz palete) | light `#111216`, dark `#F2F3F5` | isto | ≥ 15:1 | – |
+| Accent | Fill (pastel) | Ink (light: tekst i ikone) | Ink na `sunken` (light) | Pastel na `raised` (dark) | `#111216` na fillu |
+|---|---|---|---|---|---|
+| **Sky** (default) | `#ABD5E9` | `#236F93` | 4,67:1 | 8,89:1 | 11,97:1 |
+| **Periwinkle** | `#A6C0F1` | `#1E60DE` | 4,65:1 | 7,57:1 | 10,19:1 |
+| **Lavender** | `#C6A5F1` | `#853BE5` | 4,69:1 | 6,66:1 | 8,96:1 |
+| **Mint** | `#A6F1C9` | `#107640` | 4,77:1 | 10,63:1 | 14,30:1 |
+| **Ember** | `#FF9F7E` | `#B8322C` | 4,98:1 | 6,96:1 | 9,37:1 |
+| **Onyx** (#000 iz palete) | light `#111216`, dark `#F2F3F5` | isto | 15,68:1 | 12,52:1 | obrnuto: `#F2F3F5` na `#111216` |
+
+Token po accentu i modu: `accent.<ime>.<light|dark>.{fill, ink, on-fill, ring}`. `ring` je boja fokus prstena: ink u lightu, fill u darku (§10); provjerava se na 3:1 (WCAG 1.4.11).
 
 **Vlastita boja:** `core/theme` iz korisničkog hexa izvodi fill i ink (OKLCH, mijenja se lightness uz očuvan hue) i odbija kombinacije ispod 4,5:1. UI tada pokazuje najbližu prihvatljivu nijansu.
 
@@ -73,12 +78,14 @@ Pastelne boje imaju nizak kontrast na svijetloj pozadini (Sky na `#F1F2F5` je sa
 | `ember.300` | `#FFB27A` | početak gradijenta ikone |
 | `ember.400` | `#FF8E5C` | |
 | `ember.500` | `#F2603F` | hover sjaj, ilustracije (ne za tekst na svijetlom) |
-| `ember.600` | `#D9433A` | bijeli tekst = 4,36:1, **samo za velik/bold tekst** |
-| `ember.700` | `#C93A33` | **CTA ispuna** (bijeli tekst 5,08:1) |
-| `ember.800` | `#B8322C` | ink, danger tekst (light) |
+| `ember.600` | `#D9433A` | bijeli tekst = 4,36:1, **samo za velik/bold tekst**; nikad kao hover CTA-a |
+| `ember.700` | `#C93A33` | **CTA ispuna** (bijeli tekst 5,08:1), `cta.fill` u obje teme |
+| `ember.800` | `#B8322C` | ink, danger tekst (light), **CTA hover** u obje teme (bijeli tekst 5,95:1) |
 
 - `gradient.ember`: `conic-gradient(from 210deg, #FFB27A, #FF8E5C, #F2603F, #FFB27A)` za ikonu, logo i Shield "bloom" trenutak.
-- `gradient.aura.*`: 3–4 meka mesh gradijenta od Aura boja **niske zasićenosti** za pozadinu New Taba. Najviše jedan gradijent po ekranu.
+- `aura-mesh.*` (po temi): 4 meka mesh gradijenta od Aura boja **niske zasićenosti** za pozadinu New Taba, uvijek preko `surface.canvas`. Najviše jedan gradijent po ekranu.
+  - `dawn` (Sky + Lavender, default), `mist` (Mint + Sky), `dusk` (Lavender + Ember), `tide` (Periwinkle + Mint)
+  - light: alfa 25–45 %; dark: alfa 8–12 %, da tekst zadrži kontrast iz §2.1
 
 ### 2.4 Semantičke
 
@@ -166,6 +173,8 @@ Shield ikona u toolbaru je `status.shield` kad je zaštita aktivna, a `text.tert
 | `motion.spring.smooth` | response 0,45 s · damping 1,0 | sheetovi, tab switcher, drag reorder |
 | `motion.spring.bouncy` | response 0,50 s · damping 0,72 | **samo** Shield counter "pop" |
 | `motion.stagger` | 24–32 ms, najviše 8 elemenata | liste i tileovi |
+
+Izračunata vremena smirivanja springova (unutar 0,1 % od cilja), koja `tools/springs` daje uz CSS `linear()`: snappy **420 ms**, smooth **663 ms**, bouncy **805 ms** (overshoot 3,8 %). Rep springa je vizualno miran, pa `choreo-max` (420 ms) vrijedi za vremenske animacije i za trenutak kad je element interaktivan, ne za posljednjih 0,1 % springa.
 
 **Springovi na sve tri platforme** (`tools/springs`): stiffness `k = (2π / response)²` (masa 1), damping ratio `ζ = damping`.
 - Web: unaprijed generirani CSS `linear()` stringovi
@@ -273,3 +282,29 @@ Ključne varijable: `--accent-fill`, `--accent-ink`, `--accent-on-fill`, `--acce
 - tekst VELIKIM SLOVIMA
 - centriranje svega po defaultu
 - animacija svega što se miče
+
+---
+
+## 12. Tokeni u kodu i changelog
+
+| Izvor | Izlaz | Gdje |
+|---|---|---|
+| `design/tokens/*.json` (DTCG) | CSS custom properties | `web/packages/tokens/dist/css/tokens.css` (`@scyde/tokens/tokens.css`) |
+| | Kotlin (Compose) | `dist/kotlin/ScydeTokens.kt`: `ScydeColorsLight/Dark`, `ScydeAccents`, `ScydeMotion`… |
+| | Swift (SwiftUI) | `dist/swift/ScydeTokens.swift`: `ScydeColors.light/.dark`, `ScydeAccents`, `ScydeMotion`… |
+| | ravni JSON | `dist/json/tokens.json` (za `tools/contrast-check` i `core/theme`) |
+
+**Imena CSS varijabli:** semantika bez prefiksa teme (`--surface-canvas`, `--text-primary`, `--accent-ink`, `--cta-fill`, `--elev-2`, `--aura-mesh-dawn`), primitivi po putanji (`--space-16`, `--radius-lg`, `--type-label-size`, `--motion-duration-fast`, `--motion-spring-smooth` + `--motion-spring-smooth-duration`). Komponente koriste samo semantiku i primitive za razmak, oblik, tip i kretanje, nikad `--neutral-*` ni `--aura-*` direktno.
+
+**Pomoćne varijable:** `--density-scale` (1 / 0,875) i `--motion-distance-scale` (1, a 0 uz reduced motion), npr. `translateY(calc(var(--motion-rise-distance) * var(--motion-distance-scale)))`.
+
+**Sustavne postavke:** bez `data-theme` vrijedi `prefers-color-scheme`; bez `data-motion="full"` vrijedi `prefers-reduced-motion`; `prefers-contrast: more` mijenja hairline u `border.strong`.
+
+### Changelog
+- **v1.0 (Faza 0.2):**
+  - Kontrasti ponovno izračunati alatom; ispravljene vrijednosti "tamni tekst na fillu" (prije su bile izračunate prema `#000`, a ne prema `#111216`).
+  - Dark CTA hover je `ember.800`, ne `ember.600` (bijeli tekst na `ember.600` je 4,36:1 i pada AA; contrast-check ga je uhvatio).
+  - Dodani `border.strong` (Increase Contrast) i `scrim`.
+  - Aura mesh predlošci imenovani (`dawn`, `mist`, `dusk`, `tide`) s alfom po temi.
+  - Dodana izračunata vremena smirivanja springova i pravilo za `choreo-max`.
+  - Dodan §12 (tokeni u kodu).
