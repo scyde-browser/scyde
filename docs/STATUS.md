@@ -2,7 +2,7 @@
 
 > At the start of every session, read this file and continue from the first open task of the current phase.
 
-**Current phase:** Phase 1, Rust core and Shield pipeline (PLAN §11) · **in progress** (plan confirmed by the owner 2026-11-11)
+**Current phase:** Phase 1, Rust core and Shield pipeline (PLAN §11) · **done 2026-11-11** (PRs #5–#12), except the `[OWNER]` items below · next: Phase 2 (web design system and internal pages) once the owner confirms
 **Last updated:** 2026-11-11
 
 ## Phase 0: CLOSED (2026-11-11)
