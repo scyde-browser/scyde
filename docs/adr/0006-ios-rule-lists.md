@@ -1,6 +1,6 @@
 # ADR-0006: Shield na iOS-u: WKContentRuleList, više lista, kompajliranje u pozadini
 
-- **Status:** Predloženo (čeka zatvaranje Faze 0)
+- **Status:** Prihvaćeno (Faza 0 zatvorena 2026-11-11)
 - **Datum:** 2026-11-11
 - **Odlučuje:** Claude Code, na temelju spikea S4
 - **Veza:** PLAN §5.2, §5.4, gate **G4**, `spikes/s4-ios-rulelists`
@@ -38,3 +38,5 @@ CI run na `4e288eb` (`s4-ios-rulelists`, macos-latest, iOS simulator):
 | Fixture (bundlean, `file://`) | 10/11: svih 6 mrežnih, iznimka, generička i atributna kozmetika | ✅ |
 
 Host-specifična kozmetika (`127.0.0.1##`) ne vrijedi za `file://` i nije dio mrežnog G4 kriterija. Stvarne liste daju 131.891 WebKit pravilo; stres test ih duplicira s jedinstvenim markerom.
+
+> Spike kod je obrisan pri zatvaranju Faze 0. Izvorni kod i CI workflow su u git povijesti na commitu `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).

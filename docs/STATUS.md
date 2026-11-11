@@ -2,75 +2,84 @@
 
 > Na početku svake sesije pročitaj ovu datoteku i nastavi od prvog otvorenog zadatka trenutne faze.
 
-**Trenutna faza:** Faza 0, Temelji, dizajn i spikeovi (PLAN §11)
-**Grana:** `phase/0-foundations`
+**Trenutna faza:** Faza 1, Rust jezgra i Shield pipeline (PLAN §11) · **plan predložen, čeka potvrdu `[VLASNIK]`**
 **Zadnje ažurirano:** 2026-11-11
 
-## Faza 0: checklista
+## Faza 0: ZATVORENA (2026-11-11)
 
-### 0.1 Repo
-- [x] Struktura iz PLAN §4 (`core/`, `web/`, `shield-extension/`, `desktop/`, `android/`, `ios/`, `qa/`, `spikes/`, `tools/`, `docs/`, `brand/`, `design/`)
-- [x] Pinani toolchainovi: `rust-toolchain.toml` (1.97.0), `.nvmrc` (22), `packageManager` pnpm 10.28.0
-- [ ] Gradle version catalog: dolazi sa spikeom S3 / Fazom 5 (tamo prvi put postoji Gradle projekt)
-- [x] Renovate (`renovate.json`): GeckoView svaka 4 tjedna, Tauri ručno, sigurnosni bumpovi odmah
-- [x] Skeleton CI workflowi iz PLAN §13 (`core`, `web`, `filters`, `windows`, `android`, `ios`)
-- [x] ADR predložak (`docs/adr/0000-template.md`) i ADR-0001 (strategija enginea)
-- [x] `docs/NETWORK.md`
-- [x] PR predložak (screenshotovi + `impeccable` critique)
+| Korak | Rezultat |
+|---|---|
+| 0.1 Repo | struktura, pinani toolchainovi, Renovate, CI skeleton, ADR-0001 · PR #1 |
+| 0.2 Dizajn | DESIGN.md v1.0, DTCG tokeni → CSS/Kotlin/Swift, contrast gate 168/168, ADR-0005 · PR #1 |
+| 0.3 Ikona | **Aura S** + `tools/icon-export` · PR #2 |
+| 0.4 Prototipovi | New Tab, desktop chrome, mobile + critique · PR #2 · odobrenje `[VLASNIK]` otvoreno |
+| 0.5 Spikeovi | svi gateovi prošli, spike kod obrisan (git `23451d6`) · PR #2 |
 
-### 0.2 Dizajn temelj
-- [x] DESIGN.md finaliziran (v1.0): izračunati kontrasti, token mapa, ispravci (vidi changelog u DESIGN.md)
-- [x] `design/tokens/*.json` (DTCG) → Style Dictionary 5 → CSS, Kotlin (Compose), Swift (SwiftUI), JSON
-- [x] `tools/springs`: response/damping → stiffness, CSS `linear()` + trajanje
-- [x] `tools/contrast-check`: 168 parova, svi ≥ AA (najtijesniji 4,65:1)
-- [x] ADR-0005: Svelte 5 + vlastite komponente (izmjereno 14,2 KB gz)
-- [x] Smjer provjeren protiv generičkog izgleda (ručno, vidi "Skillovi" dolje)
-- [ ] Prva kompilacija generiranog `ScydeTokens.kt` i `ScydeTokens.swift` u stvarnim projektima (S3/S4 ili Faza 4/5)
+| Gate | Rezultat | ADR |
+|---|---|---|
+| G1 Google prijava | ✅ WebView2, GeckoView, WKWebView (vlasnik) | 0002 |
+| G2 Windows Shield | ✅ opcija A (DNR), B rezerva; 6/6 mreža; učitavanje brže od baselinea | 0003 |
+| G3 GeckoView | ✅ WASM p99 40 µs (SpiderMonkey), fixture, native messaging | 0004 |
+| G4 iOS rule liste | ✅ 263.790 pravila / 2 liste, keširani load 6 ms | 0006 |
+| G5 Tauri multiwebview | ✅ switch p95 ≤ 0,39 ms, popover p95 0,10 ms | 0007 |
 
-### 0.3 Brand i ikona
-- [x] Tri originalna koncepta ikone (SVG): **Orbit**, **Twin Arc**, **Aura Drop** (`brand/icon/concepts/`), bez dva preklopljena kruga
-- [x] `tools/icon-export`: Windows `.ico` 16–256, Android adaptive (foreground, background, monochrome) + legacy, iOS 1024 + dark + tinted, pregled `preview.png`
-- [x] Ikona odabrana: **Aura S** (`brand/icon/scyde.svg`, `brand.json → icon`). Vlasnik je nakon dva kruga (6 koncepata) prepustio izbor; znak je doveden do kraja kroz `taste-skill` + `impeccable` critique (vidi dolje).
+**Preneseno u kasnije faze:**
+- Snap Layouts na Windows 11 (ADR-0007) → Faza 3
+- lijeno kreiranje tabova + pre-warmed tab za Ctrl+T (≈ 200 ms po webviewu) → Faza 3
+- iOS kompajliranje lista samo u pozadini i isporuka unaprijed kompajliranog snapshota → Faza 4
+- GeckoView 160 traži compileSdk 37.2, AGP 9.5, Kotlin 2.4 → Faza 5
 
-### 0.4 Prototipovi
-- [x] New Tab light/dark (`design/prototypes/newtab/`)
-- [x] Desktop chrome: tabovi, omnibox focus s prijedlozima, Shield panel (`design/prototypes/desktop-chrome/`)
-- [x] Mobilni donji toolbar + tab switcher (`design/prototypes/mobile/`)
-- [x] `taste-skill` + `impeccable` critique svakog prototipa; svi P1/P2 popravljeni (vidi `notes.md` u svakoj mapi)
-- [ ] `[VLASNIK]` odobrava prototipove (screenshotovi u `design/prototypes/*/shots/`)
+## Faza 1: plan (prijedlog)
+Grana `phase/1-core`, PR po logičkoj cjelini, CI zelen. Redoslijed je izabran tako da se Shield pipeline (najrizičniji dio) radi prvi.
 
-### 0.5 Spikeovi
-CI: `.github/workflows/spikes.yml` (pokreće se na PR-u ili ručno). Fixturei: `qa/` (`node qa/serve.mjs 8787`).
-- [ ] S1 Google prijava → **G1**: **WebView2 ✅** (vlasnik potvrdio 2026-11-11, svi tabovi); GeckoView (`s3-geckoview-apk`) i WKWebView (`s1-ios-ipa`) čekaju potvrdu `[VLASNIK]` → ADR-0002
-- [x] S2 WebView2 Shield → **G2 ✅**: A i B blokiraju 6/6 mrežnih fixture zahtjeva; učitavanje je brže nego bez blokiranja (index.hr 1102 → 229 ms). Odluka: **opcija A (DNR)**, B rezerva → ADR-0003
-- [x] S3 GeckoView → **G3 ✅**: GeckoView 160, fixture 10/11 (6/6 mreža), WASM p99 40 µs u SpiderMonkeyju (14,8 µs u V8), interna stranica ↔ aplikacija radi → ADR-0004
-- [x] S4 iOS rule liste → **G4 ✅**: 263.790 pravila u 2 liste, keširani load 6 ms, fixture 6/6 mreža; kompajliranje 83 s + 133 s → samo u pozadini → ADR-0006
-- [x] S5 Tauri multiwebview → **G5 ✅** (osim Snap Layouts): prebacivanje taba p95 0,16–0,39 ms, popover p95 0,10 ms, 20/20 tabova, Mica i titlebar; Snap Layouts otvoren (ručno, Faza 3) → ADR-0007
+### 1.1 `core/shield`: engine
+- [ ] Omotač oko adblock-rust: `should_block`, kozmetika (`url_cosmetic_resources`, `hidden_class_id_selectors`), scriptleti
+- [ ] `engine.dat`: serijalizacija i deserijalizacija s verzijom formata
+- [ ] criterion benchmark `cargo bench -p shield --bench match`
+- **AC:** native match p50 < 5 µs, p99 < 50 µs; deserijalizacija < 50 ms (desktop); fixture `qa/lists/fixture.txt` daje točne odluke
 
-**Nakon G1:** ako vlasnik potvrdi prijavu na sva tri enginea, Faza 0 se zatvara (prompt 2 iz `docs/KICKOFF.md`): ADR-ovi idu u "Prihvaćeno", `spikes/` se briše, a plan Faze 1 se predlaže.
+### 1.2 `core/shield-compiler`: jedan izvor, svi formati (PLAN §5.2)
+- [ ] `engine.dat`
+- [ ] DNR rulesetovi ≤ 30k pravila, s izvješćem o odbačenim pravilima (`$popup`, kozmetika, regex…)
+- [ ] iOS liste ≤ 150k, s filtrom za regexe koje WebKit ne podržava (ADR-0006) i izvješćem
+- [ ] kozmetički indeksi, `resources.json`
+- [ ] `manifest.json` s hashevima i ed25519 potpisom
+- [ ] Golden testovi: `qa/lists/fixture.txt` → očekivani DNR / iOS / kozmetički izlaz
+- [ ] macOS CI job koji kompajlira iOS izlaz na simulatoru (tag/ručno)
+- **AC:** DNR i iOS izlaz su unutar limita, odbačena pravila su prijavljena, potpis je provjeren u testu
 
-#### S1: koraci za vlasnika (Google prijava) `[VLASNIK]`
-Cilj G1: prijava radi na sva tri enginea (screenshotovi idu u ADR-0002). Koristi **testni Google račun** s uključenom 2FA, ako ga imaš.
+### 1.3 `shield-wasm`: paket za GeckoView ekstenziju
+- [ ] wasm32 build + wasm-bindgen (iz S3), veličina u budgetu, p99 test u CI-ju
 
-**Windows (WebView2):**
-1. Na PR-u otvori zadnji uspješni run workflowa `spikes` i preuzmi artefakt `s1-windows-exe`.
-2. Pokreni `scyde-spike-s5.exe` (bez argumenata). SmartScreen će upozoriti jer exe nije potpisan: "More info" → "Run anyway".
-3. Prvi tab je `accounts.google.com`: prijavi se (lozinka + 2FA).
-4. Klikni tabove Gmail, YouTube i Drive: moraš biti prijavljen bez ponovne prijave.
-5. Zadnji tab (Stack Overflow login): odaberi "Log in with Google" i dovrši prijavu.
-6. Za svaki korak zapiši: prošlo / poruka "This browser or app may not be secure" / drugo. Napravi screenshot (Win+Shift+S).
+### 1.4 `filters.yml`: dnevni bundle
+- [ ] dohvat lista → compile → golden testovi → potpis → release `filters-YYYYMMDD` + `filters-latest`
+- `[VLASNIK]`: dodati secret `FILTERS_SIGNING_KEY` (generirat ću par ključeva i uputu; javni ključ ide u `brand/keys/`)
 
-**Android (GeckoView):**
-1. Preuzmi artefakt `s3-geckoview-apk` i instaliraj `app-debug.apk` na telefon (dopusti instalaciju iz nepoznatih izvora).
-2. Otvori aplikaciju "SCYDE S3". Prikazuje internu stranicu s popisom linkova (ujedno dokazuje da interna stranica razgovara s aplikacijom).
-3. Redom: accounts.google.com (prijava), Gmail, YouTube, Drive, Stack Overflow → "Log in with Google". Tipka Natrag vraća na popis.
+### 1.5 `core/omnibox`
+- [ ] URL fixup (`scyde`, `localhost:3000`, `192.168.1.1`, `ftp://`), odluka URL ili pretraga
+- [ ] eTLD+1 prikaz, punycode za miješana pisma i konfuzabilne IDN-ove
+- [ ] frecency rangiranje
+- **AC:** property testovi za parsiranje; homograf `аpple.com` (ćirilično "а") se prikazuje kao punycode
 
-**iOS (WKWebView):**
-1. Preuzmi artefakt `s1-ios-ipa` (`ScydeS1.ipa`, nepotpisan).
-2. U Featheru: Import → odaberi `.ipa` → potpiši svojim certifikatom → instaliraj.
-3. Otvori "SCYDE S1". Donji izbornik bira cilj: Google prijava, Gmail, YouTube, Drive, Sign in with Google. Prijavi se i prođi sve ciljeve.
+### 1.6 `core/places`
+- [ ] SQLite (rusqlite bundled): povijest, oznake, top sites, migracije; test sa 100k zapisa
 
-Rezultate javi u chatu ili ih upiši ovdje, a ja ću napisati ADR-0002.
+### 1.7 `core/settings`
+- [ ] JSON Schema kao izvor istine, validacija, migracije
+- [ ] default tražilica DuckDuckGo `[VLASNIK]`
+
+### 1.8 `core/theme`
+- [ ] vlastiti accent: OKLCH → fill/ink, odbijanje ispod AA, najbliža prihvatljiva nijansa (DESIGN §2.2)
+- [ ] isti rezultat kao `tools/contrast-check`
+
+### 1.9 `core/ffi`
+- [ ] UniFFI → Swift i Kotlin
+- [ ] CI: `.so` po ABI-ju (cargo-ndk), `ScydeCore.xcframework` (macOS, tag/ručno)
+
+### 1.10 Mjerenje
+- [ ] `perf.json` artefakt iz benchmarka; regresija > 10 % ruši job (PLAN §8.2)
+
+**AC Faze 1 (PLAN §11):** `cargo test` zelen, clippy bez upozorenja, budgeti iz 1.1, liste unutar limita, potpis provjeren, omnibox testovi prolaze.
 
 ## Skillovi
 `impeccable`, `taste-skill`, `prototype` i `pick-ui-library` ne postoje u katalogu pluginova, pa su **implementirani kao project skillovi** u `.claude/skills/` (2026-11-11) i učitavaju se u svakoj sesiji u ovom repou:
@@ -108,7 +117,7 @@ Zadane vrijednosti vrijede dok vlasnik ne odluči (PLAN §17).
 | 6 | SCYDE Sync self-hosted | – | otvoreno (Faza 7) |
 | 7 | Izvori za Top Stories | isključeno (opt-in) | otvoreno |
 | 8 | Distribucija za Android | GitHub Releases | otvoreno |
-| 9 | Koncept ikone (0.3) | – | **odlučeno 2026-11-11**: Aura S (vlasnik: "generiraj ikonu") |
+| 9 | Koncept ikone (0.3) | – | **odlučeno 2026-11-11**: Aura S |
 | 11 | Pravilo "čisti naš kod": GeckoView i adblock-rust? | – | **odlučeno 2026-11-11**: GeckoView ostaje (Android engine kao biblioteka), adblock-rust ostaje (Shield matcher). Bez forka preglednika. |
 | 10 | Regionalne HR/EU filter liste | isključeno | otvoreno |
 

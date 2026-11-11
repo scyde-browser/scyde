@@ -1,6 +1,6 @@
 # ADR-0004: Shield na Androidu: GeckoView built-in ekstenzija s WASM engineom
 
-- **Status:** Predloženo (čeka zatvaranje Faze 0)
+- **Status:** Prihvaćeno (Faza 0 zatvorena 2026-11-11)
 - **Datum:** 2026-11-11
 - **Odlučuje:** Claude Code, na temelju spikea S3
 - **Veza:** PLAN §5.4, gate **G3**, `spikes/s3-geckoview`, CLAUDE.md pravilo 11 (GeckoView i adblock-rust odobreni kao biblioteke)
@@ -30,3 +30,5 @@ CI run 43017809149 / 43019194222 (`s3-geckoview-app`, emulator API 34 x86_64, Ge
 - WASM u V8 (CI proxy, 50k odluka): p50 5,5 µs, p99 14,8 µs.
 - Interna stranica (`moz-extension://…/internal.html`, prikazuje se kao `scyde://newtab`) → `runtime.sendNativeMessage` → Kotlin `MessageDelegate` → odgovor natrag: ✅.
 - UA: `Mozilla/5.0 (Android 14; Mobile; rv:160.0) Gecko/160.0 Firefox/160.0` (relevantno za G1).
+
+> Spike kod je obrisan pri zatvaranju Faze 0. Izvorni kod i CI workflow su u git povijesti na commitu `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).

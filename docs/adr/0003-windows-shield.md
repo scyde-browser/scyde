@@ -1,6 +1,6 @@
 # ADR-0003: Shield na Windowsu (WebView2): opcija A, DNR ekstenzija
 
-- **Status:** Predloženo (čeka zatvaranje Faze 0)
+- **Status:** Prihvaćeno (Faza 0 zatvorena 2026-11-11)
 - **Datum:** 2026-11-11
 - **Odlučuje:** Claude Code, na temelju spikea S2; potvrda `[VLASNIK]` pri zatvaranju Faze 0
 - **Veza:** PLAN §5.4, gate **G2**, `spikes/s5-tauri`, `spikes/s2-dnr`
@@ -43,3 +43,5 @@ CI run 43019194222 (windows-latest), medijan od 3 učitavanja, PageLoad Started 
 - Fixture: obje opcije blokiraju **6/6 mrežnih** zahtjeva (100 %) i propuštaju iznimku. Ostala 3 boda su kozmetika, koju radi bootstrap skripta (nije dio G2 mrežnog kriterija).
 - Dodatno vrijeme: **negativno** na svim stranicama (blokiranje ubrzava učitavanje) → G2 ✅.
 - DNR konverzija (spike, ograničena): 139k linija → 106k pravila, 4 ruleseta; odbačeno je kozmetika (24,8k), `$popup` (3k) i ostalo (~0,3k).
+
+> Spike kod je obrisan pri zatvaranju Faze 0. Izvorni kod i CI workflow su u git povijesti na commitu `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).

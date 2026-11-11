@@ -26,13 +26,3 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
-# spikes
-spikes/**/pkg/
-spikes/**/Resources/rulelists/*.json
-spikes/**/fixture-out/
-spikes/**/.build/
-spikes/**/.swiftpm/
-spikes/s5-tauri/src-tauri/gen/
-spikes/s1-ios/build/
-spikes/s1-ios/*.xcodeproj/
-spikes/**/Resources/rulelists/qa-adblock/

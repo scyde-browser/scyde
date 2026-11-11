@@ -1,6 +1,6 @@
 # ADR-0007: Windows ljuska: Tauri 2 multiwebview (feature `unstable`)
 
-- **Status:** Predloženo (čeka zatvaranje Faze 0; Snap Layouts otvoren)
+- **Status:** Prihvaćeno (Faza 0 zatvorena 2026-11-11)
 - **Datum:** 2026-11-11
 - **Odlučuje:** Claude Code, na temelju spikea S5
 - **Veza:** PLAN §9.1, gate **G5**, `spikes/s5-tauri`
@@ -37,3 +37,5 @@ CI runovi 43017487417 i 43019194222 (windows-latest):
 | 20 tabova kreirano / učitano | 3,7 s · 20/20 | 4,8 s · 20/20 | – |
 
 Mica i vlastiti titlebar: screenshot `s5.png` u artefaktu `s5-s2-results`. Vizualna frame provjera je ručna.
+
+> Spike kod je obrisan pri zatvaranju Faze 0. Izvorni kod i CI workflow su u git povijesti na commitu `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).

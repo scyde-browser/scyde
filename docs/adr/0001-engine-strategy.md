@@ -1,6 +1,6 @@
 # ADR-0001: Strategija enginea (vlastita ljuska oko platformskih enginea)
 
-- **Status:** Prihvaćeno (uvjetno, ovisi o G1 za Windows)
+- **Status:** Prihvaćeno (G1–G5 prošli, Faza 0 zatvorena 2026-11-11)
 - **Datum:** 2026-11-11
 - **Odlučuje:** Claude Code, prema PLAN §2
 - **Veza:** PLAN.md §2.1–2.3, gateovi G1, G3, G4, G5
@@ -31,4 +31,4 @@ Windows dio je **uvjetan**: ako spike S1 pokaže da Google prijava u WebView2 ne
 - Google prijava je rizik br. 1 → G1 na sva tri enginea prije Faze 1.
 
 ## Mjerenja / dokazi
-Još nema. Dokazi dolaze iz spikeova S1–S5 (Faza 0.5) i upisuju se u ADR-0002, 0003, 0004, 0006 i 0007.
+Spikeovi S1–S5 su potvrdili strategiju: ADR-0002 (G1), 0003 (G2), 0004 (G3), 0006 (G4), 0007 (G5).
