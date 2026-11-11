@@ -1,56 +1,56 @@
 # CLAUDE.md: SCYDE Browser
 
-Ovo je radna uputa za Claude Code u ovom repou. Kompletan plan je u **PLAN.md**, vizualni sustav u **DESIGN.md**.
-Na početku svake sesije pročitaj `docs/STATUS.md` i nastavi od prvog otvorenog zadatka trenutne faze.
+These are the working instructions for Claude Code in this repo. The complete plan is in **PLAN.md**, the visual system in **DESIGN.md**.
+At the start of every session, read `docs/STATUS.md` and continue from the first open task of the current phase.
 
-## Što gradimo
-Vlastiti preglednik (kao Brave, ali vlastiti) za **Windows, Android i iOS**. Zahtjevi:
-- unikatan
-- bez reklama, s ugrađenim ad, tracker i popup blockerom
-- Dark/Light i prilagodba tema
-- premium izgled
-- jako optimiziran
+## What we are building
+Our own browser (like Brave, but our own) for **Windows, Android and iOS**. Requirements:
+- unique
+- no ads, with a built-in ad, tracker and popup blocker
+- Dark/Light and theme customization
+- premium look
+- highly optimized
 
-| Platforma | Engine i shell |
+| Platform | Engine and shell |
 |---|---|
 | Windows | Tauri 2 + WebView2 |
 | Android | Kotlin/Compose + GeckoView |
-| iOS | Swift + WKWebView, .ipa za Feather |
+| iOS | Swift + WKWebView, .ipa for Feather |
 
-Zajednička Rust jezgra je `core/`, zajednički web UI je `web/`.
+The shared Rust core is `core/`, the shared web UI is `web/`.
 
-## Zlatna pravila
-1. **Faze i gateovi.** Radi samo na trenutnoj fazi (PLAN §11). Ne preskači gateove G1–G5. Kad nešto ovisi o vlasniku, označi `[VLASNIK]`, upiši u `docs/STATUS.md` i nastavi s onim što ne ovisi o toj odluci.
-2. **Bez reklama i bez telemetrije.** Nikad ne dodaj sponzorirani sadržaj, affiliate linkove, analitiku ni SDK-ove trećih strana koji šalju podatke. Svaki novi mrežni poziv preglednika dokumentiraj u `docs/NETWORK.md`.
-3. **Performanse su zahtjev, ne želja.** Poštuj budgete iz PLAN §8. PR koji dira vrući put (startup, prebacivanje tabova, Shield match, animacije) uz sebe nosi mjerenje.
-4. **Dizajn samo kroz tokene.** Nema hardkodiranih boja, razmaka, radijusa ni trajanja. Sve dolazi iz `design/tokens` (CSS varijable, Kotlin, Swift). Nova vrijednost znači prvo token, pa tek onda kod.
-5. **Kretanje:** animiraj samo `transform` i `opacity` (web) i ekvivalente na nativnim platformama. Animacije moraju biti prekidive i poštovati reduced motion. Trajanja i springovi dolaze iz DESIGN.md §6.
-6. **Sigurnost:**
-   - native bridge prima poruke samo od `scyde://` origina (provjera origina + allowlista metoda)
-   - stroga CSP na internim stranicama
-   - remote debugging samo u debug buildovima
-   - nikad ne gasi provjeru TLS-a
-   - omnibox nikad ne skriva pravu domenu
-7. **Ne kopiraj reference.** Slike u `design/references/` su smjer. Logo, layout i assete tuđih radova ne preuzimaj. Ikona ne smije biti "dva preklopljena kruga" (PLAN §16).
-8. **Odluke idu u ADR.** Svako odstupanje od PLAN.md dobiva `docs/adr/NNNN-*.md`.
-9. **Mali PR-ovi, zeleni CI.** Conventional Commits. Grane `phase/N-*`, `feat/*`, `fix/*`. Svaki UI PR ima screenshotove (CI artefakti) i `impeccable` critique u opisu.
-10. **i18n od prvog dana.** Hrvatski i engleski. Nema hardkodiranih stringova u UI-ju. Ključevi su u `web/packages/i18n`, `android/.../strings.xml` i `ios/.../Localizable.xcstrings`.
-11. **Čisti naš kod, ne fork.** SCYDE se ne gradi kao Brave, Firefox ili drugi preglednici: nema forka ni rebrandanja Chromiuma, Bravea, Firefoxa ni njihovog koda. Ljuska, UI, Shield logika, omnibox, povijest, teme i sve značajke pišemo sami. Render engine je platformski (WebView2, WKWebView). Odobrene iznimke (vlasnik, 2026-11-11): **GeckoView** kao Android engine i **adblock-rust** kao Shield matcher, obje kao biblioteke. Svaka nova vanjska biblioteka koja nosi kod drugog preglednika ide prvo vlasniku `[VLASNIK]`.
+## Golden rules
+1. **Phases and gates.** Work only on the current phase (PLAN §11). Do not skip gates G1–G5. When something depends on the owner, mark it `[OWNER]`, record it in `docs/STATUS.md` and continue with whatever does not depend on that decision.
+2. **No ads and no telemetry.** Never add sponsored content, affiliate links, analytics or third-party SDKs that send data. Document every new network call made by the browser in `docs/NETWORK.md`.
+3. **Performance is a requirement, not a wish.** Respect the budgets from PLAN §8. A PR that touches a hot path (startup, tab switching, Shield match, animations) comes with a measurement.
+4. **Design only through tokens.** No hard-coded colors, spacing, radii or durations. Everything comes from `design/tokens` (CSS variables, Kotlin, Swift). A new value means a token first, and only then code.
+5. **Motion:** animate only `transform` and `opacity` (web) and their equivalents on native platforms. Animations must be interruptible and respect reduced motion. Durations and springs come from DESIGN.md §6.
+6. **Security:**
+   - the native bridge accepts messages only from the `scyde://` origin (origin check + method allowlist)
+   - strict CSP on internal pages
+   - remote debugging only in debug builds
+   - never disable TLS verification
+   - the omnibox never hides the real domain
+7. **Do not copy references.** The images in `design/references/` are a direction. Do not take logos, layouts or assets from other people's work. The icon must not be "two overlapping circles" (PLAN §16).
+8. **Decisions go into an ADR.** Every deviation from PLAN.md gets a `docs/adr/NNNN-*.md`.
+9. **Small PRs, green CI.** Conventional Commits. Branches `phase/N-*`, `feat/*`, `fix/*`. Every UI PR has screenshots (CI artifacts) and an `impeccable` critique in the description.
+10. **English only, i18n-ready.** All UI copy is English (owner decision 2026-11-11, ADR-0009). No hard-coded strings: copy lives in `web/packages/i18n` (en), `android/.../strings.xml` and `ios/.../Localizable.xcstrings`, so more languages can be added later.
+11. **Clean code of our own, not a fork.** SCYDE is not built the way Brave, Firefox or other browsers are: no fork or rebrand of Chromium, Brave, Firefox or their code. We write the shell, UI, Shield logic, omnibox, history, themes and all features ourselves. The render engine is the platform's (WebView2, WKWebView). Approved exceptions (owner, 2026-11-11): **GeckoView** as the Android engine and **adblock-rust** as the Shield matcher, both as libraries. Any new external library that carries another browser's code goes to the owner first `[OWNER]`.
 
-## Okruženje i build
-Claude Code obično radi na **Linuxu**. Lokalno radi `core/`, `web/`, `shield-extension/` i `android/`. **Windows i iOS se grade i testiraju u GitHub Actions.** Iteriraj ovako:
+## Environment and build
+Claude Code usually runs on **Linux**. `core/`, `web/`, `shield-extension/` and `android/` work locally. **Windows and iOS are built and tested in GitHub Actions.** Iterate like this:
 ```bash
-gh workflow run windows.yml --ref <grana>   # ili ios.yml
-gh run watch                                 # prati
-gh run view --log-failed                     # ako padne
-gh run download <run-id> -n screenshots      # vizualna provjera
+gh workflow run windows.yml --ref <branch>   # or ios.yml
+gh run watch                                 # follow
+gh run view --log-failed                     # if it fails
+gh run download <run-id> -n screenshots      # visual check
 ```
 
-### Naredbe (popuni ih u Fazi 0 i drži ažurnima)
+### Commands (fill them in during Phase 0 and keep them up to date)
 ```bash
 # core
 cargo fmt --all && cargo clippy --workspace -- -D warnings && cargo test --workspace
-cargo bench -p shield --bench match            # Shield latencija
+cargo bench -p shield --bench match            # Shield latency
 cargo run -p shield-compiler -- --lists qa/lists --out dist/filters
 
 # web (pnpm workspace)
@@ -58,7 +58,7 @@ pnpm i && pnpm -r lint && pnpm -r typecheck && pnpm -r test
 pnpm --filter @scyde/tokens build              # Style Dictionary → CSS/Kotlin/Swift
 pnpm --filter newtab dev
 pnpm e2e                                        # Playwright: chromium + firefox + webkit, light/dark
-pnpm size                                       # bundle budgeti
+pnpm size                                       # bundle budgets
 
 # shield-extension
 pnpm --filter shield-extension build -- --target chromium-mv3
@@ -66,50 +66,50 @@ pnpm --filter shield-extension build -- --target gecko-mv2
 
 # android
 cd android && ./gradlew assembleDebug testDebugUnitTest
-./gradlew :benchmark:connectedCheck            # Macrobenchmark (emulator: samo trend)
+./gradlew :benchmark:connectedCheck            # Macrobenchmark (emulator: trend only)
 
-# desktop (samo Windows / CI)
+# desktop (Windows / CI only)
 cd desktop && pnpm tauri build
 
-# ios (samo macOS / CI)
-cd ios && xcodegen && xcodebuild -scheme SCYDE -destination 'platform=iOS Simulator,name=<iPhone iz xcrun simctl list>' test
+# ios (macOS / CI only)
+cd ios && xcodegen && xcodebuild -scheme SCYDE -destination 'platform=iOS Simulator,name=<iPhone from xcrun simctl list>' test
 ```
 
-## Skillovi: kada ih koristiti
-Detaljna mapa je u PLAN §12. Ukratko:
+## Skills: when to use them
+The detailed map is in PLAN §12. In short:
 
-| Situacija | Skill |
+| Situation | Skill |
 |---|---|
-| Nova UI značajka | `prototype` → implementacija → `impeccable` critique |
-| Design sustav, DESIGN.md, audit, polish | `impeccable` |
-| Provjera da ne izgleda generički | `taste-skill` |
-| Komponente i sitni detalji | `emil-design-eng` |
-| iOS (i principi gesti i springova općenito) | `apple-design` |
-| Interne web stranice na mobitelu | `mobile-native` |
-| Nova animacija | `animate`; za više elemenata `choreograph` |
-| Svaka animacija (budget) | `animation-performance` |
-| Imenovanje efekata | `animation-vocabulary` |
-| Faza 6 | `find-animation-opportunities` → `improve-animations` → `review-animations` → `remove-animations` |
-| Kraj platformske faze | `break-ui` |
-| Odabir UI biblioteke (Faza 0) | `pick-ui-library` |
-| Hero, onboarding, reveal efekti | `awwwards-animations`, **samo smjernice**; bez GSAP-a i njegovih biblioteka |
+| New UI feature | `prototype` → implementation → `impeccable` critique |
+| Design system, DESIGN.md, audit, polish | `impeccable` |
+| Checking that it does not look generic | `taste-skill` |
+| Components and small details | `emil-design-eng` |
+| iOS (and gesture and spring principles in general) | `apple-design` |
+| Internal web pages on phones | `mobile-native` |
+| New animation | `animate`; for multiple elements `choreograph` |
+| Every animation (budget) | `animation-performance` |
+| Naming effects | `animation-vocabulary` |
+| Phase 6 | `find-animation-opportunities` → `improve-animations` → `review-animations` → `remove-animations` |
+| End of a platform phase | `break-ui` |
+| Choosing a UI library (Phase 0) | `pick-ui-library` |
+| Hero, onboarding, reveal effects | `awwwards-animations`, **guidelines only**; no GSAP or its libraries |
 
-Ako neki skill nije instaliran, nastavi po DESIGN.md i zabilježi to u STATUS.md.
+If a skill is not installed, continue according to DESIGN.md and note it in STATUS.md.
 
-## Arhitektonske napomene (najčešće zamke)
-- **Tauri multiwebview** traži feature `unstable`. Svi tab webviewi moraju biti na **istom WebView2 environmentu**. Za API-je koje Tauri ne izlaže koristi `with_webview(|w| w.controller())`.
-- **Popoveri na desktopu** (omnibox prijedlozi, meniji, Shield panel) su zasebni transparentni top-level prozori, unaprijed kreirani. Ne pokušavaj prozirno preklapati child webviewe.
-- **WebView2 popup blocker je isključen** u WebView2. Blokiranje radimo sami u `NewWindowRequested` prema `IsUserInitiated`.
-- **Google prijava:** ne mijenjaj UA na Windowsu (mora biti identičan Edgeu). Na iOS-u UA mora imati Safari sufiks. Android koristi GeckoView. Nakon svake promjene enginea pokreni G1 test.
-- **iOS rule liste:** najviše 150k pravila po listi. Kompajliraj jednom i keširaj, nikad na main threadu.
-- **Android:** edge-to-edge i predictive back su obavezni. Ograniči broj živih `GeckoSession`a.
-- **Svelte 5 runes**, TypeScript `strict`, bez UI kita (ADR-0005). Komponente su u `web/packages/ui`.
-- Fontovi: OFL zamjena dok `[VLASNIK]` ne potvrdi Aeonik licencu. Subset mora pokriti č, ć, đ, š, ž.
+## Architecture notes (most common pitfalls)
+- **Tauri multiwebview** requires the `unstable` feature. All tab webviews must be on the **same WebView2 environment**. For APIs that Tauri does not expose, use `with_webview(|w| w.controller())`.
+- **Popovers on desktop** (omnibox suggestions, menus, Shield panel) are separate transparent top-level windows, created in advance. Do not try to transparently overlay child webviews.
+- **The WebView2 popup blocker is disabled** in WebView2. We do the blocking ourselves in `NewWindowRequested` based on `IsUserInitiated`.
+- **Google sign-in:** do not change the UA on Windows (it must be identical to Edge). On iOS the UA must have the Safari suffix. Android uses GeckoView. After every engine change, run the G1 test.
+- **iOS rule lists:** at most 150k rules per list. Compile once and cache, never on the main thread.
+- **Android:** edge-to-edge and predictive back are mandatory. Limit the number of live `GeckoSession`s.
+- **Svelte 5 runes**, TypeScript `strict`, no UI kit (ADR-0005). Components are in `web/packages/ui`.
+- Fonts: OFL substitute until `[OWNER]` confirms the Aeonik license. The subset must cover č, ć, đ, š, ž.
 
-## Definicija "gotovo" za svaki zadatak
-- [ ] Kod + testovi; CI zelen
-- [ ] Budgeti nisu prekršeni (mjerenje priloženo ako je vrući put)
-- [ ] Light i dark provjereni (screenshotovi)
-- [ ] a11y: fokus, labele, kontrast AA, hit targeti (44 pt iOS / 48 dp Android)
-- [ ] i18n ključevi HR i EN
-- [ ] `docs/STATUS.md` ažuriran; ADR ako je odluka
+## Definition of "done" for every task
+- [ ] Code + tests; CI green
+- [ ] Budgets not exceeded (measurement attached if it is a hot path)
+- [ ] Light and dark checked (screenshots)
+- [ ] a11y: focus, labels, AA contrast, hit targets (44 pt iOS / 48 dp Android)
+- [ ] i18n keys (en)
+- [ ] `docs/STATUS.md` updated; ADR if it is a decision

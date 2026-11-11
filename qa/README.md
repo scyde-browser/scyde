@@ -1,9 +1,9 @@
 # qa
 
-Deterministički fixturei (PLAN §14.2):
+Deterministic fixtures (PLAN §14.2):
 
-- `adblock/`: mreža (6 blokiranih uklj. subframe + 1 iznimka), kozmetika (generička, atributna, host-specifična), rezultat u `window.__scydeQa`
-- `popup/`: window.open bez geste, s gestom, `_blank`, popunder, redirect lanac, istekla gesta
-- `lists/fixture.txt`: točna pravila za fixture (svaki engine mora dati isti rezultat)
+- `adblock/`: network (6 blocked incl. subframe + 1 exception), cosmetic (generic, attribute, host-specific), result in `window.__scydeQa`
+- `popup/`: window.open without a gesture, with a gesture, `_blank`, popunder, redirect chain, expired gesture
+- `lists/fixture.txt`: exact rules for the fixture (every engine must produce the same result)
 - `serve.mjs`: `node qa/serve.mjs 8787`
-- `sites.md`: ručni popis stvarnih stranica
+- `sites.md`: manual list of real sites

@@ -1,3 +1,3 @@
 # desktop
 
-Tauri 2 + WebView2 ljuska za Windows (PLAN §9.1). Gradi se u Fazi 3, nakon spikea S5 (`spikes/s5-tauri-multiwebview`).
+Tauri 2 + WebView2 shell for Windows (PLAN §9.1). Built in Phase 3, after spike S5 (`spikes/s5-tauri-multiwebview`).

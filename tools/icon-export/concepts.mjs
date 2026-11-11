@@ -84,7 +84,7 @@ const GRAD = [E300, E400, E500, E300];
 const concepts = {
   orbit: {
     name: 'Orbit',
-    blurb: 'Jedan prsten s otvorom kroz koji prolazi manja kugla. Kretanje i zaštita: kugla je "propuštena" kroz štit.',
+    blurb: 'A single ring with a gap that a smaller sphere passes through: motion and protection, the sphere is "let through" the shield.',
     draw() {
       const r = 250;
       const sw = 92;
@@ -104,7 +104,7 @@ const concepts = {
   },
   'twin-arc': {
     name: 'Twin Arc',
-    blurb: 'Apstraktno "S" od dva luka različitih radijusa (gornji manji, donji veći). Čita se kao slovo, a ne kao krugovi.',
+    blurb: 'An abstract "S" from two arcs of different radii (smaller on top, larger below). Reads as a letter, not as circles.',
     draw() {
       const sw = 96;
       const r1 = 112;
@@ -128,7 +128,7 @@ const concepts = {
   },
   'aura-drop': {
     name: 'Aura Drop',
-    blurb: 'Jedan krug s pomaknutom unutarnjom svjetlinom. Mekani "sjaj" Aure; na 16 px postaje ekscentrični prsten.',
+    blurb: 'One circle with an offset inner light. The soft Aura glow; at 16 px it becomes an eccentric ring.',
     draw() {
       const R = 290;
       const [lx, ly] = [C - 70, C - 78];
@@ -150,7 +150,7 @@ const concepts = {
   petal: {
     round: 2,
     name: 'Petal',
-    blurb: 'Kap/latica: tri zaobljena kuta i jedan oštar, usmjeren gore-desno. Naprijed, lagano, zaštićeno.',
+    blurb: 'A drop/petal: three rounded corners and one sharp one pointing up-right. Forward, light, protected.',
     draw() {
       const s = 300; // half-size of the bounding square
       const R = s; // full rounding on three corners
@@ -173,7 +173,7 @@ const concepts = {
   portal: {
     round: 2,
     name: 'Portal',
-    blurb: 'Luk kao vrata prema webu, s točkom svjetla na pragu. Ulaz u sadržaj; jedan oblik i jedna točka.',
+    blurb: 'An arch as a doorway to the web, with a point of light on the threshold. One shape and one dot.',
     draw() {
       const w = 236; // half width to stroke centre
       const sw = 96;
@@ -196,7 +196,7 @@ const concepts = {
   'fold-s': {
     round: 2,
     name: 'Fold S',
-    blurb: 'Slovo S od dvije pune polukružne trake s malim "prijelomom" u sredini. Monogram, čvrst i na 16 px.',
+    blurb: 'An S from two solid half-ring bands with a small "fold" in the middle. A monogram that holds at 16 px.',
     draw() {
       const Ro = 158;
       const Ri = 66;
@@ -217,7 +217,7 @@ const concepts = {
   'aura-s': {
     round: 3,
     name: 'Aura S',
-    blurb: 'Finalni znak: S od dva jednaka polukružna poteza sa zaobljenim krajevima i tankim "prijelomom" u sredini. Na 16 px čita se kao čisto S.',
+    blurb: 'An S from two equal half-circle strokes with rounded ends and a thin "fold" in the middle. Reads as a clean S at 16 px.',
     draw() {
       const sw = 118; // stroke width
       const Rm = 128; // centre-line radius of each half
@@ -242,7 +242,7 @@ const concepts = {
   'owner-s': {
     round: 4,
     name: 'SCYDE S',
-    blurb: 'Vlasnikov znak: S od dva zrcalna dijela s dijagonalnim rezom (munja). Samo slovo S u Emberu, bez pločice i pozadine.',
+    blurb: "Owner's mark: an S from two mirrored halves split by a diagonal cut (a lightning bolt). The letter only, in Ember, no plate or background.",
     palette: { tileLight: '#F2603F', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#F2603F', radius: 230, unplated: true, iosLightBg: '#FFFFFF' },
     draw() {
       // Points read from the owner's construction drawing (539 x 584 artboard). The lower half is the upper

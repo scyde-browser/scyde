@@ -1,43 +1,43 @@
-# ADR-0005: UI biblioteka za desktop chrome i interne stranice
+# ADR-0005: UI library for the desktop chrome and internal pages
 
-- **Status:** Prihvaćeno
-- **Datum:** 2026-11-11
-- **Odlučuje:** Claude Code (Faza 0.2)
-- **Veza:** PLAN §8.1 (JS budgeti), §11 Faza 0.2, CLAUDE.md (arhitektonske napomene)
+- **Status:** Accepted
+- **Date:** 2026-11-11
+- **Decided by:** Claude Code (Phase 0.2)
+- **Related:** PLAN §8.1 (JS budgets), §11 Phase 0.2, CLAUDE.md (architecture notes)
 
-## Kontekst
-Desktop chrome (tab strip, toolbar, omnibox, popoveri) i interne stranice (`scyde://newtab`, `settings`, `shields`, `library`) pišu se u web tehnologiji i rade u tri enginea: WebView2 (Chromium), GeckoView (Gecko) i WKWebView (WebKit).
+## Context
+The desktop chrome (tab strip, toolbar, omnibox, popovers) and internal pages (`scyde://newtab`, `settings`, `shields`, `library`) are written in web technology and run in three engines: WebView2 (Chromium), GeckoView (Gecko) and WKWebView (WebKit).
 
-Ograničenja:
+Constraints:
 - desktop chrome ≤ **80 KB gz** JS, New Tab ≤ **120 KB gz** (PLAN §8.1)
-- New Tab mora biti prikazan ≤ 120 ms nakon Ctrl+T na Windowsu
-- izgled je vlastiti (DESIGN.md "Aura"); generički izgled UI kitova nije prihvatljiv (R1, R4)
-- animacije samo `transform`/`opacity`, kroz CSS, WAAPI i `linear()` springove (bez GSAP-a)
-- skill `pick-ui-library` nije instaliran u ovom okruženju, pa je odluka donesena ručno prema istim kriterijima (zabilježeno u `docs/STATUS.md`)
+- New Tab must be displayed ≤ 120 ms after Ctrl+T on Windows
+- the look is our own (DESIGN.md "Aura"); the generic look of UI kits is not acceptable (R1, R4)
+- animations only on `transform`/`opacity`, via CSS, WAAPI and `linear()` springs (no GSAP)
+- the `pick-ui-library` skill is not installed in this environment, so the decision was made manually against the same criteria (recorded in `docs/STATUS.md`)
 
-## Opcije
-| Opcija | Runtime (gz, približno) | Prednosti | Mane |
+## Options
+| Option | Runtime (gz, approx.) | Pros | Cons |
 |---|---|---|---|
-| **Svelte 5 (runes) + vlastite komponente** | **14,2 KB** izmjereno za cijelu mini aplikaciju (vidi dolje) | kompajlirano, fina reaktivnost bez virtualnog DOM-a, mali runtime, scoped CSS, dobar TS | manji ekosustav; runes su noviji API |
-| Solid + vlastite komponente | ~7–9 KB | najmanji runtime, fina reaktivnost | JSX, manji ekosustav od Reacta; tim (Claude Code + vlasnik) već planira Svelte |
-| Preact + vlastite komponente | ~4–5 KB + hooks | sitan, poznat API | VDOM diff na svakom tipkanju u omniboxu; signals su dodatak |
-| React 19 + UI kit (npr. Radix/shadcn) | ~45–50 KB samo React + kit | ogroman ekosustav, gotove a11y primitive | troši ~60 % budgeta chromea prije prvog retka našeg koda; kit vuče prema generičkom izgledu |
-| Lit (web components) | ~6 KB | standardni custom elementi | shadow DOM komplicira tokene, fokus i testove; više boilerplatea |
+| **Svelte 5 (runes) + our own components** | **14.2 KB** measured for a whole mini app (see below) | compiled, fine-grained reactivity without a virtual DOM, small runtime, scoped CSS, good TS | smaller ecosystem; runes are a newer API |
+| Solid + our own components | ~7–9 KB | smallest runtime, fine-grained reactivity | JSX, smaller ecosystem than React; the team (Claude Code + owner) is already planning Svelte |
+| Preact + our own components | ~4–5 KB + hooks | tiny, familiar API | VDOM diff on every keystroke in the omnibox; signals are an add-on |
+| React 19 + UI kit (e.g. Radix/shadcn) | ~45–50 KB for React + kit alone | huge ecosystem, ready-made a11y primitives | uses ~60 % of the chrome budget before the first line of our code; the kit pulls toward a generic look |
+| Lit (web components) | ~6 KB | standard custom elements | shadow DOM complicates tokens, focus and tests; more boilerplate |
 
-## Odluka
-**Svelte 5 (runes) + TypeScript `strict` + vlastite komponente u `web/packages/ui`, bez UI kita.** Stilovi isključivo kroz CSS varijable iz `@scyde/tokens`. A11y obrasci (menu, listbox, dialog, tabs) pišu se prema WAI-ARIA APG i testiraju axe-om i Playwrightom u sva tri enginea.
+## Decision
+**Svelte 5 (runes) + TypeScript `strict` + our own components in `web/packages/ui`, no UI kit.** Styles exclusively through CSS variables from `@scyde/tokens`. A11y patterns (menu, listbox, dialog, tabs) are written following the WAI-ARIA APG and tested with axe and Playwright in all three engines.
 
-## Posljedice
-- Svaka komponenta ima sva stanja iz DESIGN §8 (default, hover, press, focus-visible, disabled, loading); to radimo sami, bez kita.
-- `pnpm size` (size-limit ili ekvivalent) postaje obavezan job u `web.yml` od Faze 2; budget: desktop-chrome 80 KB gz, newtab 120 KB gz.
-- Animacije: CSS transitions + WAAPI, springovi kao unaprijed generirani `linear()` (`tools/springs`). Bez animacijskih biblioteka.
-- Ako Faza 2 pokaže da Svelte runtime + naš kod prelazi 60 KB gz za desktop chrome, ponovno otvaramo ovaj ADR (kandidat: Solid).
+## Consequences
+- Every component has all the states from DESIGN §8 (default, hover, press, focus-visible, disabled, loading); we build these ourselves, without a kit.
+- `pnpm size` (size-limit or equivalent) becomes a mandatory job in `web.yml` from Phase 2; budget: desktop-chrome 80 KB gz, newtab 120 KB gz.
+- Animations: CSS transitions + WAAPI, springs as pre-generated `linear()` (`tools/springs`). No animation libraries.
+- If Phase 2 shows that the Svelte runtime + our code exceeds 60 KB gz for the desktop chrome, we reopen this ADR (candidate: Solid).
 
-## Mjerenja / dokazi
-Mini aplikacija (lista tabova s `$state`, `$derived`, `{#each}` s ključem, `bind:value`, `{#if}`, event handleri), Svelte 5.57.3 + Vite 8.3.8, produkcijski build:
+## Measurements / evidence
+Mini app (tab list with `$state`, `$derived`, keyed `{#each}`, `bind:value`, `{#if}`, event handlers), Svelte 5.57.3 + Vite 8.3.8, production build:
 
 ```
 dist/assets/index-*.js  36.57 kB │ gzip: 14.35 kB
 ```
 
-To je ~18 % budgeta desktop chromea (80 KB gz) i ~12 % budgeta New Taba (120 KB gz), uz ostatak za naše komponente i logiku.
+That is ~18 % of the desktop chrome budget (80 KB gz) and ~12 % of the New Tab budget (120 KB gz), leaving the rest for our components and logic.

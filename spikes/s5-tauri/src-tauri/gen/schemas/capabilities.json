@@ -1,1 +1,0 @@
-{"chrome":{"identifier":"chrome","description":"Only the chrome and popover webviews (local app content) may call the host. Tabs get nothing.","local":true,"windows":["main","popover"],"webviews":["chrome","popover"],"permissions":["core:default"]}}

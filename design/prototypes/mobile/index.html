@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="hr" data-accent="ember" data-density="comfortable" data-motion="full">
+<html lang="en" data-accent="ember" data-density="comfortable" data-motion="full">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: file:; connect-src 'none'">
-  <title>SCYDE · Otok · mobitel (prototip)</title>
+  <title>SCYDE · Island · mobile (prototype)</title>
   <link rel="stylesheet" href="../../../web/packages/tokens/dist/css/tokens.css">
   <link rel="stylesheet" href="../_shared/base.css">
   <script src="../_shared/strings.js"></script>
@@ -102,7 +102,7 @@
         <section class="recent"><h2>${t('newtab.recent')}</h2><ol>${recent.map(([h, m, c, tm], i) => `<li class="rise" style="--i:${i + 2}"><a href="#">${fav(m, c)}<span>${h}</span><time>${tm}</time></a></li>`).join('')}</ol></section>
       </main>` + island(`<span class="ghost">${t('island.new_tab')}</span>`);
     } else if (S === 'tabs') {
-      const tabs = [['Index.hr – Najnovije vijesti', 'I', 0, 'on'], ['Jutarnji list', 'J', 4], ['GitHub – scyde-browser', 'G', 3], ['YouTube', 'Y', 1, 'sleep'], ['Recept: domaći kruh', 'K', 2], ['hr.wikipedia.org', 'W', 0]];
+      const tabs = [['Index.hr – Latest news', 'I', 0, 'on'], ['Jutarnji list', 'J', 4], ['GitHub – scyde-browser', 'G', 3], ['YouTube', 'Y', 1, 'sleep'], ['Recipe: sourdough bread', 'K', 2], ['hr.wikipedia.org', 'W', 0]];
       html = web + `<div class="scrim"></div><section class="sheet" aria-label="${t('tabs.shelf')}"><header><span>${t('mobile.tabs.count', { n: 7 })}</span><span>${t('mobile.tabs.close_all')}</span></header>
         <ul class="grid">${tabs.map(([tt, m, c, cls], i) => `<li class="card ${cls || ''}" style="--i:${i}"><div class="snap"><i style="width:70%"></i><i></i><i class="img"></i><i style="width:60%"></i></div><div class="t">${fav(m, c)}${tt}</div><button class="x" type="button" aria-label="${t('tab.close')}"><span class="icon" data-icon="x"></span></button></li>`).join('')}</ul></section>` + island(domain);
     } else if (S === 'shield') {

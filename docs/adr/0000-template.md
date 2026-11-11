@@ -1,22 +1,22 @@
-# ADR-NNNN: <naslov>
+# ADR-NNNN: <title>
 
-- **Status:** Predloženo | Prihvaćeno | Zamijenjeno (ADR-XXXX) | Odbačeno
-- **Datum:** YYYY-MM-DD
-- **Odlučuje:** Claude Code / `[VLASNIK]`
-- **Veza:** PLAN.md §…, gate G…
+- **Status:** Proposed | Accepted | Superseded (ADR-XXXX) | Rejected
+- **Date:** YYYY-MM-DD
+- **Decided by:** Claude Code / `[OWNER]`
+- **Related:** PLAN.md §…, gate G…
 
-## Kontekst
-Koji problem rješavamo i koja ograničenja vrijede (budgeti iz PLAN §8, licence, platforme).
+## Context
+What problem we are solving and which constraints apply (budgets from PLAN §8, licenses, platforms).
 
-## Opcije
-1. **Opcija A**: opis. Prednosti / mane.
-2. **Opcija B**: opis. Prednosti / mane.
+## Options
+1. **Option A**: description. Pros / cons.
+2. **Option B**: description. Pros / cons.
 
-## Odluka
-Što biramo i zašto, u jednoj ili dvije rečenice.
+## Decision
+What we choose and why, in one or two sentences.
 
-## Posljedice
-Što se mijenja u kodu, CI-ju, budgetima i planu. Što postaje teže.
+## Consequences
+What changes in code, CI, budgets and the plan. What becomes harder.
 
-## Mjerenja / dokazi
-Brojke, screenshotovi, linkovi na CI runove i artefakte.
+## Measurements / evidence
+Numbers, screenshots, links to CI runs and artifacts.

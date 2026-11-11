@@ -12,7 +12,7 @@ A prototype answers "is this the right layout and feel?" before real code. It is
 - Styles **only** through tokens. Link the generated file with a relative path:
   `<link rel="stylesheet" href="../../../web/packages/tokens/dist/css/tokens.css">` (run `pnpm tokens` first). No hex, px or ms literals in the prototype CSS except `0`, `1px` hairlines and percentages.
 - Put `data-theme`, `data-accent`, `data-density`, `data-motion` on `<html>`. Include a small, visually quiet switcher (bottom corner) so the owner can flip them; hide it with `?clean` for screenshots.
-- Text comes from `web/packages/i18n/locales/{hr,en}.json` keys where they exist; add missing keys there first. Default language for prototypes: `hr`, with `?lang=en`.
+- Text comes from `web/packages/i18n/locales/en.json` keys; add missing keys there first. English only (ADR-0009).
 - Realistic content: real-looking site names, real-shaped numbers ("1.284 blokirano"), long titles, empty states. No lorem ipsum.
 - Motion uses token durations/easings/springs and the named effects from DESIGN §6.3. Respect `prefers-reduced-motion`.
 - Icons: inline Lucide-style 1.5 px line icons (ISC) or our own; never emoji.
@@ -31,4 +31,4 @@ Writes `design/prototypes/<name>/shots/<theme>-<width>.png` (commit them: they a
 1. Run `taste-skill` on the screenshots.
 2. Run `impeccable` critique, fix P1/P2, re-shoot.
 3. Record both result blocks in `design/prototypes/<name>/notes.md` and the PR body.
-4. Mark the prototype in `docs/STATUS.md` (0.4) and ask `[VLASNIK]` for approval.
+4. Mark the prototype in `docs/STATUS.md` (0.4) and ask `[OWNER]` for approval.

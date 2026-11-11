@@ -2,13 +2,13 @@
 (() => {
   const q = new URLSearchParams(location.search);
   const root = document.documentElement;
-  const lang = q.get('lang') || 'hr';
+  const lang = 'en'; // English only (ADR-0009)
   root.lang = lang;
   for (const k of ['theme', 'accent', 'density', 'motion']) if (q.get(k)) root.dataset[k] = q.get(k);
   if (!root.dataset.theme) root.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
   const dict = (window.SCYDE_STRINGS || {})[lang] || {};
-  const fmtNum = (n) => new Intl.NumberFormat(lang === 'hr' ? 'hr-HR' : 'en-US').format(n);
+  const fmtNum = (n) => new Intl.NumberFormat('en-US').format(n);
   const t = (key, params = {}) => {
     let s = dict[key];
     if (s == null) {
@@ -91,15 +91,9 @@
       sel('proto.theme', 'theme', ['light', 'dark']) +
       sel('proto.accent', 'accent', ['ember', 'sky', 'periwinkle', 'lavender', 'mint', 'onyx']) +
       sel('proto.density', 'density', ['comfortable', 'compact']) +
-      sel('proto.motion', 'motion', ['full', 'reduced']) +
-      `<label>${t('proto.lang')} <select data-k="lang"><option ${lang === 'hr' ? 'selected' : ''}>hr</option><option ${lang === 'en' ? 'selected' : ''}>en</option></select></label>`;
+      sel('proto.motion', 'motion', ['full', 'reduced']);
     box.addEventListener('change', (e) => {
       const k = e.target.dataset.k;
-      if (k === 'lang') {
-        q.set('lang', e.target.value);
-        location.search = q.toString();
-        return;
-      }
       const go = () => (root.dataset[k] = e.target.value);
       // Dissolve (DESIGN §6.3): theme change cross-fades via View Transitions where available.
       if (k === 'theme' && document.startViewTransition && root.dataset.motion !== 'reduced') document.startViewTransition(go);

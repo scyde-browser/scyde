@@ -1,47 +1,47 @@
-# ADR-0003: Shield na Windowsu (WebView2): opcija A, DNR ekstenzija
+# ADR-0003: Shield on Windows (WebView2): option A, DNR extension
 
-- **Status:** Prihvaćeno (Faza 0 zatvorena 2026-11-11)
-- **Datum:** 2026-11-11
-- **Odlučuje:** Claude Code, na temelju spikea S2; potvrda `[VLASNIK]` pri zatvaranju Faze 0
-- **Veza:** PLAN §5.4, gate **G2**, `spikes/s5-tauri`, `spikes/s2-dnr`
+- **Status:** Accepted (Phase 0 closed 2026-11-11)
+- **Date:** 2026-11-11
+- **Decided by:** Claude Code, based on spike S2; confirmation by `[OWNER]` at the close of Phase 0
+- **Related:** PLAN §5.4, gate **G2**, `spikes/s5-tauri`, `spikes/s2-dnr`
 
-## Kontekst
-WebView2 nema ugrađeni ad blocker. G2 traži ≤ 3 % (cilj 0) dodatnog vremena na medijan učitavanja i ≥ 95 % blokiranih fixture zahtjeva.
+## Context
+WebView2 has no built-in ad blocker. G2 requires ≤ 3 % (target 0) extra time on the median page load and ≥ 95 % of fixture requests blocked.
 
-## Opcije
-1. **A: MV3 ekstenzija s DNR statičkim rulesetovima** (`browser_extensions_enabled` + `extensions_path` u Tauriju). Blokiranje unutar mrežnog sloja Chromiuma, bez IPC-a prema hostu.
-2. **B: `WebResourceRequested` + adblock-rust u hostu.** Svaki zahtjev ide na UI thread hosta (dodatni process hop).
-3. **C: CDP `Network.setBlockedURLs`.** Samo kao mjerenje.
+## Options
+1. **A: MV3 extension with DNR static rulesets** (`browser_extensions_enabled` + `extensions_path` in Tauri). Blocking inside Chromium's network layer, with no IPC to the host.
+2. **B: `WebResourceRequested` + adblock-rust in the host.** Every request goes to the host's UI thread (an extra process hop).
+3. **C: CDP `Network.setBlockedURLs`.** For measurement only.
 
-## Odluka
-**Opcija A za mrežno blokiranje**, uz host za ono što DNR ne može:
-- kozmetiku i scriptlete kroz bootstrap skriptu (`AddScriptToExecuteOnDocumentCreated`, PLAN §5.4)
-- `NavigationStarting` interstitial za glavni okvir
-- per-site iznimke kroz dinamička DNR pravila
+## Decision
+**Option A for network blocking**, with the host handling what DNR cannot:
+- cosmetics and scriptlets through a bootstrap script (`AddScriptToExecuteOnDocumentCreated`, PLAN §5.4)
+- a `NavigationStarting` interstitial for the main frame
+- per-site exceptions through dynamic DNR rules
 
-**Opcija B ostaje rezerva**, ako DNR ograničenja postanu problem. Kôd za B je iz spikea poznat i radi.
+**Option B remains the fallback** in case DNR limitations become a problem. The code for B is known from the spike and works.
 
-## Posljedice
-- `shield-compiler` (Faza 1) mora proizvoditi DNR rulesetove ≤ 30k pravila po rulesetu. Spike je stavio 106k pravila u 4 rulesetova (globalni pool), i to WebView2 prihvaća.
-- Brojač blokiranih na Windowsu dolazi iz `declarativeNetRequestFeedback` (`onRuleMatchedDebug` nije za produkciju), pa se u Fazi 3 bira `getMatchedRules` po tabu ili brojanje u hostu kroz B samo za statistiku.
-- Svi webviewi (chrome, tabovi, popoveri) moraju imati iste opcije environmenta (`browser_extensions_enabled`), inače nisu na istom environmentu.
-- `extensions_path` učitava **podmape** kao ekstenzije.
-- Opcija C nije mjerena: A i B su obje prošle G2, a C nema prednosti za produkciju.
+## Consequences
+- `shield-compiler` (Phase 1) must produce DNR rulesets of ≤ 30k rules per ruleset. The spike put 106k rules into 4 rulesets (global pool), and WebView2 accepts that.
+- The blocked counter on Windows comes from `declarativeNetRequestFeedback` (`onRuleMatchedDebug` is not for production), so Phase 3 will choose between `getMatchedRules` per tab or counting in the host via B for statistics only.
+- All webviews (chrome, tabs, popovers) must have the same environment options (`browser_extensions_enabled`), otherwise they are not on the same environment.
+- `extensions_path` loads **subfolders** as extensions.
+- Option C was not measured: A and B both passed G2, and C has no advantage for production.
 
-## Mjerenja / dokazi
-CI run 43019194222 (windows-latest), medijan od 3 učitavanja, PageLoad Started → Finished:
+## Measurements / evidence
+CI run 43019194222 (windows-latest), median of 3 loads, PageLoad Started → Finished:
 
-| Stranica | Bez blokiranja | A (DNR) | B (host) |
+| Page | No blocking | A (DNR) | B (host) |
 |---|---|---|---|
-| qa/adblock (mrežni dio 6/6) | 28 ms · 2/11 | 26 ms · **8/11** | 25 ms · **8/11** |
+| qa/adblock (network part 6/6) | 28 ms · 2/11 | 26 ms · **8/11** | 25 ms · **8/11** |
 | index.hr | 1102 ms | 229 ms | 226 ms |
 | 24sata.hr | 1172 ms | 218 ms | 219 ms |
 | jutarnji.hr | 1218 ms | 945 ms | 1007 ms |
 | youtube.com | 1158 ms | 831 ms | 825 ms |
 | edition.cnn.com | 900 ms | 726 ms | 751 ms |
 
-- Fixture: obje opcije blokiraju **6/6 mrežnih** zahtjeva (100 %) i propuštaju iznimku. Ostala 3 boda su kozmetika, koju radi bootstrap skripta (nije dio G2 mrežnog kriterija).
-- Dodatno vrijeme: **negativno** na svim stranicama (blokiranje ubrzava učitavanje) → G2 ✅.
-- DNR konverzija (spike, ograničena): 139k linija → 106k pravila, 4 ruleseta; odbačeno je kozmetika (24,8k), `$popup` (3k) i ostalo (~0,3k).
+- Fixture: both options block **6/6 network** requests (100 %) and let the exception through. The remaining 3 points are cosmetics, handled by the bootstrap script (not part of the G2 network criterion).
+- Extra time: **negative** on all pages (blocking speeds up loading) → G2 ✅.
+- DNR conversion (spike, limited): 139k lines → 106k rules, 4 rulesets; dropped were cosmetics (24.8k), `$popup` (3k) and other (~0.3k).
 
-> Spike kod je obrisan pri zatvaranju Faze 0. Izvorni kod i CI workflow su u git povijesti na commitu `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).
+> The spike code was deleted at the close of Phase 0. The source code and CI workflow are in git history at commit `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).

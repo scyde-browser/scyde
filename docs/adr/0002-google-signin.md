@@ -1,30 +1,30 @@
-# ADR-0002: Google prijava u embedded engineima (G1)
+# ADR-0002: Google sign-in in embedded engines (G1)
 
-- **Status:** Prihvaćeno (G1 ✅ na sva tri enginea, vlasnik 2026-11-11)
-- **Datum:** 2026-11-11
-- **Veza:** PLAN §2.2, §2.3, gate **G1**, `docs/STATUS.md` (S1 koraci)
+- **Status:** Accepted (G1 ✅ on all three engines, owner 2026-11-11)
+- **Date:** 2026-11-11
+- **Related:** PLAN §2.2, §2.3, gate **G1**, `docs/STATUS.md` (S1 steps)
 
-## Kontekst
-Google blokira OAuth prijavu u "embedded webviewima". Bez prijave u Gmail i YouTube preglednik je neupotrebljiv. G1 traži da prijava radi na WebView2, GeckoViewu i WKWebViewu.
+## Context
+Google blocks OAuth sign-in in "embedded webviews". Without sign-in to Gmail and YouTube the browser is unusable. G1 requires sign-in to work on WebView2, GeckoView and WKWebView.
 
-## Pripremljeno za test
+## Prepared for testing
 | Engine | Build | UA |
 |---|---|---|
-| WebView2 | artefakt `s1-windows-exe` (`scyde-spike-s5.exe`, mod `signin`) | nepromijenjen WebView2 UA (= Edge) |
-| GeckoView 160 | artefakt `s3-geckoview-apk` | `Mozilla/5.0 (Android 14; Mobile; rv:160.0) Gecko/160.0 Firefox/160.0` |
-| WKWebView | artefakt `s1-ios-ipa` (Feather) | sistemski + `Version/<iOS> Mobile/15E148 Safari/604.1` |
+| WebView2 | artifact `s1-windows-exe` (`scyde-spike-s5.exe`, mode `signin`) | unmodified WebView2 UA (= Edge) |
+| GeckoView 160 | artifact `s3-geckoview-apk` | `Mozilla/5.0 (Android 14; Mobile; rv:160.0) Gecko/160.0 Firefox/160.0` |
+| WKWebView | artifact `s1-ios-ipa` (Feather) | system + `Version/<iOS> Mobile/15E148 Safari/604.1` |
 
-## Odluka
-**Prijava radi na sva tri enginea.** Fallback iz PLAN §2.3 nije potreban. Strategija iz ADR-0001 vrijedi bez promjena:
-- Windows: Tauri 2 + WebView2, nepromijenjen UA
+## Decision
+**Sign-in works on all three engines.** The fallback from PLAN §2.3 is not needed. The strategy from ADR-0001 stands unchanged:
+- Windows: Tauri 2 + WebView2, unmodified UA
 - Android: GeckoView
-- iOS: WKWebView sa Safari sufiksom u UA
+- iOS: WKWebView with the Safari suffix in the UA
 
-**Pravilo za sve sljedeće faze:** nakon svake promjene enginea, UA-a ili verzije GeckoViewa ponovi ovaj test (CLAUDE.md).
+**Rule for all subsequent phases:** after every change of engine, UA or GeckoView version, repeat this test (CLAUDE.md).
 
-## Mjerenja / dokazi
-| Engine | Google prijava | Gmail | YouTube | Drive | "Sign in with Google" (3rd party) | Izvor |
+## Measurements / evidence
+| Engine | Google sign-in | Gmail | YouTube | Drive | "Sign in with Google" (3rd party) | Source |
 |---|---|---|---|---|---|---|
-| WebView2 (`scyde-spike-s5.exe`, nepromijenjen UA) | ✅ | ✅ | ✅ | ✅ | ✅ | vlasnik, 2026-11-11: "rade sve prijave na svim ovim otvorenim tabovima" |
-| GeckoView 160 (`s3-geckoview-apk`) | ✅ | ✅ | ✅ | ✅ | ✅ | vlasnik, 2026-11-11: "sve je testirano i sve radi" |
-| WKWebView + Safari UA (`s1-ios-ipa`) | ✅ | ✅ | ✅ | ✅ | ✅ | vlasnik, 2026-11-11 |
+| WebView2 (`scyde-spike-s5.exe`, unmodified UA) | ✅ | ✅ | ✅ | ✅ | ✅ | owner, 2026-11-11: "all sign-ins work in all of these open tabs" |
+| GeckoView 160 (`s3-geckoview-apk`) | ✅ | ✅ | ✅ | ✅ | ✅ | owner, 2026-11-11: "everything has been tested and everything works" |
+| WKWebView + Safari UA (`s1-ios-ipa`) | ✅ | ✅ | ✅ | ✅ | ✅ | owner, 2026-11-11 |

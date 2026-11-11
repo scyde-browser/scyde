@@ -1,42 +1,42 @@
-# ADR-0006: Shield na iOS-u: WKContentRuleList, više lista, kompajliranje u pozadini
+# ADR-0006: Shield on iOS: WKContentRuleList, multiple lists, background compilation
 
-- **Status:** Prihvaćeno (Faza 0 zatvorena 2026-11-11)
-- **Datum:** 2026-11-11
-- **Odlučuje:** Claude Code, na temelju spikea S4
-- **Veza:** PLAN §5.2, §5.4, gate **G4**, `spikes/s4-ios-rulelists`
+- **Status:** Accepted (Phase 0 closed 2026-11-11)
+- **Date:** 2026-11-11
+- **Decided by:** Claude Code, based on spike S4
+- **Related:** PLAN §5.2, §5.4, gate **G4**, `spikes/s4-ios-rulelists`
 
-## Kontekst
-WKWebView blokira kroz `WKContentRuleList`, uz limit od 150k pravila po listi. G4 traži da se ≥ 150k pravila podijeljenih u više lista kompajlira, da keširani load bude < 100 ms i da fixture bude blokiran.
+## Context
+WKWebView blocks through `WKContentRuleList`, with a limit of 150k rules per list. G4 requires that ≥ 150k rules split across multiple lists compile, that the cached load is < 100 ms, and that the fixture is blocked.
 
-## Opcije
-1. **adblock-rust `content-blocking` konverzija → više lista ≤ 150k**, kompajlira se jednom i kešira u `WKContentRuleListStore` (plan).
-2. Samo jedna lista s prioritetnim pravilima: gubi se pokrivenost.
-3. JS presretanje u stranici: ne vidi mrežni sloj, sporo i zaobilazivo.
+## Options
+1. **adblock-rust `content-blocking` conversion → multiple lists ≤ 150k**, compiled once and cached in `WKContentRuleListStore` (the plan).
+2. A single list with priority rules only: coverage is lost.
+3. JS interception in the page: does not see the network layer, slow and circumventable.
 
-## Odluka
-**Opcija 1**, uz pravila za Fazu 1 i Fazu 4 (vidi Posljedice).
+## Decision
+**Option 1**, with rules for Phase 1 and Phase 4 (see Consequences).
 
-## Posljedice
-- **Kompajliranje je sporo:** 83 s za 150k pravila i 133 s za 114k pravila na CI simulatoru. Zato:
-  - kompajlira se **samo u pozadini**, nikad na main threadu i nikad na putu do prvog prikaza
-  - aplikacija isporučuje **unaprijed kompajliran** snapshot ili kreće s manjom "core" listom
-  - nakon updatea bundlea, nova lista se kompajlira u pozadini pa se atomski zamijeni
-  - na stvarnom uređaju vrijeme se mjeri u Fazi 4
-- `shield-compiler` mora filtrirati regexe koje WebKit ne podržava (`|`, `{}`, `\d`/`\w`/`\s`/`\b`, lookaround, ne-ASCII, `$` u sredini, doslovni `\^`) i prijaviti ih kao odbačene. Spike odbacuje 388 od 132k pravila (0,3 %). Golden test u Fazi 1: sve izlazne liste se kompajliraju na simulatoru.
-- adblock-rust 0.13.5 pretvara `||<IP>^*` u regex s doslovnim `\^` → odbacuje se (vidi spike README).
-- Brojač blokiranih na iOS-u je procjena "≈" (WebKit ne prijavljuje blokirane zahtjeve).
+## Consequences
+- **Compilation is slow:** 83 s for 150k rules and 133 s for 114k rules on the CI simulator. Therefore:
+  - compilation happens **only in the background**, never on the main thread and never on the path to first paint
+  - the app ships a **precompiled** snapshot or starts with a smaller "core" list
+  - after a bundle update, the new list is compiled in the background and then swapped atomically
+  - the time on a real device is measured in Phase 4
+- `shield-compiler` must filter out regexes that WebKit does not support (`|`, `{}`, `\d`/`\w`/`\s`/`\b`, lookaround, non-ASCII, `$` in the middle, literal `\^`) and report them as dropped. The spike drops 388 of 132k rules (0.3 %). Golden test in Phase 1: all output lists compile on the simulator.
+- adblock-rust 0.13.5 converts `||<IP>^*` into a regex with a literal `\^` → it is dropped (see the spike README).
+- The blocked counter on iOS is an estimate "≈" (WebKit does not report blocked requests).
 
-## Mjerenja / dokazi
-CI run na `4e288eb` (`s4-ios-rulelists`, macos-latest, iOS simulator):
+## Measurements / evidence
+CI run at `4e288eb` (`s4-ios-rulelists`, macos-latest, iOS simulator):
 
-| Metrika | Vrijednost | Cilj |
+| Metric | Value | Target |
 |---|---|---|
-| Ukupno pravila | **263.790** u 2 liste (150.000 + 113.790) | ≥ 150k, ≤ 150k po listi ✅ |
-| Kompajliranje | 82,5 s + 132,5 s | – (pozadina) |
-| Lookup jedne liste | 4,7 ms / 6,2 ms | – |
-| Keširani load svih lista | **6,0 ms** | < 100 ms ✅ |
-| Fixture (bundlean, `file://`) | 10/11: svih 6 mrežnih, iznimka, generička i atributna kozmetika | ✅ |
+| Total rules | **263,790** in 2 lists (150,000 + 113,790) | ≥ 150k, ≤ 150k per list ✅ |
+| Compilation | 82.5 s + 132.5 s | – (background) |
+| Lookup of a single list | 4.7 ms / 6.2 ms | – |
+| Cached load of all lists | **6.0 ms** | < 100 ms ✅ |
+| Fixture (bundled, `file://`) | 10/11: all 6 network, exception, generic and attribute cosmetics | ✅ |
 
-Host-specifična kozmetika (`127.0.0.1##`) ne vrijedi za `file://` i nije dio mrežnog G4 kriterija. Stvarne liste daju 131.891 WebKit pravilo; stres test ih duplicira s jedinstvenim markerom.
+Host-specific cosmetics (`127.0.0.1##`) do not apply to `file://` and are not part of the network G4 criterion. The real lists produce 131,891 WebKit rules; the stress test duplicates them with a unique marker.
 
-> Spike kod je obrisan pri zatvaranju Faze 0. Izvorni kod i CI workflow su u git povijesti na commitu `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).
+> The spike code was deleted at the close of Phase 0. The source code and CI workflow are in git history at commit `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).

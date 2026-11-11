@@ -1,41 +1,41 @@
-# ADR-0007: Windows ljuska: Tauri 2 multiwebview (feature `unstable`)
+# ADR-0007: Windows shell: Tauri 2 multiwebview (feature `unstable`)
 
-- **Status:** Prihvaćeno (Faza 0 zatvorena 2026-11-11)
-- **Datum:** 2026-11-11
-- **Odlučuje:** Claude Code, na temelju spikea S5
-- **Veza:** PLAN §9.1, gate **G5**, `spikes/s5-tauri`
+- **Status:** Accepted (Phase 0 closed 2026-11-11)
+- **Date:** 2026-11-11
+- **Decided by:** Claude Code, based on spike S5
+- **Related:** PLAN §9.1, gate **G5**, `spikes/s5-tauri`
 
-## Kontekst
-Desktop ljuska drži chrome webview, po jedan webview za svaki tab i popovere u zasebnim prozorima, sve na jednom WebView2 environmentu. G5 traži da prebacivanje taba i prikaz popovera budu ≤ 16 ms i da radi snap layout.
+## Context
+The desktop shell holds the chrome webview, one webview per tab, and popovers in separate windows, all on a single WebView2 environment. G5 requires tab switching and popover display to take ≤ 16 ms, and snap layouts to work.
 
-## Opcije
-1. **Tauri 2.12.5 multiwebview** (`unstable`): child webviewi u jednom prozoru, show/hide za tabove.
-2. Jedan webview i navigacija između tabova: gubi stanje taba, ne dolazi u obzir.
-3. Vlastiti host direktno na webview2-com, bez Taurija: više koda, bez prednosti u mjerenjima.
+## Options
+1. **Tauri 2.12.5 multiwebview** (`unstable`): child webviews in one window, show/hide for tabs.
+2. A single webview with navigation between tabs: loses tab state, out of the question.
+3. Our own host directly on webview2-com, without Tauri: more code, no advantage in the measurements.
 
-## Odluka
-**Opcija 1**, uz pinane verzije (tauri =2.12.5, tauri-build =2.7.4, webview2-com =0.39.1) i escape hatch `with_webview` za COM API-je (dokazan u spikeu kroz `WebResourceRequested`).
+## Decision
+**Option 1**, with pinned versions (tauri =2.12.5, tauri-build =2.7.4, webview2-com =0.39.1) and the `with_webview` escape hatch for COM APIs (proven in the spike via `WebResourceRequested`).
 
-## Posljedice
-- Tauri 3 je u alfi; prelazak tek kad bude stabilan (Renovate grupa `tauri` ostaje ručna).
-- Svaki webview mora dijeliti iste environment opcije (vidi ADR-0003).
-- **Kreiranje taba je skupo:** 20 webviewa = 3,7–4,8 s, oko 185–240 ms po tabu. Lijeno kreiranje tabova (PLAN §8.2) je **obavezno**, a za Ctrl+T treba unaprijed zagrijan (pre-warmed) tab webview da bi New Tab bio ≤ 120 ms.
-- **Snap Layouts (otvoreno):** caption gumbi su u chrome webviewu, pa child HWND prima miš i `WM_NCHITTEST → HTMAXBUTTON` na glavnom prozoru tamo ne djeluje. Kandidati za Fazu 3:
-  - (a) tanki nativni overlay prozor iznad maximize gumba koji vraća `HTMAXBUTTON`
+## Consequences
+- Tauri 3 is in alpha; we migrate only once it is stable (the Renovate group `tauri` stays manual).
+- Every webview must share the same environment options (see ADR-0003).
+- **Tab creation is expensive:** 20 webviews = 3.7–4.8 s, about 185–240 ms per tab. Lazy tab creation (PLAN §8.2) is **mandatory**, and Ctrl+T needs a pre-warmed tab webview so that New Tab is ≤ 120 ms.
+- **Snap Layouts (open):** the caption buttons are in the chrome webview, so the child HWND receives the mouse and `WM_NCHITTEST → HTMAXBUTTON` on the main window has no effect there. Candidates for Phase 3:
+  - (a) a thin native overlay window above the maximize button that returns `HTMAXBUTTON`
   - (b) `tauri-plugin-decorum`
-  - (c) nativni caption gumbi
+  - (c) native caption buttons
 
-  Provjera je ručna na Windows 11.
+  Verification is manual on Windows 11.
 
-## Mjerenja / dokazi
-CI runovi 43017487417 i 43019194222 (windows-latest):
+## Measurements / evidence
+CI runs 43017487417 and 43019194222 (windows-latest):
 
-| Metrika | Run 1 | Run 2 | Cilj |
+| Metric | Run 1 | Run 2 | Target |
 |---|---|---|---|
-| Prebacivanje taba (host: show + hide + focus), p95 / max | 0,16 / 0,86 ms | 0,39 / 1,36 ms | ≤ 16 ms ✅ |
-| Popover show (unaprijed kreiran), p95 / max | 0,10 / 0,14 ms | 0,10 / 0,16 ms | ≤ 16 ms ✅ |
-| 20 tabova kreirano / učitano | 3,7 s · 20/20 | 4,8 s · 20/20 | – |
+| Tab switch (host: show + hide + focus), p95 / max | 0.16 / 0.86 ms | 0.39 / 1.36 ms | ≤ 16 ms ✅ |
+| Popover show (pre-created), p95 / max | 0.10 / 0.14 ms | 0.10 / 0.16 ms | ≤ 16 ms ✅ |
+| 20 tabs created / loaded | 3.7 s · 20/20 | 4.8 s · 20/20 | – |
 
-Mica i vlastiti titlebar: screenshot `s5.png` u artefaktu `s5-s2-results`. Vizualna frame provjera je ručna.
+Mica and custom titlebar: screenshot `s5.png` in the artifact `s5-s2-results`. The visual frame check is manual.
 
-> Spike kod je obrisan pri zatvaranju Faze 0. Izvorni kod i CI workflow su u git povijesti na commitu `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).
+> The spike code was deleted at the close of Phase 0. The source code and CI workflow are in git history at commit `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).

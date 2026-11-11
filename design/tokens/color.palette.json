@@ -1,7 +1,7 @@
 {
   "neutral": {
     "$type": "color",
-    "$description": "Otok neutrals: warm paper and ink (DESIGN.md v2 §2).",
+    "$description": "Island neutrals: warm paper and ink (DESIGN.md v2 §2).",
     "light": {
       "0": {
         "$value": "#FFFFFF"

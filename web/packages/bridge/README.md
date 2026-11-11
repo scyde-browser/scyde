@@ -1,3 +1,3 @@
 # @scyde/bridge
 
-Tipizirani IPC klijent prema native hostu (Faza 2). Poruke prima samo `scyde://` origin, s allowlistom metoda (CLAUDE.md, pravilo 6).
+Typed IPC client to the native host (Phase 2). Messages are accepted only from the `scyde://` origin, with a method allowlist (CLAUDE.md, rule 6).

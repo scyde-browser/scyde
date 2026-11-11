@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="hr" data-accent="ember" data-density="comfortable" data-motion="full">
+<html lang="en" data-accent="ember" data-density="comfortable" data-motion="full">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: file:; connect-src 'none'">
-  <title>SCYDE · Otok · desktop (prototip)</title>
+  <title>SCYDE · Island · desktop (prototype)</title>
   <link rel="stylesheet" href="../../../web/packages/tokens/dist/css/tokens.css">
   <link rel="stylesheet" href="../_shared/base.css">
   <script src="../_shared/strings.js"></script>
@@ -136,7 +136,7 @@
     const S = new URLSearchParams(location.search).get('state') || 'newtab';
     const fills = ['sky', 'periwinkle', 'lavender', 'mint', 'ember'];
     const fav = (m, c, cls = '') => `<span class="fav ${cls}" style="--fill:var(--aura-${fills[c]}-fill)" aria-hidden="true">${m}</span>`;
-    const tabs = [['Index.hr – Najnovije vijesti', 'I', 0], ['GitHub – scyde-browser/scyde', 'G', 3], ['YouTube', 'Y', 1, 'sleep'], ['Jutarnji list', 'J', 4], ['Recept: domaći kruh od kiselog tijesta', 'K', 2], ['hr.wikipedia.org', 'W', 0], ['Gmail', 'M', 2]];
+    const tabs = [['Index.hr – Latest news', 'I', 0], ['GitHub – scyde-browser/scyde', 'G', 3], ['YouTube', 'Y', 1, 'sleep'], ['Jutarnji list', 'J', 4], ['Recipe: sourdough bread, step by step with photos', 'K', 2], ['hr.wikipedia.org', 'W', 0], ['Gmail', 'M', 2]];
 
     function island(addr, opts = {}) {
       return `<nav class="island${opts.swell ? ' swell' : ''}" aria-label="${t('island.label')}">
@@ -151,7 +151,7 @@
     }
     const page = `<div class="page" aria-hidden="true"><div class="site"><div><div class="ph h"></div><div class="ph"></div><div class="ph" style="width:92%"></div><div class="ph" style="width:80%"></div><div class="ph img"></div><div class="ph"></div><div class="ph" style="width:70%"></div></div><div><div class="ph" style="width:60%"></div><div class="ph img" style="height:calc(var(--space-80) * 2)"></div><div class="ph"></div><div class="ph img" style="height:calc(var(--space-80) * 2)"></div></div></div></div>`;
     const caps = `<div class="caps"><button type="button" aria-label="Minimize"><span class="icon" data-icon="min"></span></button><button type="button" aria-label="Maximize"><span class="icon" data-icon="max"></span></button><button type="button" class="x" aria-label="Close"><span class="icon" data-icon="x"></span></button></div>`;
-    const domain = `<span class="icon lock" data-icon="lock"></span><span>index.hr</span><span class="path">/vijesti/clanak/hrvatska-dobila-novi-most/2581044.aspx</span>`;
+    const domain = `<span class="icon lock" data-icon="lock"></span><span>index.hr</span><span class="path">/news/article/croatia-opens-new-bridge/2581044.aspx</span>`;
 
     let html = '';
     if (S === 'newtab') {
@@ -167,9 +167,9 @@
       </main>` + caps + island(`<span class="ghost">${t('island.new_tab')}</span>`, { newtab: true });
     } else if (S === 'omnibox') {
       html = page + caps + `<div class="panel suggest" role="listbox">
-          <div class="row" role="option" aria-selected="true">${fav('J', 4)}<span>Jutarnji list – Najnovije vijesti <span class="host">jutarnji.hr</span></span><kbd>Enter</kbd></div>
+          <div class="row" role="option" aria-selected="true">${fav('J', 4)}<span>Jutarnji list – Latest news <span class="host">jutarnji.hr</span></span><kbd>Enter</kbd></div>
           <div class="row" role="option"><span class="icon" data-icon="search"></span><span>${t('omnibox.suggest.search', { q: 'jutarnji list' })}</span><span class="meta">DuckDuckGo</span></div>
-          <div class="row" role="option"><span class="icon" data-icon="clock"></span><span>Vijesti – Jutarnji.hr <span class="host">jutarnji.hr/vijesti</span></span><span class="meta">${t('omnibox.suggest.history')}</span></div>
+          <div class="row" role="option"><span class="icon" data-icon="clock"></span><span>News – Jutarnji.hr <span class="host">jutarnji.hr/vijesti</span></span><span class="meta">${t('omnibox.suggest.history')}</span></div>
           <div class="row" role="option"><span class="icon" data-icon="star"></span><span>Sport <span class="host">sportske.jutarnji.hr</span></span><span class="meta">${t('omnibox.suggest.bookmark')}</span></div>
         </div>` + island(`<span class="icon lock" data-icon="search"></span><span>jutarnji<span class="sel">.hr</span></span>`, { swell: true, focus: true });
     } else if (S === 'tabs') {

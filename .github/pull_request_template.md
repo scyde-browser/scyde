@@ -1,23 +1,23 @@
-## Što i zašto
-<!-- Kratko: što se mijenja i zašto. Veza na PLAN.md § / ADR. -->
+## What and why
+<!-- Short: what changes and why. Link to PLAN.md § / ADR. -->
 
-## Faza i zadatak
-<!-- npr. Faza 0.2, docs/STATUS.md -->
+## Phase and task
+<!-- e.g. Phase 1.2, docs/STATUS.md -->
 
-## Mjerenja (obavezno ako PR dira vrući put)
-<!-- startup, prebacivanje tabova, Shield match, animacije: brojke prije/poslije -->
+## Measurements (required if the PR touches a hot path)
+<!-- startup, tab switching, Shield match, animations: numbers before/after -->
 
-## Screenshotovi (UI PR)
-<!-- Linkovi na CI artefakte: light/dark, širine, platforme -->
+## Screenshots (UI PR)
+<!-- Links to CI artifacts: light/dark, widths, platforms -->
 
 ## `impeccable` critique (UI PR)
-<!-- Nalazi i što je popravljeno -->
+<!-- Findings and what was fixed -->
 
 ## Checklist
-- [ ] CI zelen
-- [ ] Budgeti nisu prekršeni
-- [ ] Light i dark provjereni
-- [ ] a11y: fokus, labele, kontrast AA, hit targeti
-- [ ] i18n ključevi HR i EN
-- [ ] `docs/STATUS.md` ažuriran; ADR ako je odluka
-- [ ] Novi mrežni poziv upisan u `docs/NETWORK.md` (ili ga nema)
+- [ ] CI green
+- [ ] Budgets not exceeded
+- [ ] Light and dark checked
+- [ ] a11y: focus, labels, AA contrast, hit targets
+- [ ] i18n keys (en)
+- [ ] `docs/STATUS.md` updated; ADR if a decision was made
+- [ ] New network call recorded in `docs/NETWORK.md` (or none)

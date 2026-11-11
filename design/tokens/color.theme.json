@@ -3,7 +3,7 @@
     "light": {
       "surface": {
         "$type": "color",
-        "$description": "Otok has no chrome bar: the page and the paper are the surfaces.",
+        "$description": "Island has no chrome bar: the page and the paper are the surfaces.",
         "canvas": {
           "$value": "{neutral.light.50}"
         },

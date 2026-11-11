@@ -1,3 +1,3 @@
-# Arhitektura
+# Architecture
 
-Dijagrami i bilješke uz PLAN §3. Popunjava se kako faze napreduju.
+Diagrams and notes accompanying PLAN §3. Filled in as the phases progress.
