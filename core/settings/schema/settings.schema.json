@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scyde.dev/schema/settings.schema.json",
+  "title": "SCYDE settings",
+  "description": "Source of truth for user settings (PLAN §11 Phase 1.7). core/settings validates against it; defaults come from it. Supported keywords (core/settings validator): type, properties, required, additionalProperties, enum, const, default, minimum, maximum, minLength, maxLength, x-scyde-format (hex-color, search-template).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version"],
+  "properties": {
+    "version": { "type": "integer", "const": 1, "default": 1 },
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "theme": { "type": "string", "enum": ["system", "light", "dark"], "default": "system" },
+        "accent": {
+          "type": "string",
+          "enum": ["ember", "sky", "periwinkle", "lavender", "mint", "onyx", "custom"],
+          "default": "ember"
+        },
+        "custom_accent": {
+          "type": "string",
+          "description": "Seed colour for accent = custom; core/theme derives every role and the nearest AA-safe shade.",
+          "x-scyde-format": "hex-color",
+          "default": "#F2603F"
+        },
+        "density": { "type": "string", "enum": ["comfortable", "compact"], "default": "comfortable" },
+        "reduce_motion": { "type": "string", "enum": ["system", "on", "off"], "default": "system" }
+      }
+    },
+    "search": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "type": "string",
+          "description": "Default search engine. DuckDuckGo until the owner decides (STATUS open question 2).",
+          "enum": ["duckduckgo", "startpage", "brave", "ecosia", "google", "bing", "custom"],
+          "default": "duckduckgo"
+        },
+        "custom_template": {
+          "type": "string",
+          "description": "https URL with {searchTerms}, used when engine = custom.",
+          "x-scyde-format": "search-template",
+          "maxLength": 2048,
+          "default": ""
+        },
+        "suggestions": { "type": "boolean", "default": true }
+      }
+    },
+    "shield": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "level": { "type": "string", "enum": ["standard", "aggressive"], "default": "standard" },
+        "cookie_banners": { "type": "boolean", "default": true },
+        "filter_updates": {
+          "type": "boolean",
+          "description": "Daily signed filter bundle check (docs/NETWORK.md N1).",
+          "default": true
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "https_first": { "type": "boolean", "default": true },
+        "block_popups": { "type": "boolean", "default": true },
+        "clear_on_exit": { "type": "boolean", "default": false }
+      }
+    },
+    "newtab": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speed_dial": { "type": "boolean", "default": true },
+        "speed_dial_rows": { "type": "integer", "minimum": 1, "maximum": 4, "default": 2 },
+        "shield_stats": { "type": "boolean", "default": true },
+        "top_stories": {
+          "type": "boolean",
+          "description": "Opt-in (docs/NETWORK.md N4, STATUS open question 7).",
+          "default": false
+        }
+      }
+    },
+    "startup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "open": { "type": "string", "enum": ["newtab", "restore"], "default": "restore" }
+      }
+    }
+  }
+}
