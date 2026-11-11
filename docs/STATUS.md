@@ -88,13 +88,29 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - **AC:** ✅ 10 tests; every hue × 4 lightness × 4 chroma (576 seeds) derives a valid accent; Ember's pastel is kept unchanged
 
 ### 1.9 `core/ffi`
-- [ ] UniFFI → Swift and Kotlin
-- [ ] CI: `.so` per ABI (cargo-ndk), `ScydeCore.xcframework` (macOS, tag/manual)
+- [x] UniFFI 0.32 (proc macros) → `libscyde_core`: `ShieldEngine`, `verify_filter_bundle`, omnibox (`omnibox_classify`, `omnibox_display_url`, `omnibox_elide_host`, `omnibox_search_url`), `PlacesStore`, `SettingsStore`, `theme_derive_accent`, `theme_contrast_ratio`, `core_version`; errors as `CoreError`; stores are `Send + Sync`
+- [x] CI `android` → `core-ndk`: `ffi/build-android.sh` → `.so` for arm64-v8a, armeabi-v7a and x86_64 + Kotlin bindings (artifact `scyde-core-android`). The Kotlin bindings are compiled for real with the Android project in Phase 5.
+- [x] CI `ios` → `core-apple` (tag/manual/`ios/**`/`core/ffi/**`): `ffi/build-apple.sh` → `ScydeCore.xcframework` + Swift package, and an XCTest that calls the core from Swift on the simulator (artifact `scyde-core-apple`)
+- Note: bindings are generated from an unstripped host build, because the release profile strips the UniFFI metadata symbols. The shipped libraries stay stripped.
 
 ### 1.10 Measurement
-- [ ] `perf.json` artifact from benchmarks; a regression > 10 % fails the job (PLAN §8.2)
+- [x] `perf.json` from benchmarks (`shield`, `shield-wasm`), uploaded as artifacts
+- [x] CI `core` → `perf` (PRs): the base commit's Shield bench and the PR's bench are alternated 3× on the same runner; a budgeted metric whose median is > 10 % worse fails (`tools/perf/compare.mjs`, with tests). A same-runner A/B, because absolute µs numbers swing ±50 % between shared runners.
 
 **Phase 1 AC (PLAN §11):** `cargo test` green, clippy without warnings, budgets from 1.1, lists within limits, signature verified, omnibox tests pass.
+
+| AC | Status |
+|---|---|
+| `cargo test` green, clippy `-D warnings` | ✅ CI `core` → `check` (pedantic lints, native and wasm32) |
+| match p50 < 5 µs, p99 < 50 µs, deserialization < 50 ms | ✅ ADR-0010, gated in CI, A/B regression gate |
+| iOS ≤ 150k per list, DNR within Chromium limits, dropped rules reported | ✅ real lists: iOS 148,676 (compiled on the simulator), DNR 118,964 in 4 rulesets; `report.json` |
+| bundle signed and verified in a test | ✅ `shield-compiler` golden tests; publishing waits on `[OWNER]` key (1.4) |
+| omnibox: URL or search, punycode/confusables, fixups | ✅ unit + property tests |
+
+**Remaining `[OWNER]` items for Phase 1:**
+- `FILTERS_SIGNING_KEY` and `brand/keys/filters.pub` (docs/filters-signing.md)
+- the scriptlet resources source (resources.json, GPLv3; open question 3)
+- default search engine (open question 2; DuckDuckGo until then)
 
 ## Skills
 `impeccable`, `taste-skill`, `prototype` and `pick-ui-library` do not exist in the plugin catalog, so they are **implemented as project skills** in `.claude/skills/` (2026-11-11) and are loaded in every session in this repo:

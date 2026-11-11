@@ -27,14 +27,21 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: rustup show active-toolchain || rustup toolchain install
-      - run: rustup target add aarch64-linux-android x86_64-linux-android
+      - run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: core
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
-      - name: Core cross-compiles for Android (arm64-v8a, x86_64)
+        run: cargo ndk --version 2>/dev/null || cargo install cargo-ndk --locked
+      - name: Core cross-compiles for Android (whole workspace)
         working-directory: core
         run: cargo ndk -t arm64-v8a -t x86_64 build --workspace --lib
+      - name: libscyde_core per ABI + Kotlin bindings (Phase 1.9)
+        working-directory: core
+        run: ffi/build-android.sh target/ffi-android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scyde-core-android
+          path: core/target/ffi-android/
       # Phase 5: ./gradlew assembleDebug testDebugUnitTest, emulator smoke + screenshots,
       # signed per-ABI APKs on tags.

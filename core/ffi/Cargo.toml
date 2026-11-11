@@ -1,12 +1,37 @@
 [package]
 name = "ffi"
-description = "UniFFI bindings for Swift and Kotlin"
+description = "UniFFI bindings of the SCYDE core for Swift and Kotlin (libscyde_core)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
+
+[lib]
+# libscyde_core.so (Android, per ABI) and libscyde_core.a (iOS xcframework)
+name = "scyde_core"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+# Generates Kotlin/Swift sources from the built library:
+#   cargo run -p ffi --features bindgen --bin uniffi-bindgen -- generate --library <lib> --language kotlin --out-dir <dir>
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["bindgen"]
+
+[features]
+bindgen = ["uniffi/cli"]
+
+[dependencies]
+shield = { path = "../shield" }
+shield-compiler = { path = "../shield-compiler" }
+omnibox = { path = "../omnibox" }
+places = { path = "../places" }
+settings = { path = "../settings" }
+theme = { path = "../theme" }
+uniffi = "=0.32.2"
+serde_json = "1"
 
 [lints]
 workspace = true
