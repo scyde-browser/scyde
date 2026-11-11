@@ -1,0 +1,11 @@
+{
+  "manifest_version": 2,
+  "name": "SCYDE Shield (spike S3)",
+  "version": "0.0.1",
+  "description": "Built-in Shield extension spike: webRequestBlocking + adblock-rust WASM + native messaging.",
+  "browser_specific_settings": { "gecko": { "id": "shield@spike.scyde.dev" } },
+  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>", "nativeMessaging", "nativeMessagingFromContent", "geckoViewAddons"],
+  "background": { "scripts": ["engine/scyde_shield_wasm_spike.js", "background.js"] },
+  "content_scripts": [{ "matches": ["<all_urls>"], "js": ["content.js"], "run_at": "document_start" }],
+  "content_security_policy": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+}
