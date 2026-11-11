@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Which spike to run (all, s3-wasm, s3-geckoview-app, s4-ios-rulelists, s5-windows)"
+        description: "Which spike to run (all, s1-ios, s3-wasm, s3-geckoview-app, s4-ios-rulelists, s5-windows)"
         default: all
 
 concurrency:
@@ -25,6 +25,32 @@ env:
     https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt
 
 jobs:
+  s1-ios:
+    # Unsigned .ipa for the manual Google sign-in test (G1) through Feather / SideStore.
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all' || inputs.job == 's1-ios'
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: spikes/s1-ios
+    steps:
+      - uses: actions/checkout@v5
+      - run: brew install xcodegen
+      - run: xcodegen
+      - name: Archive (unsigned) and package .ipa
+        run: |
+          set -o pipefail
+          xcodebuild archive -project ScydeS1.xcodeproj -scheme ScydeS1 -sdk iphoneos -configuration Release \
+            -archivePath build/ScydeS1.xcarchive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -20
+          mkdir -p build/Payload
+          cp -R build/ScydeS1.xcarchive/Products/Applications/ScydeS1.app build/Payload/
+          (cd build && zip -qry ScydeS1.ipa Payload)
+          ls -la build/ScydeS1.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s1-ios-ipa
+          path: spikes/s1-ios/build/ScydeS1.ipa
+
   s3-wasm:
     if: github.event_name != 'workflow_dispatch' || inputs.job == 'all' || inputs.job == 's3-wasm'
     runs-on: ubuntu-latest

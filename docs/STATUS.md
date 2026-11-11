@@ -63,7 +63,10 @@ Cilj G1: prijava radi na sva tri enginea (screenshotovi idu u ADR-0002). Koristi
 2. Otvori aplikaciju "SCYDE S3". Prikazuje internu stranicu s popisom linkova (ujedno dokazuje da interna stranica razgovara s aplikacijom).
 3. Redom: accounts.google.com (prijava), Gmail, YouTube, Drive, Stack Overflow → "Log in with Google". Tipka Natrag vraća na popis.
 
-**iOS (WKWebView):** koraci dolaze s malom S1 iOS aplikacijom (Safari UA sufiks) u sljedećem commitu.
+**iOS (WKWebView):**
+1. Preuzmi artefakt `s1-ios-ipa` (`ScydeS1.ipa`, nepotpisan).
+2. U Featheru: Import → odaberi `.ipa` → potpiši svojim certifikatom → instaliraj.
+3. Otvori "SCYDE S1". Donji izbornik bira cilj: Google prijava, Gmail, YouTube, Drive, Sign in with Google. Prijavi se i prođi sve ciljeve.
 
 Rezultate javi u chatu ili ih upiši ovdje, a ja ću napisati ADR-0002.
 
