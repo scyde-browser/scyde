@@ -35,10 +35,12 @@ jobs:
       - run: pnpm test
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 3
           name: tokens
           path: web/packages/tokens/dist
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 3
           name: icons
           path: brand/icon/export
       - name: Build internal pages
@@ -54,6 +56,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          retention-days: 3
           name: screenshots
           path: |
             web/e2e/screenshots/

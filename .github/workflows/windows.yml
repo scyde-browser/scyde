@@ -66,6 +66,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          retention-days: 3
           name: scyde-windows
           path: |
             desktop/src-tauri/target/release/bundle/nsis/*-setup.exe

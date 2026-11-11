@@ -43,10 +43,6 @@ jobs:
           UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
           set -o pipefail
           xcodebuild test -scheme ScydeCore -destination "id=$UDID" 2>&1 | grep -E "Test Case|error:|TEST (SUCCEEDED|FAILED)"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: scyde-core-apple
-          path: core/target/ffi-apple/ScydeCore/
       # Phase 4: xcodegen, simulator build + XCUITest screenshots,
       # unsigned .ipa (Payload/SCYDE.app zipped) on tags for Feather.
 
@@ -90,6 +86,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          retention-days: 3
           name: shield-rulelists
           path: |
             rulelists.log
@@ -177,6 +174,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          retention-days: 3
           name: scyde-ios
           path: |
             ios/SCYDE/build/SCYDE-unsigned.ipa

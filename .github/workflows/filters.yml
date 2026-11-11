@@ -96,6 +96,7 @@ jobs:
           ls -la release
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 3
           name: filters-${{ env.VERSION }}
           path: release/
       - name: Publish filters-${{ env.VERSION }} and move filters-latest

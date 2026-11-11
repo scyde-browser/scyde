@@ -42,6 +42,7 @@ jobs:
         run: ffi/build-android.sh target/ffi-android
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 3
           name: scyde-core-android
           path: core/target/ffi-android/
       # Phase 5: ./gradlew assembleDebug testDebugUnitTest, emulator smoke + screenshots,
@@ -156,6 +157,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          retention-days: 3
           name: scyde-android
           path: |
             apk/
