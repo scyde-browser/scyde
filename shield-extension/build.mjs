@@ -6,6 +6,7 @@
 //   (--wasm <shield-wasm no-modules dir> --pages <dir with newtab/ settings/ shields/ library/>).
 import { mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, readdirSync, cpSync } from 'node:fs';
 import path from 'node:path';
+import { shardOf } from './src/shard.js';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -54,12 +55,30 @@ if (target === 'gecko-mv2') {
 }
 if (target !== 'chromium-mv3') throw new Error(`unknown target ${target}`);
 
-for (const f of ['generic.json', 'hosts.json']) copyFileSync(path.join(bundle, 'cosmetic', f), path.join(out, 'cosmetic', f));
+// Cosmetics without a service worker (WebView2 did not deliver worker messages, ADR-0012):
+// all generic selectors as one stylesheet the browser injects itself, host rules as shards.
+const generic = JSON.parse(readFileSync(path.join(bundle, 'cosmetic', 'generic.json'), 'utf8'));
+const hosts = JSON.parse(readFileSync(path.join(bundle, 'cosmetic', 'hosts.json'), 'utf8'));
+const excepted = new Set(generic.exceptions ?? []);
+const selectors = [...Object.values(generic.classes ?? {}).flat(), ...Object.values(generic.ids ?? {}).flat(), ...(generic.other ?? [])]
+  .filter((s) => !excepted.has(s));
+const css = [];
+// One invalid selector drops its whole rule, so rules stay small.
+for (let i = 0; i < selectors.length; i += 50) css.push(`${selectors.slice(i, i + 50).join(',\n')}{display:none!important}`);
+writeFileSync(path.join(out, 'cosmetic', 'generic.css'), css.join('\n') + '\n');
+mkdirSync(path.join(out, 'cosmetic', 'hosts'), { recursive: true });
+const shards = new Map();
+for (const [host, rules] of Object.entries(hosts)) {
+  const s = shardOf(host);
+  if (!shards.has(s)) shards.set(s, {});
+  shards.get(s)[host] = { hide: rules.hide, unhide: rules.unhide };
+}
+for (const [s, index] of shards) writeFileSync(path.join(out, 'cosmetic', 'hosts', `${s}.json`), JSON.stringify(index));
 const rulesets = manifest.dnr.map((r) => {
   copyFileSync(path.join(bundle, r.path), path.join(out, r.path));
   return { id: r.id, enabled: true, path: r.path };
 });
-for (const f of ['content.js', 'cosmetics.js', 'chromium-background.js']) copyFileSync(path.join(here, 'src', f), path.join(out, f));
+copyFileSync(path.join(here, 'src', 'content-static.js'), path.join(out, 'content.js'));
 
 writeFileSync(
   path.join(out, 'manifest.json'),
@@ -71,8 +90,10 @@ writeFileSync(
       description: `Built-in ad, tracker and popup protection (filters ${manifest.version})`,
       permissions: ['declarativeNetRequest'],
       host_permissions: ['<all_urls>'],
-      background: { service_worker: 'chromium-background.js', type: 'module' },
-      content_scripts: [{ matches: ['http://*/*', 'https://*/*'], js: ['content.js'], run_at: 'document_start', all_frames: true }],
+      content_scripts: [
+        { matches: ['http://*/*', 'https://*/*'], css: ['cosmetic/generic.css'], js: ['content.js'], run_at: 'document_start', all_frames: true },
+      ],
+      web_accessible_resources: [{ resources: ['cosmetic/hosts/*.json'], matches: ['http://*/*', 'https://*/*'] }],
       declarative_net_request: { rule_resources: rulesets },
     },
     null,

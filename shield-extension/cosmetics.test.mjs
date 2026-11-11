@@ -14,3 +14,11 @@ test('host, generic and exceptions', () => {
   assert.deepEqual(idx.forClassesAndIds('example.hr', ['ad-banner', 'content'], ['top']), ['.ad-banner', '#top']);
   assert.deepEqual(idx.forClassesAndIds('news.example.hr', ['ad-banner'], []), []);
 });
+
+test('content script and build hash hosts identically', async () => {
+  const { shardOf } = await import('./src/shard.js');
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('./src/content-static.js', import.meta.url), 'utf8');
+  const inline = new Function(`${src.match(/const SHARDS = 256;[\s\S]*?return \(h % SHARDS\)[^;]*;\n  \};/)[0].replace('const shardOf =', 'return')}`)();
+  for (const h of ['example.com', '127.0.0.1', 'www.index.hr', 'localhost']) assert.equal(inline(h), shardOf(h));
+});
