@@ -23,6 +23,7 @@ A prototype answers "is this the right layout and feel?" before real code. It is
 pnpm tokens
 node .claude/skills/prototype/shot.mjs design/prototypes/<name>/index.html
 # options: --widths 1440,390  --themes light,dark  --accent sky  --out <dir>  --scale 2
+#          --query state=omnibox --tag omnibox   (extra URL params; prefix for file names)
 ```
 Writes `design/prototypes/<name>/shots/<theme>-<width>.png` (commit them: they are the review artefact) and prints the paths. Read every screenshot before claiming the prototype is done.
 

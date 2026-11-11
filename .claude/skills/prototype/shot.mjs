@@ -2,6 +2,7 @@
 // Screenshots a SCYDE prototype in every theme/width combination using the pre-installed Playwright Chromium.
 // Usage: node .claude/skills/prototype/shot.mjs <file.html> [--widths 1440,390] [--themes light,dark]
 //        [--accent sky] [--out <dir>] [--scale 2] [--height 0 (full page)] [--browser chromium|firefox|webkit]
+//        [--query state=omnibox] [--tag omnibox]
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -26,6 +27,8 @@ const accent = opt('accent', '');
 const scale = Number(opt('scale', '2'));
 const height = Number(opt('height', '0'));
 const browserName = opt('browser', 'chromium');
+const query = opt('query', ''); // e.g. state=omnibox
+const tag = opt('tag', '');
 const abs = path.resolve(file);
 const out = path.resolve(opt('out', path.join(path.dirname(abs), 'shots')));
 mkdirSync(out, { recursive: true });
@@ -48,6 +51,7 @@ try {
       page.on('pageerror', (e) => errors.push(e.message));
       const url = new URL(pathToFileURL(abs));
       url.searchParams.set('clean', '');
+      for (const [k, v] of new URLSearchParams(query)) url.searchParams.set(k, v);
       await page.goto(url.href);
       await page.evaluate(
         ({ theme, accent }) => {
@@ -58,7 +62,7 @@ try {
         { theme, accent },
       );
       await page.waitForTimeout(400);
-      const name = `${theme}-${width}${accent ? `-${accent}` : ''}.png`;
+      const name = `${tag ? `${tag}-` : ''}${theme}-${width}${accent ? `-${accent}` : ''}.png`;
       const target = path.join(out, name);
       await page.screenshot({ path: target, fullPage: height === 0, ...(height ? { clip: { x: 0, y: 0, width, height } } : {}) });
       written.push(target);
