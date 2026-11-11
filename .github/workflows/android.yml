@@ -4,7 +4,7 @@ on:
   push:
     tags: ["v*"]
   pull_request:
-    paths: ["android/**", "core/**", ".github/workflows/android.yml"]
+    paths: ["android/**", "core/**", "shield-extension/**", "tools/i18n-native/**", ".github/workflows/android.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -45,3 +45,117 @@ jobs:
           path: core/target/ffi-android/
       # Phase 5: ./gradlew assembleDebug testDebugUnitTest, emulator smoke + screenshots,
       # signed per-ABI APKs on tags.
+
+  app:
+    # SCYDE for Android (Phase 5): GeckoView + Compose, per-ABI APKs, emulator screenshots.
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Tools (cargo-ndk, wasm-bindgen-cli)
+        working-directory: core
+        run: |
+          cargo ndk --version 2>/dev/null || cargo install cargo-ndk --locked
+          v=$(sed -n 's/^wasm-bindgen = "=\(.*\)"/\1/p' shield-wasm/Cargo.toml)
+          [ "$(wasm-bindgen --version 2>/dev/null | awk '{print $2}')" = "$v" ] || cargo install wasm-bindgen-cli --version "$v" --locked
+      - name: Web pages, tokens, strings, icons
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm tokens
+          for a in newtab settings shields library; do pnpm --filter "@scyde/app-$a" build; done
+          A=android/app/src/main
+          mkdir -p $A/java/dev/scyde/browser/theme pages
+          cp web/packages/tokens/dist/kotlin/ScydeTokens.kt $A/java/dev/scyde/browser/theme/
+          node tools/i18n-native/build.mjs --android $A/res/values/strings.xml
+          node tools/icon-export/export.mjs --out dist/icons
+          cp -R dist/icons/owner-s/android/res/. $A/res/
+          for a in newtab settings shields library; do cp -R web/apps/$a/dist pages/$a; done
+      - name: Shield extension (gecko-mv2, WASM engine + engine.dat, ADR-0004)
+        run: |
+          node tools/filters/fetch.mjs --out lists || { echo "::warning::list download failed, using the fixture"; rm -rf lists; mkdir lists; }
+          cp qa/lists/fixture.txt lists/zz-fixture.txt
+          (cd core && cargo run --release -p shield-compiler -- --lists ../lists --out ../bundle --version "$(date -u +%Y%m%d)")
+          core/shield-wasm/build.sh "$PWD/core/target/shield-wasm"
+          node shield-extension/build.mjs --target gecko-mv2 --bundle bundle --wasm core/target/shield-wasm/no-modules \
+            --pages pages --out android/app/src/main/assets/extension
+      - name: libscyde_core per ABI + Kotlin bindings
+        run: |
+          (cd core && ffi/build-android.sh target/ffi-android)
+          A=android/app/src/main
+          mkdir -p $A/jniLibs
+          cp -R core/target/ffi-android/jniLibs/. $A/jniLibs/
+          cp -R core/target/ffi-android/kotlin/. $A/java/
+      - name: Signing key (owner's keystore if configured, else a per-build test key)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            { echo "SCYDE_KEYSTORE=$RUNNER_TEMP/release.jks"; echo "SCYDE_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"; echo "SCYDE_KEY_ALIAS=$KEY_ALIAS"; echo "SCYDE_KEY_PASSWORD=$KEY_PASSWORD"; echo "SIGNING=owner"; } >> "$GITHUB_ENV"
+          else
+            P=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore "$RUNNER_TEMP/test.jks" -storepass "$P" -keypass "$P" -alias scyde-test \
+              -keyalg RSA -keysize 3072 -validity 365 -dname "CN=SCYDE test build" -noprompt
+            echo "::add-mask::$P"
+            { echo "SCYDE_KEYSTORE=$RUNNER_TEMP/test.jks"; echo "SCYDE_KEYSTORE_PASSWORD=$P"; echo "SCYDE_KEY_ALIAS=scyde-test"; echo "SCYDE_KEY_PASSWORD=$P"; echo "SIGNING=test"; } >> "$GITHUB_ENV"
+          fi
+      - name: Build APKs (per ABI)
+        working-directory: android
+        run: |
+          ./gradlew --no-daemon assembleRelease
+          mkdir -p ../apk
+          for f in app/build/outputs/apk/release/*.apk; do
+            abi=$(basename "$f" | sed -E 's/app-(.*)-release\.apk/\1/')
+            cp "$f" "../apk/scyde-0.2.0-$abi.apk"
+          done
+          ls -la ../apk
+          echo "signing: $SIGNING"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Serve qa fixtures
+        run: node qa/serve.mjs 8787 > /dev/null 2>&1 &
+      - name: Emulator smoke + screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: |
+            mkdir -p shots
+            adb install -r apk/scyde-0.2.0-x86_64.apk
+            adb shell am start -n dev.scyde.browser/.MainActivity
+            sleep 25
+            adb exec-out screencap -p > shots/newtab.png
+            adb shell am start -n dev.scyde.browser/.MainActivity -a android.intent.action.VIEW -d http://10.0.2.2:8787/adblock/index.html
+            sleep 25
+            adb exec-out screencap -p > shots/qa-adblock.png
+            adb logcat -d | grep -E "SCYDE|GeckoView" | tail -80 > shots/logcat.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scyde-android
+          path: |
+            apk/
+            shots/

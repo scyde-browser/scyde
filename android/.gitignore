@@ -1,0 +1,10 @@
+.gradle/
+build/
+local.properties
+app/src/main/assets/extension/
+app/src/main/jniLibs/
+app/src/main/java/uniffi/
+app/src/main/java/dev/scyde/browser/theme/
+app/src/main/res/values/strings.xml
+app/src/main/res/mipmap-*/
+app/src/main/res/values/ic_launcher_background.xml

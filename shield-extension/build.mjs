@@ -2,8 +2,9 @@
 // Builds the Shield extension from a shield-compiler bundle.
 //   node shield-extension/build.mjs --target chromium-mv3 --bundle <bundle dir> --out <dir>
 // chromium-mv3: DNR static rulesets (≤ 30k each) + cosmetics worker/content script (WebView2).
-// The gecko-mv2 target (webRequest + WASM engine) is built in Phase 5.
-import { mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, readdirSync } from 'node:fs';
+// gecko-mv2: webRequestBlocking + WASM engine (engine.dat) + cosmetics + the internal pages
+//   (--wasm <shield-wasm no-modules dir> --pages <dir with newtab/ settings/ shields/ library/>).
+import { mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, readdirSync, cpSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,6 +21,37 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(path.join(out, 'cosmetic'), { recursive: true });
 mkdirSync(path.join(out, 'dnr'), { recursive: true });
 
+if (target === 'gecko-mv2') {
+  const wasm = path.resolve(opt('--wasm', ''));
+  const pages = opt('--pages');
+  mkdirSync(path.join(out, 'engine'), { recursive: true });
+  for (const f of ['shield_wasm.js', 'shield_wasm_bg.wasm']) copyFileSync(path.join(wasm, f), path.join(out, 'engine', f));
+  for (const f of ['engine.dat', 'resources.json']) copyFileSync(path.join(bundle, f), path.join(out, f));
+  for (const f of ['content.js', 'gecko-background.js']) copyFileSync(path.join(here, 'src', f), path.join(out, f));
+  if (pages) cpSync(path.resolve(pages), path.join(out, 'pages'), { recursive: true });
+  rmSync(path.join(out, 'dnr'), { recursive: true, force: true });
+  rmSync(path.join(out, 'cosmetic'), { recursive: true, force: true });
+  writeFileSync(
+    path.join(out, 'manifest.json'),
+    JSON.stringify(
+      {
+        manifest_version: 2,
+        name: 'SCYDE Shield',
+        version,
+        description: `Built-in ad, tracker and popup protection (filters ${manifest.version})`,
+        browser_specific_settings: { gecko: { id: 'shield@scyde.dev' } },
+        permissions: ['webRequest', 'webRequestBlocking', '<all_urls>', 'nativeMessaging', 'nativeMessagingFromContent', 'geckoViewAddons'],
+        background: { scripts: ['engine/shield_wasm.js', 'gecko-background.js'] },
+        content_scripts: [{ matches: ['http://*/*', 'https://*/*'], js: ['content.js'], run_at: 'document_start', all_frames: true }],
+        content_security_policy: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+      },
+      null,
+      2,
+    ),
+  );
+  console.log(`gecko-mv2: engine.dat ${(readFileSync(path.join(out, 'engine.dat')).length / 1e6).toFixed(1)} MB, filters ${manifest.version} → ${out}`);
+  process.exit(0);
+}
 if (target !== 'chromium-mv3') throw new Error(`unknown target ${target}`);
 
 for (const f of ['generic.json', 'hosts.json']) copyFileSync(path.join(bundle, 'cosmetic', f), path.join(out, 'cosmetic', f));

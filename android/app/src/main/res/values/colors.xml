@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Window background only (before Compose draws): surface.canvas light, DESIGN.md §2.1 -->
+<resources>
+    <color name="canvas">#F3F1EC</color>
+</resources>
