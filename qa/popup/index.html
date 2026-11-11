@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SCYDE QA · popup fixture</title>
+  <style>body{font:16px/1.5 system-ui;margin:2rem} button,a{display:block;margin:.5rem 0}</style>
+</head>
+<body>
+  <h1>Popup fixture</h1>
+  <p>Expected: everything marked <b>BLOCK</b> is blocked (pill shown), everything marked <b>ALLOW</b> opens a new tab.</p>
+  <ol>
+    <li>BLOCK: <code>window.open</code> on load without a gesture (fires automatically).</li>
+    <li>BLOCK: <code>window.open</code> in <code>setTimeout(…, 1500)</code> after a click (gesture expired).</li>
+    <li>ALLOW: <button id="gesture" onclick="window.open('target.html?case=gesture')">window.open with a click</button></li>
+    <li>ALLOW: <a id="blank" href="target.html?case=blank" target="_blank">target=_blank link</a></li>
+    <li>BLOCK: <button id="popunder" onclick="popunder()">popunder (open + blur + focus back)</button> second window opened from the first without gesture.</li>
+    <li>BLOCK: <a id="redirect" href="redirect.html">redirect chain to a blocked domain</a> (main-frame interstitial when the final host is in the list).</li>
+    <li><button id="late" onclick="setTimeout(() => window.open('target.html?case=late'), 1500)">click, then window.open after 1.5 s</button></li>
+  </ol>
+  <script>
+    window.__popupLog = [];
+    const origOpen = window.open;
+    window.open = function (...a) { const w = origOpen.apply(this, a); window.__popupLog.push({ url: a[0], opened: !!w, t: performance.now() }); return w; };
+    window.addEventListener('load', () => window.open('target.html?case=onload'));
+    function popunder() {
+      const w = window.open('target.html?case=popunder-1');
+      setTimeout(() => window.open('target.html?case=popunder-2'), 50);
+      if (w) { w.blur(); window.focus(); }
+    }
+  </script>
+</body>
+</html>

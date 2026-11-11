@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SCYDE QA · adblock fixture</title>
+  <style>body{font:16px/1.5 system-ui;margin:2rem} .ok{color:green} .fail{color:#b8322c} td{padding:.25rem .75rem}</style>
+  <script>window.results = {}; function mark(k, ok) { results[k] = ok; }</script>
+</head>
+<body>
+  <h1>Adblock fixture</h1>
+  <p>Expected with <code>qa/lists/fixture.txt</code>: 6 network requests blocked (incl. subframe), 1 allowed by exception, 3 elements hidden. Result is in <code>window.__scydeQa</code> and the table below.</p>
+
+  <!-- network -->
+  <script src="ad-network/ad.js" onerror="mark('net:ad-script', true)" onload="mark('net:ad-script', false)"></script>
+  <img src="ad-network/banner.gif" alt="" onerror="mark('net:ad-image', true)" onload="mark('net:ad-image', false)">
+  <img src="tracker/pixel.gif" alt="" onerror="mark('net:tracker-pixel', true)" onload="mark('net:tracker-pixel', false)">
+  <script src="analytics/collect.js" onerror="mark('net:analytics', true)" onload="mark('net:analytics', false)"></script>
+  <script src="cdn/prebid-v8.js" onerror="mark('net:prebid', true)" onload="mark('net:prebid', false)"></script>
+  <script src="cdn/prebid-allowed.js" onerror="mark('allow:exception', false)" onload="mark('allow:exception', true)"></script>
+  <iframe id="adframe" src="ad-network/frame.html" title="ad frame" style="width:200px;height:40px"></iframe>
+
+  <!-- cosmetic -->
+  <div class="ad-banner" id="c1">AD BANNER (generic class)</div>
+  <div id="sponsor-top" class="c2">SPONSORED (attribute selector)</div>
+  <div class="scyde-specific-ad" id="c3">SPECIFIC AD (host rule)</div>
+  <div class="content" id="keep">Real content, must stay visible</div>
+
+  <table id="out"></table>
+  <script>
+    // true = "the engine did the right thing"
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        // An iframe blocked by the network layer either fails to load or stays empty.
+        try { results['net:subframe'] = !document.getElementById('adframe').contentDocument?.body?.textContent.includes('ad frame'); }
+        catch { results['net:subframe'] = true; }
+        const hidden = (id) => { const e = document.getElementById(id) || document.querySelector('.' + id); return !e || getComputedStyle(e).display === 'none' || e.offsetParent === null; };
+        results['cos:generic-class'] = hidden('c1');
+        results['cos:attribute'] = hidden('sponsor-top');
+        results['cos:host-specific'] = hidden('c3');
+        results['keep:content'] = !hidden('keep');
+        const vals = Object.values(results);
+        window.__scydeQa = { results, passed: vals.filter(Boolean).length, total: vals.length, rate: vals.filter(Boolean).length / vals.length };
+        document.getElementById('out').innerHTML = Object.entries(results).map(([k, v]) => `<tr><td>${k}</td><td class="${v ? 'ok' : 'fail'}">${v ? 'PASS' : 'FAIL'}</td></tr>`).join('') +
+          `<tr><td><b>total</b></td><td><b>${window.__scydeQa.passed}/${window.__scydeQa.total}</b></td></tr>`;
+        document.title = `QA ${window.__scydeQa.passed}/${window.__scydeQa.total}`;
+      }, 500);
+    });
+  </script>
+</body>
+</html>
