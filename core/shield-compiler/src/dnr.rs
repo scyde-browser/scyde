@@ -477,7 +477,10 @@ mod tests {
             "domain:unsupported"
         );
         assert_eq!(one("/ad(?=s)/").unwrap_err(), "regex:unsupported");
-        assert_eq!(one("/^https?:\\/\\/[a-z]{5,13}\\/[%0-9a-z]{200,1300}/").unwrap_err(), "regex:too-complex");
+        assert_eq!(
+            one("/^https?:\\/\\/[a-z]{5,13}\\/[%0-9a-z]{200,1300}/").unwrap_err(),
+            "regex:too-complex"
+        );
         assert!(one("/banner[0-9]{2,8}\\.js/").is_ok());
         assert_eq!(
             one("||x.com^$frobnicate").unwrap_err(),

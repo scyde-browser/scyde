@@ -1,4 +1,4 @@
-import '@scyde/ui/base.css';
+import '@scyde/ui/styles';
 import { mount } from 'svelte';
 import App from './App.svelte';
 
