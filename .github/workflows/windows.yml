@@ -1,0 +1,33 @@
+name: windows
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths: ["desktop/**", ".github/workflows/windows.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup show active-toolchain; if ($LASTEXITCODE -ne 0) { rustup toolchain install }
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Core compiles for x86_64-pc-windows-msvc
+        working-directory: core
+        run: cargo build --workspace
+      # Phase 0.5 (S5) / Phase 3: pnpm tauri build (NSIS + MSI), smoke start + screenshot artifact,
+      # updater artefacts on tags.

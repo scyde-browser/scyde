@@ -1,0 +1,37 @@
+name: ios
+
+# macOS minutes are expensive: only tags, manual runs and PRs touching ios/** (PLAN §13.1).
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  core-apple:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Core compiles for iOS device + simulator
+        working-directory: core
+        run: |
+          cargo build --workspace --lib --target aarch64-apple-ios
+          cargo build --workspace --lib --target aarch64-apple-ios-sim
+      # Phase 4: ScydeCore.xcframework, xcodegen, simulator build + XCUITest screenshots,
+      # unsigned .ipa (Payload/SCYDE.app zipped) on tags for Feather.

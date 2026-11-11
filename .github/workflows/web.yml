@@ -1,0 +1,40 @@
+name: web
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", "shield-extension/**", "design/tokens/**", "tools/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/web.yml"]
+  pull_request:
+    paths: ["web/**", "shield-extension/**", "design/tokens/**", "tools/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/web.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tokens-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build tokens (Style Dictionary -> CSS / Kotlin / Swift / JSON)
+        run: pnpm tokens
+      - name: Contrast gate (WCAG AA)
+        run: pnpm contrast
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tokens
+          path: web/packages/tokens/dist
+      # Playwright (chromium + firefox + webkit) screenshots and bundle-size budgets start in Phase 2
