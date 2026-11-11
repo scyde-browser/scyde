@@ -14,6 +14,8 @@ importers:
         specifier: workspace:*
         version: link:../../web/packages/tokens
 
+  tools/filters: {}
+
   tools/icon-export:
     devDependencies:
       '@resvg/resvg-js':

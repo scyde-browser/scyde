@@ -1,0 +1,9 @@
+# Filter lists in the daily bundle (PLAN §5.1). Format: <name> <url>
+# Order matters only for reports; every list is required (a failed download fails the run).
+# Regional HR/EU lists and annoyance lists are [OWNER] decisions (STATUS questions 10, PLAN §5.1).
+easylist      https://easylist.to/easylist/easylist.txt
+easyprivacy   https://easylist.to/easylist/easyprivacy.txt
+ubo-filters   https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt
+ubo-privacy   https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/privacy.txt
+ubo-unbreak   https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/unbreak.txt
+peter-lowe    https://pgl.yoyo.org/adservers/serverlist.php?hostformat=adblock&showintro=0&mimetype=plaintext

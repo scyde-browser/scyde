@@ -60,8 +60,9 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - **AC:** ✅ V8 p50 4.3 µs, p99 7.9–12.3 µs (best of 3; single-shot p99 50–72 µs), 80k rules build 149 ms; WASM 2.42 MB / **840 KB gz**
 
 ### 1.4 `filters.yml`: daily bundle
-- [ ] fetch lists → compile → golden tests → sign → release `filters-YYYYMMDD` + `filters-latest`
-- `[OWNER]`: add the secret `FILTERS_SIGNING_KEY` (I will generate a key pair and instructions; the public key goes into `brand/keys/`)
+- [x] fetch lists (`tools/filters/fetch.mjs`, resolves uBO `!#include`) → golden tests → compile → check limits → sign → verify → release `filters-YYYYMMDD` + `filters-latest` (updated in place), prune > 14 days
+- [ ] `[OWNER]`: add the secret `FILTERS_SIGNING_KEY` and commit `brand/keys/filters.pub` (steps in `docs/filters-signing.md`). Until then the workflow builds and uploads an artifact but **does not publish**.
+- [ ] `[OWNER]`: scriptlet resources (`resources.json`, uBO GPLv3, PLAN §16) are not fetched yet, so the bundle ships `[]`. The source and licence go with open question 3 (open/closed source).
 
 ### 1.5 `core/omnibox`
 - [ ] URL fixup (`scyde`, `localhost:3000`, `192.168.1.1`, `ftp://`), URL-or-search decision
