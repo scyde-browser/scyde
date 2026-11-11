@@ -76,8 +76,10 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - **AC:** ✅ test with 100k records (debug build, optimized SQLite): suggest host 4.1 ms, suggest title 0.7 ms (78 ms before FTS), history page 0.1 ms, history search 0.4 ms, top sites 0.2 ms, `record_visit` 0.3 ms
 
 ### 1.7 `core/settings`
-- [ ] JSON Schema as the source of truth, validation, migrations
-- [ ] default search engine DuckDuckGo `[OWNER]`
+- [x] JSON Schema as the source of truth (`core/settings/schema/settings.schema.json`), our own validator for exactly the keywords it uses (a test fails on any other keyword)
+- [x] load = repair: invalid or unknown values fall back to schema defaults and are reported (never blocks startup); `set` validates; `reset`; migrations framework (`MIGRATIONS`, version in the file; newer files are read safely)
+- [x] search templates without referral parameters; default search engine **DuckDuckGo** `[OWNER]` (open question 2); `top_stories` defaults to off (opt-in)
+- **AC:** ✅ 6 tests; the accent enum is checked against `design/tokens/accent.json`
 
 ### 1.8 `core/theme`
 - [x] tokens compiled in from `design/tokens/*.json` and resolved at runtime (the same source as CSS, Kotlin and Swift)

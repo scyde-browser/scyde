@@ -866,6 +866,9 @@ dependencies = [
 [[package]]
 name = "settings"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "sha2"
