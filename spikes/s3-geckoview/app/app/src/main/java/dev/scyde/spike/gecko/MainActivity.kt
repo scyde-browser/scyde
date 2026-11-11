@@ -35,6 +35,13 @@ class MainActivity : Activity() {
         }
     }
 
+    private var canGoBack = false
+
+    @Deprecated("Spike: simple back handling")
+    override fun onBackPressed() {
+        if (canGoBack) session.goBack() else super.onBackPressed()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val view = GeckoView(this)
@@ -56,11 +63,15 @@ class MainActivity : Activity() {
         ResultBus.put("gecko", JSONObject().put("version", GeckoBuildConfig.MOZ_APP_VERSION))
 
         session = GeckoSession()
+        session.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onCanGoBack(session: GeckoSession, value: Boolean) { canGoBack = value }
+        }
         session.open(rt)
         view.setSession(session)
 
-        val url = intent.getStringExtra("url") ?: "http://10.0.2.2:8787/adblock/"
-        val openInternal = intent.getBooleanExtra("internal", true)
+        // Launcher start (no extras) = manual S1 test: open the internal page with sign-in links.
+        val url: String? = intent.getStringExtra("url")
+        val openInternal = intent.getBooleanExtra("internal", url == null)
 
         rt.webExtensionController
             .ensureBuiltIn("resource://android/assets/extension/", EXT_ID)
@@ -73,11 +84,11 @@ class MainActivity : Activity() {
                     Thread {
                         // Wait until the WASM engine is built, otherwise the first page would load unfiltered.
                         ResultBus.await("ready", 60)
-                        runOnUiThread { session.loadUri(url) }
-                        if (openInternal) {
-                            ResultBus.await("fixture", 90)
-                            runOnUiThread { session.loadUri(ext.metaData.baseUrl + "internal.html") }
+                        if (url != null) {
+                            runOnUiThread { session.loadUri(url) }
+                            if (openInternal) ResultBus.await("fixture", 90)
                         }
+                        if (openInternal) runOnUiThread { session.loadUri(ext.metaData.baseUrl + "internal.html") }
                     }.start()
                 },
                 { e -> Log.e("SCYDE", "extension install failed", e); ResultBus.put("extension-error", JSONObject().put("error", e.toString())) },

@@ -40,11 +40,32 @@
 - [ ] `[VLASNIK]` odobrava prototipove
 
 ### 0.5 Spikeovi
-- [ ] S1 Google prijava na WebView2, GeckoView i WKWebView → **G1**
-- [ ] S2 WebView2 Shield opcije A/B/C → **G2**
-- [ ] S3 GeckoView ekstenzija + WASM + native messaging → **G3**
-- [ ] S4 iOS rule liste ≥ 150k pravila → **G4**
-- [ ] S5 Tauri multiwebview, 20 tabova, popoveri, Mica, snap → **G5**
+CI: `.github/workflows/spikes.yml` (pokreće se na PR-u ili ručno). Fixturei: `qa/` (`node qa/serve.mjs 8787`).
+- [ ] S1 Google prijava na WebView2, GeckoView i WKWebView → **G1** (`[VLASNIK]`, ručni test: koraci ispod)
+- [ ] S2 WebView2 Shield → **G2**: baseline i opcija B automatizirani (`s5-windows`); opcije A (DNR ekstenzija) i C (CDP) još nisu napravljene
+- [ ] S3 GeckoView → **G3**: WASM dio ✅ (CI p99 14,8 µs, fixture 8/8); aplikacija + emulator test u izradi (`s3-geckoview-app`)
+- [ ] S4 iOS rule liste ≥ 150k pravila → **G4**: konverter ✅ (132k stvarnih / 264k stres), XCTest na simulatoru u CI-ju (`s4-ios-rulelists`)
+- [ ] S5 Tauri multiwebview → **G5**: 20 tabova, prebacivanje, popover, Mica, titlebar u CI-ju (`s5-windows`); Snap Layouts ručno
+
+#### S1: koraci za vlasnika (Google prijava) `[VLASNIK]`
+Cilj G1: prijava radi na sva tri enginea (screenshotovi idu u ADR-0002). Koristi **testni Google račun** s uključenom 2FA, ako ga imaš.
+
+**Windows (WebView2):**
+1. Na PR-u otvori zadnji uspješni run workflowa `spikes` i preuzmi artefakt `s1-windows-exe`.
+2. Pokreni `scyde-spike-s5.exe` (bez argumenata). SmartScreen će upozoriti jer exe nije potpisan: "More info" → "Run anyway".
+3. Prvi tab je `accounts.google.com`: prijavi se (lozinka + 2FA).
+4. Klikni tabove Gmail, YouTube i Drive: moraš biti prijavljen bez ponovne prijave.
+5. Zadnji tab (Stack Overflow login): odaberi "Log in with Google" i dovrši prijavu.
+6. Za svaki korak zapiši: prošlo / poruka "This browser or app may not be secure" / drugo. Napravi screenshot (Win+Shift+S).
+
+**Android (GeckoView):**
+1. Preuzmi artefakt `s3-geckoview-apk` i instaliraj `app-debug.apk` na telefon (dopusti instalaciju iz nepoznatih izvora).
+2. Otvori aplikaciju "SCYDE S3". Prikazuje internu stranicu s popisom linkova (ujedno dokazuje da interna stranica razgovara s aplikacijom).
+3. Redom: accounts.google.com (prijava), Gmail, YouTube, Drive, Stack Overflow → "Log in with Google". Tipka Natrag vraća na popis.
+
+**iOS (WKWebView):** koraci dolaze s malom S1 iOS aplikacijom (Safari UA sufiks) u sljedećem commitu.
+
+Rezultate javi u chatu ili ih upiši ovdje, a ja ću napisati ADR-0002.
 
 ## Skillovi
 `impeccable`, `taste-skill`, `prototype` i `pick-ui-library` ne postoje u katalogu pluginova, pa su **implementirani kao project skillovi** u `.claude/skills/` (2026-11-11) i učitavaju se u svakoj sesiji u ovom repou:
