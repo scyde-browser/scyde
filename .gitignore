@@ -36,3 +36,5 @@ desktop/src-tauri/target/
 desktop/src-tauri/gen/
 bundle/
 lists/
+# Local builds handed to the owner
+out/
