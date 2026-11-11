@@ -61,14 +61,15 @@ Branch: the session's designated branch (agent sessions may only push there), on
 
 ### 1.4 `filters.yml`: daily bundle
 - [x] fetch lists (`tools/filters/fetch.mjs`, resolves uBO `!#include`) → golden tests → compile → check limits → sign → verify → release `filters-YYYYMMDD` + `filters-latest` (updated in place), prune > 14 days
+- **Dry run on real lists (PR #8):** 169,280 filter lines → DNR **118,964** rules in 4 rulesets (none over the limit); iOS **148,676** rules (1 list, close to the 150k limit, so the compiler will split it into 2 when lists grow); cosmetic index of 32,686 hosts; `engine.dat` 8.5 MB, tarball 7.5 MB.
 - [ ] `[OWNER]`: add the secret `FILTERS_SIGNING_KEY` and commit `brand/keys/filters.pub` (steps in `docs/filters-signing.md`). Until then the workflow builds and uploads an artifact but **does not publish**.
 - [ ] `[OWNER]`: scriptlet resources (`resources.json`, uBO GPLv3, PLAN §16) are not fetched yet, so the bundle ships `[]`. The source and licence go with open question 3 (open/closed source).
 
 ### 1.5 `core/omnibox`
-- [ ] URL fixup (`scyde`, `localhost:3000`, `192.168.1.1`, `ftp://`), URL-or-search decision
-- [ ] eTLD+1 display, punycode for mixed scripts and confusable IDNs
-- [ ] frecency ranking
-- **AC:** property tests for parsing; the homograph `аpple.com` (Cyrillic "а") is displayed as punycode
+- [x] URL fixup (`scyde`, `localhost:3000`, `192.168.1.1`, `ftp://`), URL-or-search decision (PSL suffix check, https by default, `javascript:`/`data:` → search)
+- [x] eTLD+1 display, punycode for mixed scripts and confusable IDNs (own policy: one script per label or an accepted CJK mix, Cyrillic/Greek lookalikes under a foreign TLD, Latin lookalike letters), elision that never cuts the domain, credentials never shown as the host
+- [x] frecency ranking (`frecency`, `rank`, `inline_completion`)
+- **AC:** ✅ 12 unit + 6 property tests (2,000 cases each); `аpple.com` → `xn--pple-43d.com`. Uses only crates already in the tree via adblock-rust (`idna`, `psl`, `icu_properties`); `proptest` is a dev-dependency.
 
 ### 1.6 `core/places`
 - [ ] SQLite (rusqlite bundled): history, bookmarks, top sites, migrations; test with 100k records
