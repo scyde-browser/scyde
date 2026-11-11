@@ -32,3 +32,9 @@ CI run 43017809149 / 43019194222 (`s3-geckoview-app`, emulator API 34 x86_64, Ge
 - UA: `Mozilla/5.0 (Android 14; Mobile; rv:160.0) Gecko/160.0 Firefox/160.0` (relevant for G1).
 
 > The spike code was deleted at the close of Phase 0. The source code and CI workflow are in git history at commit `23451d6` (`spikes/`, `.github/workflows/spikes.yml`).
+
+## Phase 1 update (2026-11-11)
+The engine now lives in `core/shield-wasm`, a wasm-bindgen layer over `core/shield`, and loads `engine.dat` from the filter bundle (`ShieldEngine.fromDat`) instead of parsing lists at startup.
+- `wasm-bindgen` is pinned exactly (`=0.2.130`), because the CLI must match it.
+- The wasm is built without `strip` so that wasm-bindgen sees `target_features`. It then removes the name and producers sections itself, which gives the same size.
+- **Measurement in CI (V8, 80k synthetic rules):** p99 7.9–12.3 µs; 2.42 MB, 840 KB gz. The CI budget is ≤ 1000 KB gz.

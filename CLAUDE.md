@@ -54,6 +54,7 @@ cargo bench -p shield --bench match            # Shield latency
 cargo run -p shield-compiler -- --lists ../qa/lists --out dist/filters   # FILTERS_SIGNING_KEY signs
 cargo run -p shield-compiler -- verify dist/filters --pubkey ../brand/keys/filters.pub
 UPDATE_GOLDEN=1 cargo test -p shield-compiler --test golden      # after an intended output change
+shield-wasm/build.sh && node shield-wasm/bench.mjs target/shield-wasm/node   # WASM engine (needs wasm-bindgen-cli =0.2.130)
 
 # web (pnpm workspace)
 pnpm i && pnpm -r lint && pnpm -r typecheck && pnpm -r test
