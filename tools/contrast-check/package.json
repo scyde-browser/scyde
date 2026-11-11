@@ -1,0 +1,10 @@
+{
+  "name": "@scyde/contrast-check",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fails if any text/background pair from DESIGN.md drops below WCAG AA",
+  "bin": { "contrast-check": "./index.mjs" },
+  "scripts": { "check": "node index.mjs" },
+  "dependencies": { "@scyde/tokens": "workspace:*" }
+}
