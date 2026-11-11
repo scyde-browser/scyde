@@ -150,9 +150,11 @@ jobs:
             adb shell am start -n dev.scyde.browser/.MainActivity
             sleep 25
             adb exec-out screencap -p > shots/newtab.png
+            adb shell pidof dev.scyde.browser || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; echo "::error::SCYDE is not running (crash at start)"; exit 1; }
             adb shell am start -n dev.scyde.browser/.MainActivity -a android.intent.action.VIEW -d http://10.0.2.2:8787/adblock/index.html
             sleep 25
             adb exec-out screencap -p > shots/qa-adblock.png
+            adb shell pidof dev.scyde.browser || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; echo "::error::SCYDE crashed on the qa page"; exit 1; }
             adb logcat -d | grep -E "SCYDE|GeckoView" | tail -80 > shots/logcat.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
