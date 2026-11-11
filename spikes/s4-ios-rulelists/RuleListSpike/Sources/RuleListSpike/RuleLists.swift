@@ -8,6 +8,13 @@ public enum RuleLists {
         public let rules: Int
         public let compileMs: Double
         public let lookupMs: Double
+
+        public init(identifier: String, rules: Int, compileMs: Double, lookupMs: Double) {
+            self.identifier = identifier
+            self.rules = rules
+            self.compileMs = compileMs
+            self.lookupMs = lookupMs
+        }
     }
 
     @MainActor

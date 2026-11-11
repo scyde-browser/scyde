@@ -1,17 +1,14 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
 }
 
 android {
     namespace = "dev.scyde.spike.gecko"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "dev.scyde.spike.gecko"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 36 // 37 once the emulator image exists
         versionCode = 1
         versionName = "0.0.1-spike"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -23,8 +20,6 @@ android {
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
-
-kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 
 dependencies {
     // Spike: latest GeckoView release; the resolved version is printed by CI and recorded in ADR-0004.
