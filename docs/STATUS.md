@@ -2,7 +2,7 @@
 
 > At the start of every session, read this file and continue from the first open task of the current phase.
 
-**Current phase:** Phases 2–5 implemented on PR #14 (owner, 2026-11-11: "continue with all phases"), **in CI** (Actions paused for about 30 minutes at 20:30 UTC, then resumed). Phase 1 done (PRs #5–#12).
+**Current phase:** Phases 2–5 done (PR #14), **[v0.2.0 published](https://github.com/scyde-browser/scyde/releases/tag/v0.2.0)** with the Windows `.exe`, the unsigned iOS `.ipa` and the Android APKs (2026-11-11). Phase 6 is waiting for the owner to confirm the feature order (PLAN §11); Phase 7 has started with release hardening (NOTICE, privacy policy, release rules). Phase 1 done (PRs #5–#12).
 **Last updated:** 2026-11-11
 
 ## Phase 0: CLOSED (2026-11-11)
@@ -144,7 +144,14 @@ Branch: the session's designated branch (agent sessions may only push there), on
 
 ## Release
 - [x] `release.yml` calls `windows`, `ios` and `android` as reusable workflows and attaches the `.exe`, `.ipa` and `.apk` files (a tag created with `GITHUB_TOKEN` does not trigger other workflows)
-- [ ] v0.2.0: once PR #14 is green and merged, run `release` with `tag=v0.2.0`
+- [x] **v0.2.0 published** (release run 43109526691): `SCYDE-v0.2.0-windows-x64-setup.exe` (in the CI smoke test, `qa/adblock` scores 11/11 in WebView2 and the popup is blocked), `SCYDE-v0.2.0-ios-unsigned.ipa`, `scyde-0.2.0-{arm64-v8a,armeabi-v7a,x86_64}.apk`
+- [x] Phase 7 (partial): `NOTICE.md`, `PRIVACY.md` (draft), `docs/release.md`; `NETWORK.md` records that v0.2.0 makes no calls of its own
+
+## Next (owner)
+- `[OWNER]` Phase 6: confirm the order of the unique features (Aura tint, Shield pill, sleeping tabs, split view + Ctrl+K, web panels, Peek, Zen mode, Spaces)
+- `[OWNER]` Phase 7: SCYDE Sync yes/no; licence of our own code; privacy policy contact
+- `[OWNER]` keys: Android keystore, Windows code signing + `TAURI_SIGNING_PRIVATE_KEY`, `FILTERS_SIGNING_KEY`
+- `[OWNER]` real-device tests: Windows install, Feather install on iOS, Android APK, Google sign-in on all three
 
 ## Skills
 `impeccable`, `taste-skill`, `prototype` and `pick-ui-library` do not exist in the plugin catalog, so they are **implemented as project skills** in `.claude/skills/` (2026-11-11) and are loaded in every session in this repo:

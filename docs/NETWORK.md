@@ -13,4 +13,4 @@ Rule (CLAUDE.md, rule 2): **every** network call the browser makes on its own (n
 
 Notes:
 - The engine (WebView2, GeckoView, WebKit) makes its own background calls (e.g. WebView2 runtime update, Safe Browsing). These are listed and, where possible, disabled in Phases 3–5. The Safe Browsing / SmartScreen policy goes into an ADR `[OWNER]` (PLAN §7).
-- Status "planned" means the call does not exist in the code yet.
+- Status "planned" means the call does not exist in the code yet. **As of v0.2.0 none of N1–N6 exists:** the filter lists ship inside the app, omnibox suggestions come only from local history, and favicons are drawn from letters (no fetch).
