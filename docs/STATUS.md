@@ -2,7 +2,7 @@
 
 > At the start of every session, read this file and continue from the first open task of the current phase.
 
-**Current phase:** Phases 2–5 implemented on PR #14 (owner, 2026-11-11: "continue with all phases"), **waiting for CI**: GitHub Actions stopped starting jobs at about 20:30 UTC (see Blockers). Phase 1 done (PRs #5–#12).
+**Current phase:** Phases 2–5 implemented on PR #14 (owner, 2026-11-11: "continue with all phases"), **in CI** (Actions paused for about 30 minutes at 20:30 UTC, then resumed). Phase 1 done (PRs #5–#12).
 **Last updated:** 2026-11-11
 
 ## Phase 0: CLOSED (2026-11-11)
@@ -124,7 +124,7 @@ Branch: the session's designated branch (agent sessions may only push there), on
 
 ## Phase 3: Windows (ADR-0012), code on PR #14
 - [x] `desktop/src-tauri`: Tauri 2.12.5 multiwebview, tabs on one WebView2 environment, island band (`web/apps/desktop-chrome`), omnibox (core), history (places), settings (settings), `scyde://` pages via a custom protocol with CSP headers, bridge with origin + allowlist checks
-- [x] Shield: `shield-extension` chromium-mv3 (DNR + cosmetics) built from a fresh bundle; **11/11 on qa/adblock in Chromium locally**
+- [x] Shield: `shield-extension` chromium-mv3 (DNR + cosmetics) built from a fresh bundle; **11/11 on qa/adblock in Chromium locally**. The first CI smoke test in WebView2 scored 8/11 because the worker-based cosmetics did not run, so cosmetics now work without a service worker (a stylesheet plus host shards)
 - [x] Popup blocker (`NewWindowRequested` + `IsUserInitiated`), shortcuts (`AcceleratorKeyPressed`)
 - [x] `cargo check` + clippy pass for a Windows target locally (x86_64-pc-windows-gnu)
 - [x] CI: NSIS installer → silent install → smoke run + screenshot
@@ -194,4 +194,4 @@ Defaults apply until the owner decides (PLAN §17).
 Decision: **no fork or rebrand** of Chromium, Brave or Firefox. The shell, UI, Shield logic, omnibox, history and themes are our own code. The render engine is the platform one (WebView2 / WKWebView), because a custom engine is not realistic for v1. The owner confirmed two libraries as permitted: GeckoView (Android) and adblock-rust (Shield). The rule is also written into CLAUDE.md (rule 11).
 
 ## Blockers
-- **GitHub Actions stopped running jobs (2026-11-11, about 20:30 UTC).** An `upload-artifact` step failed after 10 minutes, and since then every new run stays "queued" (PR #14). This is most likely the private repository's **Actions minutes or artifact storage quota** (macOS minutes count 10×). `[OWNER]`: check GitHub → Settings → Billing → Actions (minutes and storage), raise the spending limit or wait for the monthly reset, and delete old artifacts. Workflows now keep artifacts for 3 days (builds for 14). Until Actions runs again, PR #14 cannot be verified and no `.exe`/`.ipa`/`.apk` can be built.
+- None that block the work. Open `[OWNER]` items are listed in the phase sections.
