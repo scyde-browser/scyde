@@ -12,7 +12,8 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Spike runs are long and their results are evidence for ADRs: queue new runs instead of cancelling.
+  cancel-in-progress: false
 
 permissions:
   contents: read
