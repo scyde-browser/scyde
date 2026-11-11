@@ -1,0 +1,189 @@
+{
+  "accent": {
+    "$type": "color",
+    "$extensions": {
+      "dev.scyde.default": "sky"
+    },
+    "sky": {
+      "light": {
+        "fill": {
+          "$value": "{aura.sky.fill}"
+        },
+        "ink": {
+          "$value": "{aura.sky.ink}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.sky.ink}"
+        }
+      },
+      "dark": {
+        "fill": {
+          "$value": "{aura.sky.fill}"
+        },
+        "ink": {
+          "$value": "{aura.sky.fill}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.sky.fill}"
+        }
+      }
+    },
+    "periwinkle": {
+      "light": {
+        "fill": {
+          "$value": "{aura.periwinkle.fill}"
+        },
+        "ink": {
+          "$value": "{aura.periwinkle.ink}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.periwinkle.ink}"
+        }
+      },
+      "dark": {
+        "fill": {
+          "$value": "{aura.periwinkle.fill}"
+        },
+        "ink": {
+          "$value": "{aura.periwinkle.fill}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.periwinkle.fill}"
+        }
+      }
+    },
+    "lavender": {
+      "light": {
+        "fill": {
+          "$value": "{aura.lavender.fill}"
+        },
+        "ink": {
+          "$value": "{aura.lavender.ink}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.lavender.ink}"
+        }
+      },
+      "dark": {
+        "fill": {
+          "$value": "{aura.lavender.fill}"
+        },
+        "ink": {
+          "$value": "{aura.lavender.fill}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.lavender.fill}"
+        }
+      }
+    },
+    "mint": {
+      "light": {
+        "fill": {
+          "$value": "{aura.mint.fill}"
+        },
+        "ink": {
+          "$value": "{aura.mint.ink}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.mint.ink}"
+        }
+      },
+      "dark": {
+        "fill": {
+          "$value": "{aura.mint.fill}"
+        },
+        "ink": {
+          "$value": "{aura.mint.fill}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.mint.fill}"
+        }
+      }
+    },
+    "ember": {
+      "light": {
+        "fill": {
+          "$value": "{aura.ember.fill}"
+        },
+        "ink": {
+          "$value": "{aura.ember.ink}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.ember.ink}"
+        }
+      },
+      "dark": {
+        "fill": {
+          "$value": "{aura.ember.fill}"
+        },
+        "ink": {
+          "$value": "{aura.ember.fill}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{aura.ember.fill}"
+        }
+      }
+    },
+    "onyx": {
+      "light": {
+        "fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ink": {
+          "$value": "{neutral.light.950}"
+        },
+        "on-fill": {
+          "$value": "{neutral.dark.50}"
+        },
+        "ring": {
+          "$value": "{neutral.light.950}"
+        }
+      },
+      "dark": {
+        "fill": {
+          "$value": "{neutral.dark.50}"
+        },
+        "ink": {
+          "$value": "{neutral.dark.50}"
+        },
+        "on-fill": {
+          "$value": "{neutral.light.950}"
+        },
+        "ring": {
+          "$value": "{neutral.dark.50}"
+        }
+      }
+    },
+    "$description": "Aura accents. Light: pastel is a fill with dark text, ink is used for accent text/icons. Dark: pastel is used directly. Ring = focus ring colour (DESIGN.md §10)."
+  }
+}

@@ -1,0 +1,390 @@
+{
+  "theme": {
+    "light": {
+      "surface": {
+        "$type": "color",
+        "canvas": {
+          "$value": "{neutral.light.150}"
+        },
+        "chrome": {
+          "$value": "{neutral.light.100}"
+        },
+        "sunken": {
+          "$value": "{neutral.light.200}"
+        },
+        "raised": {
+          "$value": "{neutral.light.50}"
+        }
+      },
+      "border": {
+        "$type": "color",
+        "hairline": {
+          "$value": "#11121614",
+          "$description": "rgba(17,18,22,.08)"
+        },
+        "strong": {
+          "$value": "#11121633",
+          "$description": "Increase Contrast hairline, rgba(17,18,22,.20)"
+        }
+      },
+      "text": {
+        "$type": "color",
+        "primary": {
+          "$value": "{neutral.light.950}"
+        },
+        "secondary": {
+          "$value": "{neutral.light.600}"
+        },
+        "tertiary": {
+          "$value": "{neutral.light.500}"
+        },
+        "on-ember": {
+          "$value": "{white}"
+        }
+      },
+      "status": {
+        "$type": "color",
+        "shield": {
+          "$value": "{aura.mint.ink}"
+        },
+        "success": {
+          "$value": "{aura.mint.ink}"
+        },
+        "warning": {
+          "$value": "{status-raw.warning-light}"
+        },
+        "danger": {
+          "$value": "{ember.800}"
+        },
+        "info": {
+          "$value": "{aura.periwinkle.ink}"
+        }
+      },
+      "cta": {
+        "$type": "color",
+        "fill": {
+          "$value": "{ember.700}"
+        },
+        "fill-hover": {
+          "$value": "{ember.800}"
+        },
+        "text": {
+          "$value": "{white}"
+        }
+      },
+      "scrim": {
+        "$type": "color",
+        "$value": "#11121666"
+      },
+      "elev": {
+        "$type": "shadow",
+        "1": {
+          "$value": [
+            {
+              "offsetX": "0px",
+              "offsetY": "1px",
+              "blur": "2px",
+              "spread": "0px",
+              "color": "#1112160F"
+            }
+          ]
+        },
+        "2": {
+          "$value": [
+            {
+              "offsetX": "0px",
+              "offsetY": "8px",
+              "blur": "24px",
+              "spread": "-6px",
+              "color": "#1112162E"
+            },
+            {
+              "offsetX": "0px",
+              "offsetY": "0px",
+              "blur": "0px",
+              "spread": "1px",
+              "color": "#1112160F"
+            }
+          ]
+        },
+        "3": {
+          "$value": [
+            {
+              "offsetX": "0px",
+              "offsetY": "24px",
+              "blur": "64px",
+              "spread": "-12px",
+              "color": "#11121647"
+            }
+          ]
+        }
+      },
+      "aura-mesh": {
+        "$type": "x-aura-mesh",
+        "$description": "Low-saturation New Tab backgrounds. At most one per screen.",
+        "dawn": {
+          "$value": [
+            {
+              "color": "#ABD5E973",
+              "x": "12%",
+              "y": "0%",
+              "size": "55%"
+            },
+            {
+              "color": "#C6A5F152",
+              "x": "88%",
+              "y": "8%",
+              "size": "50%"
+            }
+          ]
+        },
+        "mist": {
+          "$value": [
+            {
+              "color": "#A6F1C952",
+              "x": "10%",
+              "y": "10%",
+              "size": "50%"
+            },
+            {
+              "color": "#ABD5E966",
+              "x": "90%",
+              "y": "0%",
+              "size": "55%"
+            }
+          ]
+        },
+        "dusk": {
+          "$value": [
+            {
+              "color": "#C6A5F152",
+              "x": "15%",
+              "y": "0%",
+              "size": "50%"
+            },
+            {
+              "color": "#FF9F7E40",
+              "x": "85%",
+              "y": "12%",
+              "size": "45%"
+            }
+          ]
+        },
+        "tide": {
+          "$value": [
+            {
+              "color": "#A6C0F166",
+              "x": "8%",
+              "y": "4%",
+              "size": "55%"
+            },
+            {
+              "color": "#A6F1C940",
+              "x": "92%",
+              "y": "14%",
+              "size": "45%"
+            }
+          ]
+        }
+      }
+    },
+    "dark": {
+      "surface": {
+        "$type": "color",
+        "canvas": {
+          "$value": "{neutral.dark.800}"
+        },
+        "chrome": {
+          "$value": "{neutral.dark.850}"
+        },
+        "sunken": {
+          "$value": "{neutral.dark.750}"
+        },
+        "raised": {
+          "$value": "{neutral.dark.700}"
+        }
+      },
+      "border": {
+        "$type": "color",
+        "hairline": {
+          "$value": "#FFFFFF12",
+          "$description": "rgba(255,255,255,.07)"
+        },
+        "strong": {
+          "$value": "#FFFFFF33"
+        }
+      },
+      "text": {
+        "$type": "color",
+        "primary": {
+          "$value": "{neutral.dark.50}"
+        },
+        "secondary": {
+          "$value": "{neutral.dark.300}"
+        },
+        "tertiary": {
+          "$value": "{neutral.dark.400}"
+        },
+        "on-ember": {
+          "$value": "{white}"
+        }
+      },
+      "status": {
+        "$type": "color",
+        "shield": {
+          "$value": "{aura.mint.fill}"
+        },
+        "success": {
+          "$value": "{aura.mint.fill}"
+        },
+        "warning": {
+          "$value": "{status-raw.warning-dark}"
+        },
+        "danger": {
+          "$value": "{status-raw.danger-dark}"
+        },
+        "info": {
+          "$value": "{aura.periwinkle.fill}"
+        }
+      },
+      "cta": {
+        "$type": "color",
+        "fill": {
+          "$value": "{ember.700}"
+        },
+        "fill-hover": {
+          "$value": "{ember.800}"
+        },
+        "text": {
+          "$value": "{white}"
+        }
+      },
+      "scrim": {
+        "$type": "color",
+        "$value": "#00000080"
+      },
+      "elev": {
+        "$type": "shadow",
+        "$description": "Dark: depth comes from lighter surfaces and hairlines, not shadows (DESIGN.md §5).",
+        "1": {
+          "$value": [
+            {
+              "offsetX": "0px",
+              "offsetY": "1px",
+              "blur": "0px",
+              "spread": "0px",
+              "color": "#FFFFFF0A",
+              "inset": true
+            }
+          ]
+        },
+        "2": {
+          "$value": [
+            {
+              "offsetX": "0px",
+              "offsetY": "1px",
+              "blur": "0px",
+              "spread": "0px",
+              "color": "#FFFFFF0A",
+              "inset": true
+            },
+            {
+              "offsetX": "0px",
+              "offsetY": "0px",
+              "blur": "0px",
+              "spread": "1px",
+              "color": "#FFFFFF12"
+            }
+          ]
+        },
+        "3": {
+          "$value": [
+            {
+              "offsetX": "0px",
+              "offsetY": "1px",
+              "blur": "0px",
+              "spread": "0px",
+              "color": "#FFFFFF0A",
+              "inset": true
+            },
+            {
+              "offsetX": "0px",
+              "offsetY": "0px",
+              "blur": "0px",
+              "spread": "1px",
+              "color": "#FFFFFF12"
+            }
+          ]
+        }
+      },
+      "aura-mesh": {
+        "$type": "x-aura-mesh",
+        "dawn": {
+          "$value": [
+            {
+              "color": "#ABD5E91F",
+              "x": "12%",
+              "y": "0%",
+              "size": "55%"
+            },
+            {
+              "color": "#C6A5F11A",
+              "x": "88%",
+              "y": "8%",
+              "size": "50%"
+            }
+          ]
+        },
+        "mist": {
+          "$value": [
+            {
+              "color": "#A6F1C91A",
+              "x": "10%",
+              "y": "10%",
+              "size": "50%"
+            },
+            {
+              "color": "#ABD5E91F",
+              "x": "90%",
+              "y": "0%",
+              "size": "55%"
+            }
+          ]
+        },
+        "dusk": {
+          "$value": [
+            {
+              "color": "#C6A5F11F",
+              "x": "15%",
+              "y": "0%",
+              "size": "50%"
+            },
+            {
+              "color": "#FF9F7E17",
+              "x": "85%",
+              "y": "12%",
+              "size": "45%"
+            }
+          ]
+        },
+        "tide": {
+          "$value": [
+            {
+              "color": "#A6C0F11F",
+              "x": "8%",
+              "y": "4%",
+              "size": "55%"
+            },
+            {
+              "color": "#A6F1C914",
+              "x": "92%",
+              "y": "14%",
+              "size": "45%"
+            }
+          ]
+        }
+      }
+    },
+    "$description": "Semantic tokens per theme. CSS exposes them as --surface-canvas etc. under [data-theme]."
+  }
+}

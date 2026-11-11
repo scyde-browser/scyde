@@ -1,0 +1,9 @@
+{
+  "name": "@scyde/springs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "springs.mjs",
+  "exports": { ".": "./springs.mjs" },
+  "scripts": { "test": "node --test" }
+}
