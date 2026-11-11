@@ -4,7 +4,10 @@ plugins {
 
 android {
     namespace = "dev.scyde.spike.gecko"
-    compileSdk = 37
+    // GeckoView 160 requires compiling against API 37.2 (minor SDK level).
+    compileSdk {
+        version = release(37) { minorApiLevel = 2 }
+    }
     defaultConfig {
         applicationId = "dev.scyde.spike.gecko"
         minSdk = 26
