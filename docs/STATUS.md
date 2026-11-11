@@ -72,7 +72,8 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - **AC:** ✅ 12 unit + 6 property tests (2,000 cases each); `аpple.com` → `xn--pple-43d.com`. Uses only crates already in the tree via adblock-rust (`idna`, `psl`, `icu_properties`); `proptest` is a dev-dependency.
 
 ### 1.6 `core/places`
-- [ ] SQLite (rusqlite bundled): history, bookmarks, top sites, migrations; test with 100k records
+- [x] SQLite (rusqlite bundled, WAL): history (visits, titles, delete URL / range / all), bookmarks tree (folders, move with renumbering, no cycles, built-in folders fixed), top sites (pinned + one tile per host by frecency, hidden hosts), suggestions (host prefix + trigram FTS5 → `omnibox::frecency::rank`), migrations via `user_version` (v1 core, v2 speed dial, v3 FTS), a newer schema is refused
+- **AC:** ✅ test with 100k records (debug build, optimized SQLite): suggest host 4.1 ms, suggest title 0.7 ms (78 ms before FTS), history page 0.1 ms, history search 0.4 ms, top sites 0.2 ms, `record_visit` 0.3 ms
 
 ### 1.7 `core/settings`
 - [ ] JSON Schema as the source of truth, validation, migrations

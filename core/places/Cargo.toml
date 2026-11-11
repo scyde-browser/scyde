@@ -8,5 +8,13 @@ license.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[dependencies]
+omnibox = { path = "../omnibox" }
+# `bundled`: one SQLite version on every platform (PLAN §2.1); no system library differences.
+rusqlite = { version = "0.42", features = ["bundled"] }
+
+[dev-dependencies]
+rusqlite = { version = "0.42", features = ["bundled"] }
+
 [lints]
 workspace = true
