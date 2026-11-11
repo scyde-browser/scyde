@@ -48,7 +48,12 @@ fn main() {
                 let mut v = v.clone();
                 if let Some(f) = v.pointer_mut("/trigger/url-filter") {
                     if let Some(s) = f.as_str() {
-                        *f = serde_json::Value::String(format!("{s}.*scyde-stress-{n}"));
+                        // keep a trailing `$` anchor last: WebKit rejects `$` anywhere else
+                        let marked = match s.strip_suffix('$') {
+                            Some(body) => format!("{body}.*scyde-stress-{n}$"),
+                            None => format!("{s}.*scyde-stress-{n}"),
+                        };
+                        *f = serde_json::Value::String(marked);
                     }
                 }
                 json.push(v);

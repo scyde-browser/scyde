@@ -13,3 +13,4 @@
 ##div[id^="sponsor-"]
 127.0.0.1##.scyde-specific-ad
 localhost##.scyde-specific-ad
+10.0.2.2##.scyde-specific-ad
