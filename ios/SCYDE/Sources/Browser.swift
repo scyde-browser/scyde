@@ -4,13 +4,25 @@ import ScydeCore
 import SwiftUI
 import WebKit
 
+/// A Space: a named group of tabs with its own Aura colour (PLAN Phase 6 #8).
+struct Space: Codable, Identifiable, Equatable {
+    var id: String
+    var name: String
+    /// An accent preset name (ember, sky, periwinkle, lavender, mint, onyx).
+    var color: String
+
+    static let colors = ["ember", "sky", "mint", "lavender", "periwinkle", "onyx"]
+}
+
 /// One tab: a WKWebView and what the island shows for it.
 @MainActor
 final class Tab: NSObject, ObservableObject, Identifiable {
-    let id = UUID()
-    let webView: WKWebView
+    let id: UUID
+    /// Replaced by a fresh, empty web view while the tab sleeps (that frees its memory).
+    private(set) var webView: WKWebView
     /// Private tabs use a non-persistent data store and leave no history (ADR-0013).
     let isPrivate: Bool
+    var spaceID: String
     @Published var url: URL?
     @Published var title = ""
     @Published var loading = false
@@ -23,25 +35,44 @@ final class Tab: NSObject, ObservableObject, Identifiable {
     /// bar; scrolling up, reaching the end of the page or a tap at the bottom edge brings them back.
     @Published var immersive = false
     @Published var bookmarked = false
+    /// Pinned tabs come first, survive "Close all" and are restored with the session.
+    @Published var pinned = false
+    /// Asleep: no page in memory; it comes back (with its history) when the tab is opened.
+    @Published var sleeping = false
+    var lastActive = Date()
     var desktop = false
     var typed = false
     private var lastOffset: CGFloat = 0
     private var observers: [NSKeyValueObservation] = []
+    /// What a sleeping or restored tab loads when it wakes.
+    private var savedState: Any?
+    private var pendingURL: URL?
 
-    init(configuration: WKWebViewConfiguration, isPrivate: Bool) {
+    init(id: UUID = UUID(), configuration: WKWebViewConfiguration, isPrivate: Bool, spaceID: String) {
+        self.id = id
         self.isPrivate = isPrivate
-        webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.allowsBackForwardNavigationGestures = true
-        webView.allowsLinkPreview = true
-        webView.isFindInteractionEnabled = true
-        webView.scrollView.contentInsetAdjustmentBehavior = .always
-        #if DEBUG
-        webView.isInspectable = true
-        #endif
+        self.spaceID = spaceID
+        webView = Tab.makeWebView(configuration)
         super.init()
+        observe()
+    }
+
+    private static func makeWebView(_ configuration: WKWebViewConfiguration) -> WKWebView {
+        let wv = WKWebView(frame: .zero, configuration: configuration)
+        wv.allowsBackForwardNavigationGestures = true
+        wv.allowsLinkPreview = true
+        wv.isFindInteractionEnabled = true
+        wv.scrollView.contentInsetAdjustmentBehavior = .always
+        #if DEBUG
+        wv.isInspectable = true
+        #endif
+        return wv
+    }
+
+    private func observe() {
         observers = [
-            webView.observe(\.url) { [weak self] wv, _ in Task { @MainActor in self?.url = wv.url } },
-            webView.observe(\.title) { [weak self] wv, _ in Task { @MainActor in self?.title = wv.title ?? "" } },
+            webView.observe(\.url) { [weak self] wv, _ in Task { @MainActor in if let u = wv.url { self?.url = u } } },
+            webView.observe(\.title) { [weak self] wv, _ in Task { @MainActor in if let t = wv.title, !t.isEmpty { self?.title = t } } },
             webView.observe(\.isLoading) { [weak self] wv, _ in Task { @MainActor in self?.loading = wv.isLoading } },
             webView.observe(\.estimatedProgress) { [weak self] wv, _ in Task { @MainActor in self?.progress = wv.estimatedProgress } },
             webView.observe(\.canGoBack) { [weak self] wv, _ in Task { @MainActor in self?.canGoBack = wv.canGoBack } },
@@ -54,6 +85,40 @@ final class Tab: NSObject, ObservableObject, Identifiable {
                 Task { @MainActor in self?.scrolled(to: y, atEnd: atEnd) }
             },
         ]
+    }
+
+    /// A restored tab: shows its URL and title, loads only when it is opened.
+    func restore(url: URL, title: String) {
+        self.url = url
+        self.title = title
+        pendingURL = url
+        sleeping = true
+    }
+
+    /// Frees the page: keeps its back/forward history and swaps in an empty web view.
+    func sleep(fresh configuration: WKWebViewConfiguration, delegate: (WKNavigationDelegate & WKUIDelegate)?) {
+        guard !sleeping else { return }
+        savedState = webView.interactionState
+        pendingURL = url
+        webView.stopLoading()
+        webView = Tab.makeWebView(configuration)
+        webView.navigationDelegate = delegate
+        webView.uiDelegate = delegate
+        observe()
+        loading = false
+        sleeping = true
+    }
+
+    func wake() {
+        guard sleeping else { return }
+        sleeping = false
+        if let state = savedState {
+            webView.interactionState = state
+        } else if let url = pendingURL {
+            webView.load(URLRequest(url: url))
+        }
+        savedState = nil
+        pendingURL = nil
     }
 
     private func scrolled(to y: CGFloat, atEnd: Bool) {
@@ -90,7 +155,18 @@ final class Tab: NSObject, ObservableObject, Identifiable {
 @MainActor
 final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate {
     @Published var tabs: [Tab] = []
-    @Published var activeID: UUID?
+    @Published var activeID: UUID? {
+        didSet {
+            guard let tab = active else { return }
+            tab.lastActive = Date()
+            tab.wake()
+            if !tab.isPrivate { spaceID = tab.spaceID }
+            saveSession()
+        }
+    }
+    /// Spaces (tab groups with their own colour); private tabs belong to none.
+    @Published var spaces: [Space] = [Space(id: "personal", name: String(localized: "space.default"), color: "ember")]
+    @Published var spaceID = "personal"
     @Published var shieldReady = false
     @Published var filtersVersion = ""
     @Published var appearance: [String: String] = [:]
@@ -111,6 +187,9 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     /// One in-memory store for all private tabs; replaced when the last private tab closes.
     private var privateStore = WKWebsiteDataStore.nonPersistent()
     private var toastTask: Task<Void, Never>?
+    private let sessionURL: URL
+    private var sleepTimer: Timer?
+    private var restoring = false
     /// Tab changes (URL, title, progress, back/forward) re-render the island.
     private var tabChanges: [UUID: AnyCancellable] = [:]
     private lazy var scrollGuard: WKUserScript? = {
@@ -126,12 +205,17 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             .appendingPathComponent("SCYDE", isDirectory: true)
         try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
         settingsURL = support.appendingPathComponent("settings.json")
+        sessionURL = support.appendingPathComponent("session.json")
         places = try? PlacesStore.open(path: support.appendingPathComponent("places.sqlite").path)
         settings = SettingsStore.load(json: try? String(contentsOf: settingsURL, encoding: .utf8))
         super.init()
         bridge.browser = self
         refreshAppearance()
         loadShield()
+        // Sleeping tabs (PLAN Phase 6 #3): once a minute, tabs unused for `tabs.sleep_after_minutes`.
+        sleepTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.sleepIdleTabs() }
+        }
     }
 
     // MARK: tabs
@@ -153,7 +237,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     @discardableResult
     func newTab(_ url: URL? = nil, configuration: WKWebViewConfiguration? = nil, activate: Bool = true, isPrivate: Bool = false) -> Tab {
-        let tab = Tab(configuration: configuration ?? makeConfiguration(isPrivate: isPrivate), isPrivate: isPrivate)
+        let tab = Tab(configuration: configuration ?? makeConfiguration(isPrivate: isPrivate), isPrivate: isPrivate, spaceID: spaceID)
         tab.webView.navigationDelegate = self
         tab.webView.uiDelegate = self
         tabs.append(tab)
@@ -162,7 +246,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             if let self, let tab, tab.id == self.activeID { self.objectWillChange.send() }
         }
         if configuration == nil { tab.webView.load(URLRequest(url: url ?? InternalPages.newTab)) }
-        if activate { activeID = tab.id }
+        if activate { activeID = tab.id } else { saveSession() }
         return tab
     }
 
@@ -172,25 +256,162 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         tabChanges[tab.id] = nil
         tabs.remove(at: i)
         if activeID == tab.id {
-            // Stay in the same mode (private or not) when there is a tab left in it.
-            let same = tabs.filter { $0.isPrivate == tab.isPrivate }
-            activeID = (same.last ?? tabs.last)?.id
+            // Stay in the same mode and Space when there is a tab left in it.
+            let same = tabs.filter { $0.isPrivate == tab.isPrivate && ($0.isPrivate || $0.spaceID == tab.spaceID) }
+            let fallback = visibleTabs(isPrivate: false)
+            if let next = (same.isEmpty ? fallback : same).max(by: { $0.lastActive < $1.lastActive }) { activeID = next.id } else { activeID = nil }
         }
         if tab.isPrivate && !tabs.contains(where: \.isPrivate) { privateStore = .nonPersistent() }
-        if tabs.isEmpty { newTab() }
+        if active == nil { newTab(isPrivate: false) }
+        saveSession()
     }
 
+    /// Closes the private tabs, or the unpinned tabs of the current Space.
     func closeAll(isPrivate: Bool) {
-        for t in tabs where t.isPrivate == isPrivate { tabChanges[t.id] = nil }
-        tabs.removeAll { $0.isPrivate == isPrivate }
+        let doomed = tabs.filter { isPrivate ? $0.isPrivate : (!$0.isPrivate && $0.spaceID == spaceID && !$0.pinned) }
+        for t in doomed { tabChanges[t.id] = nil }
+        tabs.removeAll { t in doomed.contains { $0 === t } }
         if isPrivate { privateStore = .nonPersistent() }
-        if tabs.isEmpty { newTab() } else if active == nil { activeID = tabs.last?.id }
+        if active == nil {
+            if let pinned = tabs.first(where: { !$0.isPrivate && $0.spaceID == spaceID }) { activeID = pinned.id } else { newTab() }
+        }
+        saveSession()
+    }
+
+    /// The tabs the island counts and swipes through: the active mode and, for normal tabs, the Space.
+    func visibleTabs(isPrivate: Bool) -> [Tab] {
+        let list = tabs.filter { $0.isPrivate == isPrivate && (isPrivate || $0.spaceID == spaceID) }
+        return list.filter(\.pinned) + list.filter { !$0.pinned }
+    }
+
+    func togglePin(_ tab: Tab) {
+        tab.pinned.toggle()
+        objectWillChange.send()
+        saveSession()
+    }
+
+    // MARK: Spaces
+
+    var currentSpace: Space { spaces.first { $0.id == spaceID } ?? spaces[0] }
+
+    func switchSpace(_ id: String) {
+        guard spaces.contains(where: { $0.id == id }) else { return }
+        spaceID = id
+        let inSpace = tabs.filter { !$0.isPrivate && $0.spaceID == id }
+        if let last = inSpace.max(by: { $0.lastActive < $1.lastActive }) { activeID = last.id } else { newTab() }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    func addSpace(name: String) {
+        let used = Set(spaces.map(\.color))
+        let color = Space.colors.first { !used.contains($0) } ?? Space.colors[spaces.count % Space.colors.count]
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        let space = Space(id: UUID().uuidString, name: trimmed.isEmpty ? String(localized: "space.new") : trimmed, color: color)
+        spaces.append(space)
+        switchSpace(space.id)
+    }
+
+    func renameSpace(_ id: String, to name: String) {
+        guard let i = spaces.firstIndex(where: { $0.id == id }), !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        spaces[i].name = name.trimmingCharacters(in: .whitespaces)
+        saveSession()
+    }
+
+    func recolorSpace(_ id: String, to color: String) {
+        guard let i = spaces.firstIndex(where: { $0.id == id }) else { return }
+        spaces[i].color = color
+        saveSession()
+    }
+
+    /// Deletes a Space; its tabs move to the first remaining Space.
+    func deleteSpace(_ id: String) {
+        guard spaces.count > 1 else { return }
+        spaces.removeAll { $0.id == id }
+        let target = spaces[0].id
+        for t in tabs where t.spaceID == id { t.spaceID = target }
+        if spaceID == id { switchSpace(target) } else { saveSession() }
+    }
+
+    func move(_ tab: Tab, to space: String) {
+        tab.spaceID = space
+        if tab.id == activeID { spaceID = space }
+        objectWillChange.send()
+        saveSession()
+    }
+
+    // MARK: session (restore on launch, `startup.open`)
+
+    private struct SessionFile: Codable {
+        struct SavedTab: Codable {
+            var id: UUID
+            var url: String
+            var title: String
+            var pinned: Bool
+            var space: String
+        }
+
+        var version = 1
+        var active: UUID?
+        var space: String
+        var spaces: [Space]
+        var tabs: [SavedTab]
+    }
+
+    /// Saves the open (non-private) tabs and Spaces; private tabs are never written anywhere.
+    func saveSession() {
+        guard !restoring else { return }
+        let saved = tabs.filter { !$0.isPrivate }.compactMap { t -> SessionFile.SavedTab? in
+            guard let url = t.url else { return nil }
+            return SessionFile.SavedTab(id: t.id, url: url.absoluteString, title: t.title, pinned: t.pinned, space: t.spaceID)
+        }
+        let file = SessionFile(active: active?.isPrivate == false ? activeID : nil, space: spaceID, spaces: spaces, tabs: saved)
+        if let data = try? JSONEncoder().encode(file) { try? data.write(to: sessionURL, options: .atomic) }
+    }
+
+    /// Restores the last session as sleeping tabs (only the active one loads). Returns false when
+    /// there is nothing to restore or the owner chose to start with a New Tab.
+    func restoreSession() -> Bool {
+        let mode = settings.get(path: "startup.open").flatMap { try? JSONDecoder().decode(String.self, from: Data($0.utf8)) } ?? "restore"
+        guard let data = try? Data(contentsOf: sessionURL), let file = try? JSONDecoder().decode(SessionFile.self, from: data) else { return false }
+        if !file.spaces.isEmpty { spaces = file.spaces }
+        spaceID = spaces.contains { $0.id == file.space } ? file.space : spaces[0].id
+        let keep = mode == "restore" ? file.tabs : file.tabs.filter(\.pinned)
+        guard !keep.isEmpty else { return false }
+        restoring = true
+        for saved in keep {
+            guard let url = URL(string: saved.url) else { continue }
+            let tab = Tab(id: saved.id, configuration: makeConfiguration(), isPrivate: false,
+                          spaceID: spaces.contains { $0.id == saved.space } ? saved.space : spaces[0].id)
+            tab.webView.navigationDelegate = self
+            tab.webView.uiDelegate = self
+            tab.pinned = saved.pinned
+            tab.restore(url: url, title: saved.title)
+            tabs.append(tab)
+            tabChanges[tab.id] = tab.objectWillChange.sink { [weak self, weak tab] _ in
+                if let self, let tab, tab.id == self.activeID { self.objectWillChange.send() }
+            }
+        }
+        restoring = false
+        let first = tabs.first { $0.id == file.active } ?? tabs.first { $0.spaceID == spaceID } ?? tabs.first
+        if mode != "restore" || first == nil { newTab() } else { activeID = first?.id }
+        return !tabs.isEmpty
+    }
+
+    // MARK: sleeping tabs
+
+    private func sleepIdleTabs() {
+        let minutes = settings.get(path: "tabs.sleep_after_minutes").flatMap(Int.init) ?? 15
+        guard minutes > 0 else { return }
+        let limit = Date().addingTimeInterval(-Double(minutes) * 60)
+        for t in tabs where t.id != activeID && !t.sleeping && t.lastActive < limit {
+            t.sleep(fresh: makeConfiguration(isPrivate: t.isPrivate), delegate: self)
+        }
     }
 
     /// Moves to the neighbouring tab of the same mode; past the last one opens a new tab (like Safari).
     func switchTab(by delta: Int) {
         guard let current = active else { return }
-        let list = tabs.filter { $0.isPrivate == current.isPrivate }
+        let list = visibleTabs(isPrivate: current.isPrivate)
         guard let i = list.firstIndex(where: { $0.id == current.id }) else { return }
         let j = i + delta
         if j >= list.count { newTab(isPrivate: current.isPrivate) } else if j >= 0 { activeID = list[j].id }
@@ -381,6 +602,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard let tab = tab(for: webView), let url = webView.url else { return }
+        if !tab.isPrivate { saveSession() }
         tab.bookmarked = tab.isWeb && ((try? places?.isBookmarked(url: url.absoluteString)) ?? false)
         guard tab.isWeb, !tab.isPrivate else { return } // private tabs leave no history
         let kind: VisitKind = tab.typed ? .typed : .link
