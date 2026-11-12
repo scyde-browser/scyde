@@ -21,6 +21,9 @@ pub const SCHEMA_JSON: &str = include_str!("../schema/settings.schema.json");
 
 /// Keywords the validator understands.
 pub const SUPPORTED_KEYWORDS: &[&str] = &[
+    "items",
+    "maxItems",
+    "x-scyde-hidden",
     "$schema",
     "$id",
     "title",
@@ -132,10 +135,24 @@ fn check_leaf(schema: &Value, v: &Value) -> Result<(), String> {
         "boolean" => v.is_boolean(),
         "integer" => v.is_i64() || v.is_u64(),
         "number" => v.is_number(),
+        "array" => v.is_array(),
         _ => true,
     };
     if !ok_type {
         return Err(format!("expected {ty}, got {v}"));
+    }
+    if let Some(items) = v.as_array() {
+        if schema["maxItems"]
+            .as_u64()
+            .is_some_and(|m| items.len() as u64 > m)
+        {
+            return Err("too many items".into());
+        }
+        if let Some(item_schema) = schema.get("items") {
+            for (i, item) in items.iter().enumerate() {
+                check_leaf(item_schema, item).map_err(|e| format!("item {i}: {e}"))?;
+            }
+        }
     }
     if let Some(c) = schema.get("const")
         && c != v
@@ -382,6 +399,26 @@ mod tests {
         assert!(
             unknown.is_empty(),
             "validator does not implement {unknown:?}"
+        );
+    }
+
+    #[test]
+    fn arrays_of_sites() {
+        let mut s = Settings::default();
+        assert_eq!(s.get("shield.disabled_sites"), Some(&json!([])));
+        s.set("shield.disabled_sites", json!(["example.com", "index.hr"]))
+            .unwrap();
+        assert!(
+            s.set("shield.disabled_sites", json!("example.com"))
+                .is_err()
+        );
+        assert!(s.set("shield.disabled_sites", json!([""])).is_err());
+        assert!(s.set("shield.disabled_sites", json!([1])).is_err());
+        let (again, issues) = Settings::load(&s.to_json());
+        assert!(issues.is_empty(), "{issues:?}");
+        assert_eq!(
+            again.get("shield.disabled_sites"),
+            Some(&json!(["example.com", "index.hr"]))
         );
     }
 

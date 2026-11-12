@@ -379,3 +379,19 @@ fn scale_100k() {
     assert!(top_ms < 250.0, "top sites {top_ms} ms");
     assert!(visit_ms < 50.0, "record_visit {visit_ms} ms");
 }
+
+#[test]
+fn unbookmark_url_removes_every_copy() {
+    let mut p = db();
+    let f = p.add_folder(BOOKMARKS_BAR, "News", NOW).unwrap();
+    p.add_bookmark(BOOKMARKS_BAR, "https://a.hr/", "A", NOW)
+        .unwrap();
+    p.add_bookmark(f, "https://a.hr/", "A again", NOW).unwrap();
+    p.add_bookmark(OTHER_BOOKMARKS, "https://b.hr/", "B", NOW)
+        .unwrap();
+    assert_eq!(p.unbookmark_url("https://a.hr/").unwrap(), 2);
+    assert!(!p.is_bookmarked("https://a.hr/").unwrap());
+    assert!(p.is_bookmarked("https://b.hr/").unwrap());
+    assert_eq!(p.unbookmark_url("https://a.hr/").unwrap(), 0);
+    assert_eq!(p.children(f).unwrap().len(), 0);
+}

@@ -419,6 +419,14 @@ impl PlacesStore {
         lock(&self.inner).is_bookmarked(&url).map_err(places_err)
     }
 
+    /// Removes every bookmark of `url`; returns how many.
+    pub fn unbookmark_url(&self, url: String) -> Result<u32, CoreError> {
+        lock(&self.inner)
+            .unbookmark_url(&url)
+            .map(|n| u32::try_from(n).unwrap_or(u32::MAX))
+            .map_err(places_err)
+    }
+
     pub fn top_sites(&self, limit: u32) -> Result<Vec<TopSite>, CoreError> {
         Ok(lock(&self.inner)
             .top_sites(limit as usize)
@@ -580,6 +588,15 @@ pub fn theme_derive_accent(seed_hex: String) -> Result<CustomAccent, CoreError> 
         dark: roles(&a.dark),
         fill_adjusted: a.fill_adjusted,
     })
+}
+
+/// Aura tint: the island background with a little of the page's `theme-color`, or `None` when it
+/// would cost the island text AA contrast (or the colour is not hex).
+#[uniffi::export]
+#[must_use]
+pub fn theme_island_tint(page_hex: String, dark: bool) -> Option<String> {
+    let page = theme::Rgb::from_hex(page_hex.trim()).ok()?;
+    theme::aura::island_tint(page, dark).map(hex)
 }
 
 /// WCAG contrast ratio of two `#RRGGBB` colours.

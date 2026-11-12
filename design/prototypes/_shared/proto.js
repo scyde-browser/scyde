@@ -52,6 +52,9 @@
     send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
     min: '<path d="M5 12h14"/>',
     max: '<rect x="5" y="5" width="14" height="14" rx="1"/>',
+    monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>',
+    find: '<circle cx="10" cy="10" r="6"/><path d="m20 20-5.5-5.5"/><path d="M7.5 10h5"/>',
     home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   };
   const svg = (name) =>

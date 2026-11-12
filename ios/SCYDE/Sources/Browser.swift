@@ -9,18 +9,30 @@ import WebKit
 final class Tab: NSObject, ObservableObject, Identifiable {
     let id = UUID()
     let webView: WKWebView
+    /// Private tabs use a non-persistent data store and leave no history (ADR-0013).
+    let isPrivate: Bool
     @Published var url: URL?
     @Published var title = ""
     @Published var loading = false
     @Published var progress = 0.0
     @Published var canGoBack = false
     @Published var canGoForward = false
+    /// The page's `theme-color` (Aura tint, DESIGN.md §9).
+    @Published var themeColor: UIColor?
+    /// Scrolling down collapses the island into the pebble (DESIGN.md §6.3); scrolling up restores it.
+    @Published var pebble = false
+    @Published var bookmarked = false
+    var desktop = false
     var typed = false
+    private var lastOffset: CGFloat = 0
     private var observers: [NSKeyValueObservation] = []
 
-    init(configuration: WKWebViewConfiguration) {
+    init(configuration: WKWebViewConfiguration, isPrivate: Bool) {
+        self.isPrivate = isPrivate
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
+        webView.allowsLinkPreview = true
+        webView.isFindInteractionEnabled = true
         webView.scrollView.contentInsetAdjustmentBehavior = .always
         #if DEBUG
         webView.isInspectable = true
@@ -33,13 +45,37 @@ final class Tab: NSObject, ObservableObject, Identifiable {
             webView.observe(\.estimatedProgress) { [weak self] wv, _ in Task { @MainActor in self?.progress = wv.estimatedProgress } },
             webView.observe(\.canGoBack) { [weak self] wv, _ in Task { @MainActor in self?.canGoBack = wv.canGoBack } },
             webView.observe(\.canGoForward) { [weak self] wv, _ in Task { @MainActor in self?.canGoForward = wv.canGoForward } },
+            webView.observe(\.themeColor) { [weak self] wv, _ in Task { @MainActor in self?.themeColor = wv.themeColor } },
+            webView.scrollView.observe(\.contentOffset) { [weak self] sv, _ in
+                let y = sv.contentOffset.y + sv.adjustedContentInset.top
+                Task { @MainActor in self?.scrolled(to: y) }
+            },
         ]
+    }
+
+    private func scrolled(to y: CGFloat) {
+        let delta = y - lastOffset
+        if y <= ScydeSpace.s8 {
+            if pebble { pebble = false }
+        } else if delta > ScydeSpace.s12 && y > ScydeSpace.s64 {
+            if !pebble { pebble = true }
+        } else if delta < -ScydeSpace.s12 {
+            if pebble { pebble = false }
+        } else {
+            return // small moves do not move the reference point, so slow scrolls still count
+        }
+        lastOffset = y
     }
 
     var display: DisplayUrl? {
         guard let url, !InternalPages.isInternal(url) else { return nil }
         return omniboxDisplayUrl(url: url.absoluteString)
     }
+
+    /// The registrable domain (eTLD+1) Shield switches are keyed by.
+    var site: String? { display?.domain }
+
+    var isWeb: Bool { url?.scheme == "https" || url?.scheme == "http" }
 
     var editableURL: String {
         guard let url else { return "" }
@@ -57,6 +93,10 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     @Published var appearance: [String: String] = [:]
     /// Settings, Library and Shield open as a sheet over the tabs, not as tabs (closed with Done or a swipe down).
     @Published var sheetPage: String?
+    /// Sites (eTLD+1) where the owner turned Shield off (`shield.disabled_sites`).
+    @Published var disabledSites: Set<String> = []
+    /// A short message that rises out of the island (DESIGN.md §8 Toast).
+    @Published var toast: String?
 
     let places: PlacesStore?
     let settings: SettingsStore
@@ -65,6 +105,9 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     private let bridge = Bridge()
     private var ruleLists: [WKContentRuleList] = []
     private let processPool = WKProcessPool()
+    /// One in-memory store for all private tabs; replaced when the last private tab closes.
+    private var privateStore = WKWebsiteDataStore.nonPersistent()
+    private var toastTask: Task<Void, Never>?
     /// Tab changes (URL, title, progress, back/forward) re-render the island.
     private var tabChanges: [UUID: AnyCancellable] = [:]
     private lazy var scrollGuard: WKUserScript? = {
@@ -90,10 +133,10 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     // MARK: tabs
 
-    func makeConfiguration() -> WKWebViewConfiguration {
+    func makeConfiguration(isPrivate: Bool = false) -> WKWebViewConfiguration {
         let c = WKWebViewConfiguration()
         c.processPool = processPool
-        c.websiteDataStore = .default()
+        c.websiteDataStore = isPrivate ? privateStore : .default()
         c.setURLSchemeHandler(internalPages, forURLScheme: InternalPages.scheme)
         // Google sign-in needs the Safari suffix on iOS (PLAN §2.2, G1).
         let major = UIDevice.current.systemVersion.split(separator: ".").first.map(String.init) ?? "18"
@@ -106,8 +149,8 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     }
 
     @discardableResult
-    func newTab(_ url: URL? = nil, configuration: WKWebViewConfiguration? = nil, activate: Bool = true) -> Tab {
-        let tab = Tab(configuration: configuration ?? makeConfiguration())
+    func newTab(_ url: URL? = nil, configuration: WKWebViewConfiguration? = nil, activate: Bool = true, isPrivate: Bool = false) -> Tab {
+        let tab = Tab(configuration: configuration ?? makeConfiguration(isPrivate: isPrivate), isPrivate: isPrivate)
         tab.webView.navigationDelegate = self
         tab.webView.uiDelegate = self
         tabs.append(tab)
@@ -125,14 +168,29 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         tab.webView.stopLoading()
         tabChanges[tab.id] = nil
         tabs.remove(at: i)
-        if activeID == tab.id { activeID = tabs.isEmpty ? nil : tabs[min(i, tabs.count - 1)].id }
+        if activeID == tab.id {
+            // Stay in the same mode (private or not) when there is a tab left in it.
+            let same = tabs.filter { $0.isPrivate == tab.isPrivate }
+            activeID = (same.last ?? tabs.last)?.id
+        }
+        if tab.isPrivate && !tabs.contains(where: \.isPrivate) { privateStore = .nonPersistent() }
         if tabs.isEmpty { newTab() }
     }
 
-    func closeAll() {
-        tabChanges.removeAll()
-        tabs.removeAll()
-        newTab()
+    func closeAll(isPrivate: Bool) {
+        for t in tabs where t.isPrivate == isPrivate { tabChanges[t.id] = nil }
+        tabs.removeAll { $0.isPrivate == isPrivate }
+        if isPrivate { privateStore = .nonPersistent() }
+        if tabs.isEmpty { newTab() } else if active == nil { activeID = tabs.last?.id }
+    }
+
+    /// Moves to the neighbouring tab of the same mode; past the last one opens a new tab (like Safari).
+    func switchTab(by delta: Int) {
+        guard let current = active else { return }
+        let list = tabs.filter { $0.isPrivate == current.isPrivate }
+        guard let i = list.firstIndex(where: { $0.id == current.id }) else { return }
+        let j = i + delta
+        if j >= list.count { newTab(isPrivate: current.isPrivate) } else if j >= 0 { activeID = list[j].id }
     }
 
     // MARK: omnibox
@@ -146,7 +204,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         }
         guard let target else { return }
         if inNewTab || active == nil {
-            newTab(target)
+            newTab(target, isPrivate: active?.isPrivate ?? false)
         } else if let tab = active {
             tab.typed = true
             tab.webView.load(URLRequest(url: target))
@@ -164,7 +222,78 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     func open(page: String) { sheetPage = page }
 
+    // MARK: page tools (control center)
+
+    func reloadOrStop() {
+        guard let wv = active?.webView else { return }
+        if wv.isLoading { wv.stopLoading() } else { wv.reload() }
+    }
+
+    func toggleBookmark() {
+        guard let tab = active, tab.isWeb, let url = tab.url?.absoluteString, let places else { return }
+        if tab.bookmarked {
+            _ = try? places.unbookmarkUrl(url: url)
+            show(String(localized: "toast.unbookmarked"))
+        } else {
+            _ = try? places.addBookmark(parent: bookmarksBarId(), url: url, title: tab.title, now: Int64(Date().timeIntervalSince1970))
+            show(String(localized: "toast.bookmarked"))
+        }
+        tab.bookmarked = (try? places.isBookmarked(url: url)) ?? false
+    }
+
+    func toggleDesktop() {
+        guard let tab = active else { return }
+        tab.desktop.toggle()
+        tab.webView.reload()
+    }
+
+    func find() {
+        active?.webView.findInteraction?.presentFindNavigator(showingReplace: false)
+    }
+
+    func copyLink() {
+        guard let url = active?.url, active?.isWeb == true else { return }
+        UIPasteboard.general.url = url
+        show(String(localized: "toast.link_copied"))
+    }
+
+    func show(_ message: String) {
+        toast = message
+        toastTask?.cancel()
+        toastTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(ScydeMotion.toastDismiss * 1_000_000_000))
+            if !Task.isCancelled { self?.toast = nil }
+        }
+    }
+
     // MARK: Shield (ADR-0006: compile once, cache, never on the main thread's critical path)
+
+    func shieldOn(for tab: Tab?) -> Bool {
+        guard let site = tab?.site else { return true }
+        return !disabledSites.contains(site)
+    }
+
+    /// Turns Shield off or on for a site, saves it and reloads tabs showing that site.
+    func setShield(_ on: Bool, site: String) {
+        guard !site.isEmpty else { return }
+        if on { disabledSites.remove(site) } else { disabledSites.insert(site) }
+        let list = (try? JSONSerialization.data(withJSONObject: disabledSites.sorted())).map { String(decoding: $0, as: UTF8.self) } ?? "[]"
+        try? settings.set(path: "shield.disabled_sites", jsonValue: list)
+        try? settings.toJson().write(to: settingsURL, atomically: true, encoding: .utf8)
+        for tab in tabs where tab.site == site {
+            applyShield(to: tab.webView, on: on)
+            tab.webView.reload()
+        }
+        show(String(format: String(localized: on ? "toast.shield_on" : "toast.shield_off"), site))
+    }
+
+    /// Rule lists are per web view (each tab has its own content controller), so a site with Shield
+    /// off simply loads without them.
+    private func applyShield(to webView: WKWebView, on: Bool) {
+        let ucc = webView.configuration.userContentController
+        ucc.removeAllContentRuleLists()
+        if on { for list in ruleLists { ucc.add(list) } }
+    }
 
     private func loadShield() {
         guard let dir = Bundle.main.resourceURL?.appendingPathComponent("filters"),
@@ -190,7 +319,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
                 compiled.append(list)
             }
             ruleLists = compiled
-            for tab in tabs { for list in compiled { tab.webView.configuration.userContentController.add(list) } }
+            for tab in tabs { applyShield(to: tab.webView, on: shieldOn(for: tab)) }
             shieldReady = !compiled.isEmpty
             // Drop lists from older bundles.
             if let ids = try? await store.availableIdentifiers() {
@@ -211,6 +340,9 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             }
         }
         appearance = a
+        if let raw = settings.get(path: "shield.disabled_sites"), let v = try? JSONDecoder().decode([String].self, from: Data(raw.utf8)) {
+            disabledSites = Set(v)
+        }
     }
 
     private func saveSettings() {
@@ -220,17 +352,31 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     // MARK: navigation delegate
 
-    /// De-AMP: a Google AMP viewer URL loads the publisher's page, so the island shows the real domain.
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
-        guard navigationAction.targetFrame?.isMainFrame != false, let url = navigationAction.request.url,
-              let target = omniboxDeamp(url: url.absoluteString).flatMap(URL.init(string:)) else { return .allow }
-        webView.load(URLRequest(url: target))
-        return .cancel
+    func tab(for webView: WKWebView) -> Tab? { tabs.first { $0.webView === webView } }
+
+    /// De-AMP, per-site Shield and the desktop-site switch, decided before each load.
+    func webView(
+        _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences
+    ) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
+        let tab = tab(for: webView)
+        preferences.preferredContentMode = tab?.desktop == true ? .desktop : .mobile
+        guard navigationAction.targetFrame?.isMainFrame != false, let url = navigationAction.request.url else {
+            return (.allow, preferences)
+        }
+        if let target = omniboxDeamp(url: url.absoluteString).flatMap(URL.init(string:)) {
+            webView.load(URLRequest(url: target))
+            return (.cancel, preferences)
+        }
+        if url.scheme == "https" || url.scheme == "http", let site = omniboxDisplayUrl(url: url.absoluteString)?.domain {
+            applyShield(to: webView, on: !disabledSites.contains(site))
+        }
+        return (.allow, preferences)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        guard let tab = tabs.first(where: { $0.webView === webView }), let url = webView.url,
-              url.scheme == "https" || url.scheme == "http" else { return }
+        guard let tab = tab(for: webView), let url = webView.url else { return }
+        tab.bookmarked = tab.isWeb && ((try? places?.isBookmarked(url: url.absoluteString)) ?? false)
+        guard tab.isWeb, !tab.isPrivate else { return } // private tabs leave no history
         let kind: VisitKind = tab.typed ? .typed : .link
         tab.typed = false
         _ = try? places?.recordVisit(url: url.absoluteString, title: webView.title, kind: kind, at: Int64(Date().timeIntervalSince1970))
@@ -242,11 +388,51 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         _ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
         for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
-        newTab(configuration: configuration).webView
+        newTab(configuration: configuration, isPrivate: tab(for: webView)?.isPrivate ?? false).webView
     }
 
     func webViewDidClose(_ webView: WKWebView) {
-        if let tab = tabs.first(where: { $0.webView === webView }) { close(tab) }
+        if let tab = tab(for: webView) { close(tab) }
+    }
+
+    // MARK: Peek (long-press a link: a live preview and actions, PLAN Phase 6 #6)
+
+    func webView(_ webView: WKWebView, contextMenuConfigurationFor elementInfo: WKContextMenuElementInfo) async -> UIContextMenuConfiguration? {
+        guard let url = elementInfo.linkURL, url.scheme == "https" || url.scheme == "http" else { return nil }
+        let isPrivate = tab(for: webView)?.isPrivate ?? false
+        let previewConfig = makeConfiguration(isPrivate: isPrivate)
+        return UIContextMenuConfiguration(
+            identifier: url as NSURL,
+            previewProvider: { PeekController(url: url, configuration: previewConfig) },
+            actionProvider: { [weak self] _ in
+                guard let self else { return nil }
+                return UIMenu(children: [
+                    UIAction(title: String(localized: "peek.new_tab"), image: UIImage(systemName: "plus.square.on.square")) { _ in
+                        self.newTab(url, isPrivate: isPrivate)
+                    },
+                    UIAction(title: String(localized: "peek.background"), image: UIImage(systemName: "square.on.square")) { _ in
+                        self.newTab(url, activate: false, isPrivate: isPrivate)
+                        self.show(String(localized: "toast.background"))
+                    },
+                    UIAction(title: String(localized: "peek.private"), image: UIImage(systemName: "eye.slash")) { _ in
+                        self.newTab(url, isPrivate: true)
+                    },
+                    UIAction(title: String(localized: "peek.copy"), image: UIImage(systemName: "doc.on.doc")) { _ in
+                        UIPasteboard.general.url = url
+                        self.show(String(localized: "toast.link_copied"))
+                    },
+                ])
+            }
+        )
+    }
+
+    /// Tapping the preview opens the link in the current tab.
+    func webView(
+        _ webView: WKWebView, contextMenuForElement elementInfo: WKContextMenuElementInfo,
+        willCommitWithAnimator animator: UIContextMenuInteractionCommitAnimating
+    ) {
+        guard let url = elementInfo.linkURL else { return }
+        animator.addCompletion { webView.load(URLRequest(url: url)) }
     }
 
     // MARK: bridge methods (same contract as web/packages/bridge/src/api.ts)
@@ -307,9 +493,11 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             return ["ok": true]
         case "shield.summary":
             let zero = ["blocked": 0, "bytesSaved": 0, "msSaved": 0]
-            return ["today": zero, "total": zero, "filtersVersion": filtersVersion, "sites": []]
+            let sites = disabledSites.sorted().map { ["host": $0, "enabled": false, "blocked": 0] as [String: Any] }
+            return ["today": zero, "total": zero, "filtersVersion": filtersVersion, "sites": sites]
         case "shield.setSite":
-            return ["ok": false, "error": "Per-site Shield switches arrive in a later update on iOS."]
+            setShield(p["enabled"] as? Bool ?? true, site: p["host"] as? String ?? "")
+            return ["ok": true]
         default:
             return ["ok": false, "error": "method not allowed"]
         }

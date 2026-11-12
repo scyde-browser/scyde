@@ -78,6 +78,35 @@
     .toggle::after { content: ""; position: absolute; top: calc((var(--size-toggle-height) - var(--size-toggle-knob)) / 2); left: calc((var(--size-toggle-height) - var(--size-toggle-knob)) / 2); width: var(--size-toggle-knob); height: var(--size-toggle-knob); border-radius: var(--radius-full); background: var(--surface-raised); box-shadow: var(--elev-1); }
     .toggle[aria-checked="true"] { background: var(--status-shield); }
     .toggle[aria-checked="true"]::after { transform: translateX(calc(var(--size-toggle-width) - var(--size-toggle-height))); }
+
+    /* v2: back in the island, control center, omnibox with actions, pebble, private */
+    .island .ib.back { color: var(--island-text); }
+    .island.private .addr::before { content: ""; }
+    .priv { display: inline-flex; align-items: center; gap: var(--space-4); height: var(--space-24); padding: 0 var(--space-8); border-radius: var(--radius-full); background: var(--island-raised); color: var(--island-text); font-size: var(--type-micro-size); font-family: var(--font-family-mono); }
+    .priv .icon { width: var(--space-12); height: var(--space-12); }
+    .pebble-only { left: 50%; right: auto; transform: translateX(-50%); height: var(--space-40); padding: 0 var(--space-16); gap: var(--space-8); font-size: var(--type-label-size); }
+    .cc { padding: var(--space-12); display: grid; gap: var(--space-12); }
+    .navrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-8); }
+    .navrow button { height: var(--size-hit-android); border: 0; border-radius: var(--radius-lg); background: var(--surface-sunken); color: var(--text-primary); display: grid; place-items: center; }
+    .navrow button[disabled] { color: var(--text-tertiary); }
+    .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-8); list-style: none; margin: 0; padding: 0; }
+    .tile { display: grid; justify-items: start; gap: var(--space-8); padding: var(--space-12); min-height: calc(var(--space-80) + var(--space-4)); border-radius: var(--radius-lg); background: var(--surface-sunken); color: var(--text-primary); font-size: var(--type-label-size); line-height: var(--type-label-line-height); }
+    .tile .icon { color: var(--text-secondary); }
+    .tile.on { background: var(--accent-fill); color: var(--accent-on-fill); }
+    .tile.on .icon { color: var(--accent-on-fill); }
+    .omni { padding: var(--space-8) 0; }
+    .omni h3 { margin: var(--space-8) var(--space-16) var(--space-4); font-family: var(--font-family-mono); font-size: var(--type-micro-size); font-weight: var(--font-weight-regular); color: var(--text-tertiary); }
+    .row { display: grid; grid-template-columns: var(--space-32) 1fr auto; align-items: center; gap: var(--space-8); min-height: var(--size-hit-android); padding: 0 var(--space-16); font-size: var(--type-body-size); }
+    .row small { display: block; color: var(--accent-ink); font-size: var(--type-caption-size); }
+    .row .src { font-family: var(--font-family-mono); font-size: var(--type-micro-size); color: var(--text-tertiary); }
+    .row.sel { background: var(--surface-sunken); }
+    .row .icon { color: var(--text-secondary); }
+    .chips { display: flex; flex-wrap: wrap; gap: var(--space-8); padding: var(--space-4) var(--space-16) var(--space-8); }
+    .chip { display: inline-flex; align-items: center; gap: var(--space-6); height: var(--space-32); padding: 0 var(--space-12); border-radius: var(--radius-full); background: var(--surface-sunken); font-size: var(--type-label-size); }
+    .chip .icon { width: var(--space-16); height: var(--space-16); color: var(--text-secondary); }
+    .edit { flex: 1; display: flex; align-items: center; gap: var(--space-8); height: var(--space-40); padding: 0 var(--space-12); border-radius: var(--radius-full); background: var(--island-raised); font-size: var(--type-address-size); }
+    .edit .caret { display: inline-block; width: 2px; height: var(--space-20); background: var(--accent-island); }
+    .cancel { flex: none; border: 0; background: transparent; color: var(--island-text); font-size: var(--type-label-size); padding: 0 var(--space-12); height: var(--size-hit-android); }
   </style>
 </head>
 <body>
@@ -86,8 +115,9 @@
     const S = new URLSearchParams(location.search).get('state') || 'newtab';
     const fills = ['sky', 'periwinkle', 'lavender', 'mint', 'ember'];
     const fav = (m, c) => `<span class="fav" style="--fill:var(--aura-${fills[c]}-fill)" aria-hidden="true">${m}</span>`;
-    const island = (addr, shield = false) => `<nav class="island" aria-label="${t('island.label')}">
-      <button class="ib" type="button" aria-label="${t('island.menu')}"><span class="brand-mark"></span></button>
+    const island = (addr, shield = false, opts = {}) => `<nav class="island ${opts.private ? 'private' : ''}" aria-label="${t('island.label')}">
+      <button class="ib" type="button" aria-label="${t('island.menu')}" aria-expanded="${!!opts.menu}">${opts.private ? '<span class="icon" data-icon="eye-off"></span>' : '<span class="brand-mark"></span>'}</button>
+      ${opts.back === false ? '' : `<button class="ib back" type="button" aria-label="${t('nav.back')}"><span class="icon" data-icon="back"></span></button>`}
       <div class="addr" role="button" tabindex="0">${addr}</div>
       <button class="pebble" type="button" aria-expanded="${shield}" aria-label="${t('island.shield', { n: 23 })}"><span class="lamp"></span>23</button>
       <button class="count" type="button" aria-label="${t('mobile.tabs.count', { n: 7 })}"><span>7</span></button></nav>`;
@@ -110,6 +140,22 @@
         <h2>${t('shield.panel.title', { site: 'index.hr' })}<button class="toggle" role="switch" aria-checked="true" aria-label="${t('shield.on_for_site')}"></button></h2>
         <div class="stats"><div class="stat"><b>23</b><span>${t('shield.panel.blocked')}</span></div><div class="stat"><b>1,8 MB</b><span>${t('shield.panel.saved')}</span></div></div>
         <div class="field"><span>${t('shield.panel.zen')}</span><button class="toggle" role="switch" aria-checked="false" aria-label="${t('shield.panel.zen')}"></button></div></section>` + island(domain, true);
+    } else if (S === 'menu') {
+      const tile = (ic, label, on = false) => `<li class="tile ${on ? 'on' : ''}"><span class="icon" data-icon="${ic}"></span>${label}</li>`;
+      html = web + `<div class="scrim"></div><section class="sheet cc" role="dialog" aria-label="${t('menu.label')}">
+        <div class="navrow"><button aria-label="${t('nav.back')}"><span class="icon" data-icon="back"></span></button><button disabled aria-label="${t('nav.forward')}"><span class="icon" data-icon="forward"></span></button><button aria-label="${t('nav.reload')}"><span class="icon" data-icon="reload"></span></button><button aria-label="${t('mobile.share')}"><span class="icon" data-icon="share"></span></button></div>
+        <ul class="tiles">${tile('plus', t('island.new_tab'))}${tile('eye-off', t('menu.new_private_tab'))}${tile('star', t('menu.bookmark.remove'), true)}${tile('find', t('menu.find'))}${tile('monitor', t('menu.desktop_site'))}${tile('copy', t('menu.copy_link'))}${tile('clock', t('library.tab.history'))}${tile('star', t('library.tab.bookmarks'))}${tile('sliders', t('rail.settings'))}</ul></section>` + island(domain, false, { menu: true });
+    } else if (S === 'omnibox') {
+      const row = (ic, title, sub, src, sel) => `<div class="row ${sel ? 'sel' : ''}">${ic}<span>${title}<small>${sub}</small></span><span class="src">${src}</span></div>`;
+      html = web + `<div class="scrim"></div><section class="sheet omni" role="listbox" aria-label="${t('omnibox.section.suggestions')}">
+        <h3>${t('omnibox.section.tabs')}</h3>${row(fav('I', 0), 'Index.hr – Latest news', 'index.hr', t('omnibox.switch_to_tab'), true)}
+        <h3>${t('omnibox.section.suggestions')}</h3>${row(fav('I', 0), 'Index.hr Sport', 'index.hr/sport', t('omnibox.suggest.history'))}${row(fav('I', 2), 'Indeed – Jobs', 'indeed.com', t('omnibox.suggest.bookmark'))}${row('<span class="icon" data-icon="search"></span>', t('omnibox.suggest.search', { q: 'inde' }), 'DuckDuckGo', '')}
+        <h3>${t('omnibox.section.actions')}</h3><div class="chips"><span class="chip"><span class="icon" data-icon="eye-off"></span>${t('menu.new_private_tab')}</span><span class="chip"><span class="icon" data-icon="find"></span>${t('menu.find')}</span><span class="chip"><span class="icon" data-icon="sliders"></span>${t('rail.settings')}</span></div></section>
+        <nav class="island" aria-label="${t('island.label')}"><div class="edit">inde<span class="caret"></span><span class="ghost" style="color:var(--island-text-secondary)">x.hr</span></div><button class="cancel" type="button">${t('omnibox.cancel')}</button></nav>`;
+    } else if (S === 'pebble') {
+      html = web + `<nav class="island pebble-only" aria-label="${t('island.label')}"><span class="lamp" style="background:var(--island-shield);box-shadow:none"></span><span>index.hr</span></nav>`;
+    } else if (S === 'private') {
+      html = web + island(`<span class="priv"><span class="icon" data-icon="eye-off"></span>${t('private.label')}</span><span>index.hr</span>`, false, { private: true });
     } else {
       html = web + island(domain);
     }
