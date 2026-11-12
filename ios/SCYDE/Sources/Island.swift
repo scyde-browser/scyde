@@ -384,9 +384,7 @@ struct OmniboxPanel: View {
     var body: some View {
         let q = text.trimmingCharacters(in: .whitespaces)
         let tabs = matchingTabs(q)
-        let suggestions = q.isEmpty
-            ? ((try? browser.places?.history(query: nil, limit: 5, offset: 0)) ?? []).map { ($0.url, $0.title, false) }
-            : ((try? browser.places?.suggest(query: q, limit: 5)) ?? []).map { ($0.url, $0.title, $0.bookmarked) }
+        let suggestions = suggestionRows(q)
         let actions = matchingActions(q)
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -400,10 +398,11 @@ struct OmniboxPanel: View {
                 }
                 if !suggestions.isEmpty || !q.isEmpty {
                     header("omnibox.section.suggestions")
-                    ForEach(Array(suggestions.enumerated()), id: \.offset) { _, s in
-                        row(icon: s.2 ? "star" : "clock", title: s.1.isEmpty ? s.0 : s.1, sub: omniboxDisplayUrl(url: s.0)?.domain ?? s.0,
-                            source: String(localized: s.2 ? "omnibox.suggest.bookmark" : "omnibox.suggest.history")) {
-                            browser.go(s.0)
+                    ForEach(suggestions, id: \.url) { s in
+                        row(icon: s.bookmarked ? "star" : "clock", title: s.title.isEmpty ? s.url : s.title,
+                            sub: omniboxDisplayUrl(url: s.url)?.domain ?? s.url,
+                            source: String(localized: s.bookmarked ? "omnibox.suggest.bookmark" : "omnibox.suggest.history")) {
+                            browser.go(s.url)
                         }
                     }
                     if !q.isEmpty {
@@ -414,7 +413,7 @@ struct OmniboxPanel: View {
                 }
                 if !actions.isEmpty {
                     header("omnibox.section.actions")
-                    FlowChips(actions: actions.map { ($0.id, $0.icon, { $0.run(); close() }) })
+                    FlowChips(actions: actions.map { action in (action.id, action.icon, { action.run(); close() }) })
                         .padding(.horizontal, ScydeSpace.s16)
                         .padding(.bottom, ScydeSpace.s12)
                 }
@@ -423,6 +422,21 @@ struct OmniboxPanel: View {
         }
         .frame(maxHeight: UIScreen.main.bounds.height * 0.55)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private struct Row {
+        let url: String
+        let title: String
+        let bookmarked: Bool
+    }
+
+    private func suggestionRows(_ q: String) -> [Row] {
+        if q.isEmpty {
+            let recent = (try? browser.places?.history(query: nil, limit: 5, offset: 0)) ?? []
+            return recent.map { Row(url: $0.url, title: $0.title, bookmarked: false) }
+        }
+        let found = (try? browser.places?.suggest(query: q, limit: 5)) ?? []
+        return found.map { Row(url: $0.url, title: $0.title, bookmarked: $0.bookmarked) }
     }
 
     private func matchingTabs(_ q: String) -> [Tab] {
