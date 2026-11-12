@@ -150,6 +150,21 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - [x] **v0.2.1** (owner's phone test, 2026-11-12): scroll guard (all platforms), iOS island follows the active tab, De-AMP (core `omnibox::deamp`), internal pages as sheets (iOS sheet, Android sheet session with ×), island swipe in the Initial pass / simultaneous gesture, Android edge swipe back/forward (`EdgeSwipeLayout`). CI: Android emulator swipes `qa/scroll` and fails if the page does not move
 - [ ] Open: redirect stubs (`$redirect` resources) and scriptlets. Blocking `gpt.js`/`gtm.js` without uBO-style stubs can break sites that call them; we need our own stub resources (not uBO's GPL files). `[OWNER]`: send sites that still break
 
+## Phase 6 (owner, 2026-11-12: "implement all the features and more, better than Arc")
+- [x] **v0.3.0, phones:**
+  - island v2 (mark menu · back · address · Shield light/count · tabs)
+  - full screen while reading (DESIGN v2.1 "Hide")
+  - control center, command omnibox (open tabs, history, bookmarks, actions)
+  - Shield per site (`shield.disabled_sites`; Android: allowlist over a native port + per-page counts)
+  - private tabs, find in page, desktop site, bookmark star, Peek, Aura tint (`theme::aura`)
+  - welcome on first run (`web/apps/welcome`, also on Windows)
+  - prototype states in `design/prototypes/mobile`
+- [ ] v0.4.0:
+  - phones: sleeping tabs (`tabs.sleep_after_minutes`), session restore, pinned tabs, Spaces
+  - Windows: island v2, Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
+  - Zen mode (annoyance lists `[OWNER]` licences)
+- Skills `animate`, `break-ui` and others from PLAN §12 are not installed; DESIGN §6 was followed directly
+
 ## Next (owner)
 - `[OWNER]` Phase 6: confirm the order of the unique features (Aura tint, Shield pill, sleeping tabs, split view + Ctrl+K, web panels, Peek, Zen mode, Spaces)
 - `[OWNER]` Phase 7: SCYDE Sync yes/no; licence of our own code; privacy policy contact
