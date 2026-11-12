@@ -36,6 +36,15 @@ impl ShieldEngine {
         }
     }
 
+    /// Serializes the engine to `engine.dat`. The `GeckoView` extension must load a file written by
+    /// this (wasm32) build: adblock-rust's generic class/id index is keyed by a pointer-width hash,
+    /// so a file written on a 64-bit host loads but finds no generic cosmetic rules in wasm32.
+    #[wasm_bindgen(js_name = toDat)]
+    #[must_use]
+    pub fn to_dat(&self) -> Vec<u8> {
+        self.inner.to_dat()
+    }
+
     /// Loads scriptlet/redirect resources (`resources.json` from the bundle); returns their count.
     ///
     /// # Errors

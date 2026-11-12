@@ -95,6 +95,8 @@ jobs:
 
   app:
     # SCYDE for iOS (Phase 4): simulator screenshots + unsigned .ipa for Feather (PLAN §9.3).
+    permissions:
+      contents: write # screenshots branch (tools/ci/push-shots.sh, owner approval 2026-11-12)
     runs-on: macos-latest
     timeout-minutes: 75
     steps:
@@ -168,6 +170,16 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -page settings
           sleep 8
           xcrun simctl io "$UDID" screenshot ../../shots/settings-sheet.png
+          for surface in menu shield omnibox tabs; do
+            xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -open http://127.0.0.1:8787/scroll/index.html -panel $surface
+            sleep 7
+            xcrun simctl io "$UDID" screenshot ../../shots/panel-$surface.png
+          done
+          xcrun simctl ui "$UDID" appearance dark
+          xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -open http://127.0.0.1:8787/scroll/index.html -panel menu
+          sleep 7
+          xcrun simctl io "$UDID" screenshot ../../shots/panel-menu-dark.png
+          xcrun simctl ui "$UDID" appearance light
           xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -page welcome
           sleep 8
           xcrun simctl io "$UDID" screenshot ../../shots/welcome-sheet.png
@@ -181,6 +193,12 @@ jobs:
           cp -R build/SCYDE.xcarchive/Products/Applications/SCYDE.app build/Payload/
           (cd build && zip -qry SCYDE-unsigned.ipa Payload)
           ls -la build/SCYDE-unsigned.ipa
+      - name: Publish screenshots to ci-shots-ios (pull requests)
+        if: always() && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: tools/ci/push-shots.sh ios shots
       - uses: actions/upload-artifact@v4
         if: always()
         with:

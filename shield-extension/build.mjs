@@ -6,6 +6,7 @@
 //   (--wasm <shield-wasm no-modules dir> --pages <dir with newtab/ settings/ shields/ library/>).
 import { mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, readdirSync, cpSync } from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { shardOf } from './src/shard.js';
 import { fileURLToPath } from 'node:url';
 
@@ -27,7 +28,22 @@ if (target === 'gecko-mv2') {
   const pages = opt('--pages');
   mkdirSync(path.join(out, 'engine'), { recursive: true });
   for (const f of ['shield_wasm.js', 'shield_wasm_bg.wasm']) copyFileSync(path.join(wasm, f), path.join(out, 'engine', f));
-  for (const f of ['engine.dat', 'resources.json']) copyFileSync(path.join(bundle, f), path.join(out, f));
+  copyFileSync(path.join(bundle, 'resources.json'), path.join(out, 'resources.json'));
+  // engine.dat is written by the same wasm32 engine that loads it (see ShieldEngine.toDat): the
+  // bundle's file comes from a 64-bit host and loses generic class/id cosmetics in wasm32.
+  const lists = opt('--lists');
+  const wasmNode = opt('--wasm-node');
+  if (!lists || !wasmNode) throw new Error('gecko-mv2 needs --lists <dir> and --wasm-node <dir> (core/target/shield-wasm/node)');
+  const { ShieldEngine } = createRequire(import.meta.url)(path.resolve(wasmNode, 'shield_wasm.js'));
+  const text = readdirSync(path.resolve(lists)).filter((f) => f.endsWith('.txt')).sort()
+    .map((f) => readFileSync(path.resolve(lists, f), 'utf8')).join('\n');
+  const dat = ShieldEngine.fromLists(text).toDat();
+  writeFileSync(path.join(out, 'engine.dat'), dat);
+  // Guard: a generic class rule from the lists must still match after loading the file.
+  const probe = text.match(/^##\.([A-Za-z0-9_-]+)$/m)?.[1];
+  if (probe && !JSON.parse(ShieldEngine.fromDat(dat).hiddenSelectors(JSON.stringify([probe]), '[]', '[]')).includes('.' + probe)) {
+    throw new Error(`engine.dat lost generic cosmetics (probe .${probe})`);
+  }
   for (const f of ['content.js', 'gecko-background.js', 'scroll-guard.js']) copyFileSync(path.join(here, 'src', f), path.join(out, f));
   if (pages) cpSync(path.resolve(pages), path.join(out, 'pages'), { recursive: true });
   rmSync(path.join(out, 'dnr'), { recursive: true, force: true });

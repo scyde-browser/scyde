@@ -39,6 +39,11 @@ describe('bridge', () => {
     expect(detectTransport({ __TAURI_INTERNALS__: { invoke: async () => 1 } } as any)?.name).toBe('tauri');
     expect(detectTransport({ webkit: { messageHandlers: { scyde: { postMessage: async () => 1 } } } } as any)?.name).toBe('webkit');
     expect(detectTransport({ browser: { runtime: { sendNativeMessage: async () => 1 } } } as any)?.name).toBe('gecko');
+  });
+
+  it('gecko replies arrive as JSON text and are parsed', async () => {
+    const t = detectTransport({ browser: { runtime: { sendNativeMessage: async () => '{"id":1,"ok":true,"result":{"ok":true}}' } } } as any);
+    expect(await t?.call({ id: 1, method: 'navigate', params: {} })).toEqual({ id: 1, ok: true, result: { ok: true } });
     expect(METHODS).toContain('navigate');
   });
 });

@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asImageBitmap
 import dev.scyde.browser.theme.ScydeMotion
 import dev.scyde.browser.theme.ScydeSpace
 import org.json.JSONArray
@@ -62,6 +63,8 @@ class Tab(firstSession: GeckoSession, val isPrivate: Boolean, firstSpace: String
     var pendingUrl: String? = null
     /** The next finished load is a reload or a wake, not a visit (history counts stay honest). */
     var skipVisit = false
+    /** The page as it last looked, for the tab grid. */
+    var thumbnail by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     var url by mutableStateOf("")
     var title by mutableStateOf("")
     var progress by mutableIntStateOf(100)
@@ -114,6 +117,7 @@ class Browser(appContext: Context) {
         set(v) {
             // Stamp the tab being left too, or a long-read tab would fall asleep the moment it is left.
             active?.lastActive = System.currentTimeMillis()
+            if (v != activeState) snapshotActive()
             activeState = v
             val tab = active ?: return
             tab.lastActive = System.currentTimeMillis()
@@ -154,10 +158,13 @@ class Browser(appContext: Context) {
     private var extension: WebExtension? = null
     private var port: WebExtension.Port? = null
     private val pending = mutableListOf<() -> Unit>()
+    private val afterExtension = mutableListOf<() -> Unit>()
 
     val runtime: GeckoRuntime = shared ?: GeckoRuntime.create(
         context.applicationContext,
         GeckoRuntimeSettings.Builder()
+            // Page console in logcat only when asked for: `adb shell setprop log.tag.SCYDE DEBUG` (CI).
+            .consoleOutput(Log.isLoggable(TAG, Log.DEBUG))
             .contentBlocking(
                 ContentBlocking.Settings.Builder()
                     .antiTracking(ContentBlocking.AntiTracking.STRICT)
@@ -188,6 +195,7 @@ class Browser(appContext: Context) {
                 filtersVersion = ext.metaData.description?.substringAfter("filters ", "")?.removeSuffix(")") ?: ""
                 ext.setMessageDelegate(messages, NATIVE_APP)
                 for (t in tabs) t.session.webExtensionController.setMessageDelegate(ext, messages, NATIVE_APP)
+                afterExtension.toList().also { afterExtension.clear() }.forEach { it() }
                 // Shield must also run in private tabs.
                 // Only when needed: the call reloads the extension (and its engine).
                 if (!ext.metaData.allowedInPrivateBrowsing) runtime.webExtensionController.setAllowedInPrivateBrowsing(ext, true)
@@ -235,7 +243,12 @@ class Browser(appContext: Context) {
         tabs += tab
         if (activate) activeId = tab.id else saveSession()
         if (session == null) {
-            whenReady { s.loadUri(url ?: internalUrl("newtab") ?: "about:blank") }
+            whenReady {
+                // New Tab lives in the extension: if it is not installed yet (slow first start), wait
+                // for it instead of showing about:blank.
+                val target = url ?: internalUrl("newtab")
+                if (target != null) s.loadUri(target) else afterExtension += { s.loadUri(internalUrl("newtab") ?: "about:blank") }
+            }
         }
         return tab
     }
@@ -265,6 +278,25 @@ class Browser(appContext: Context) {
             if (left.isNotEmpty()) activeId = left.first().id else newTab()
         }
         saveSession()
+    }
+
+    /** The GeckoView on screen (set by the UI), for page thumbnails. */
+    var view: java.lang.ref.WeakReference<org.mozilla.geckoview.GeckoView>? = null
+
+    /** Keeps a small picture of the active page for its card in the tab grid. */
+    fun snapshotActive() {
+        val tab = active ?: return
+        val v = view?.get() ?: return
+        if (sheetSession != null || tab.sleeping || v.session !== tab.session || v.width == 0) return
+        runCatching {
+            v.capturePixels().accept({ bitmap ->
+                if (bitmap != null) {
+                    val w = bitmap.width / 4
+                    val h = bitmap.height / 4
+                    if (w > 0 && h > 0) tab.thumbnail = android.graphics.Bitmap.createScaledBitmap(bitmap, w, h, true).asImageBitmap()
+                }
+            }, { })
+        }
     }
 
     /** What the island counts and swipes through: the active mode and, for normal tabs, the Space. */
@@ -742,11 +774,14 @@ class Browser(appContext: Context) {
         }
 
         override fun onMessage(nativeApp: String, message: Any, sender: WebExtension.MessageSender): GeckoResult<Any>? {
-            val json = message as? JSONObject ?: return null
+            val json = message as? JSONObject ?: run {
+                Log.w(TAG, "bridge: message is ${message.javaClass.name}, not an object")
+                return null
+            }
             when (json.optString("type")) {
                 "ready" -> {
                     main.post { shieldReady = true; flushPending() }
-                    return GeckoResult.fromValue(JSONObject().put("ok", true))
+                    return GeckoResult.fromValue(true)
                 }
                 "shield.count" -> {
                     val hosts = json.optJSONObject("hosts")
@@ -773,14 +808,21 @@ class Browser(appContext: Context) {
             val trusted = base != null && sender.url.startsWith(base + "pages/") &&
                 sender.environmentType == WebExtension.MessageSender.ENV_TYPE_EXTENSION
             val reply = JSONObject().put("id", json.opt("id"))
-            if (!trusted) return GeckoResult.fromValue(reply.put("ok", false).put("error", "untrusted origin"))
-            if (method !in METHODS) return GeckoResult.fromValue(reply.put("ok", false).put("error", "method not allowed"))
+            if (!trusted) {
+                Log.w(TAG, "bridge: untrusted sender url=${sender.url} env=${sender.environmentType} base=$base")
+                return GeckoResult.fromValue(reply.put("ok", false).put("error", "untrusted origin").toString())
+            }
+            if (method !in METHODS) {
+                Log.w(TAG, "bridge: method not allowed: $method")
+                return GeckoResult.fromValue(reply.put("ok", false).put("error", "method not allowed").toString())
+            }
             val result = GeckoResult<Any>()
             main.post {
                 try {
-                    result.complete(reply.put("ok", true).put("result", handle(method, json.optJSONObject("params") ?: JSONObject())))
+                    result.complete(reply.put("ok", true).put("result", handle(method, json.optJSONObject("params") ?: JSONObject())).toString())
                 } catch (e: Exception) {
-                    result.complete(reply.put("ok", false).put("error", e.message ?: "error"))
+                    Log.e(TAG, "bridge: $method failed", e)
+                    result.complete(reply.put("ok", false).put("error", e.message ?: "error").toString())
                 }
             }
             return result

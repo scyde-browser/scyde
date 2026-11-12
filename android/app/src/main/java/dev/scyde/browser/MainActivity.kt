@@ -14,6 +14,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,6 +65,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -123,6 +127,8 @@ import uniffi.scyde_core.themeIslandTint
 
 class MainActivity : ComponentActivity() {
     private lateinit var browser: Browser
+    /** `--es panel menu|shield|omnibox|tabs` opens that surface (CI screenshots). */
+    private val initialPanel = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge() // mandatory for targetSdk 35+ (CLAUDE.md)
@@ -142,7 +148,8 @@ class MainActivity : ComponentActivity() {
             page != null -> browser.openPage(page)
             start == null && browser.needsOnboarding && intent?.getBooleanExtra("skipWelcome", false) != true -> browser.openPage("welcome")
         }
-        setContent { ScydeApp(browser) }
+        initialPanel.value = intent?.getStringExtra("panel")
+        setContent { ScydeApp(browser, initialPanel) }
     }
 
     override fun onPause() {
@@ -158,6 +165,7 @@ class MainActivity : ComponentActivity() {
             browser.newTab(it)
         }
         intent.getStringExtra("page")?.let { browser.openPage(it) }
+        intent.getStringExtra("panel")?.let { initialPanel.value = it }
     }
 }
 
@@ -176,7 +184,7 @@ private fun accentFor(name: String?, dark: Boolean): ScydeAccent = when (name) {
 private fun <T> smooth() = spring<T>(dampingRatio = ScydeMotion.springSmooth.dampingRatio, stiffness = ScydeMotion.springSmooth.stiffness)
 
 @Composable
-fun ScydeApp(browser: Browser) {
+fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStateOf(null)) {
     val system = isSystemInDarkTheme()
     val dark = when (browser.appearance["theme"]) { "dark" -> true; "light" -> false; else -> system }
     val c = if (dark) ScydeColorsDark else ScydeColorsLight
@@ -201,6 +209,17 @@ fun ScydeApp(browser: Browser) {
         bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         bars.isAppearanceLightStatusBars = topColor.luminance() > 0.5f
         if (immersive) bars.hide(WindowInsetsCompat.Type.systemBars()) else bars.show(WindowInsetsCompat.Type.systemBars())
+    }
+
+    LaunchedEffect(initialPanel.value) {
+        when (initialPanel.value) {
+            "menu" -> panel = Panel.MENU
+            "shield" -> panel = Panel.SHIELD
+            "omnibox" -> panel = Panel.OMNIBOX
+            "tabs" -> showTabs = true
+            else -> return@LaunchedEffect
+        }
+        initialPanel.value = null
     }
 
     fun closePanel() {
@@ -238,7 +257,7 @@ fun ScydeApp(browser: Browser) {
                             if (side > 0 && tab.canGoForward) tab.session.goForward()
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         },
-                    ).apply { addView(GeckoView(ctx)) }
+                    ).apply { addView(GeckoView(ctx).also { browser.view = java.lang.ref.WeakReference(it) }) }
                 },
                 update = { frame ->
                     val view = frame.getChildAt(0) as GeckoView
@@ -299,6 +318,7 @@ fun ScydeApp(browser: Browser) {
         }
         if (browser.peekUrl != null) Peek(browser, c, accent)
     }
+    LaunchedEffect(showTabs) { if (showTabs) browser.snapshotActive() }
     if (showTabs) TabGrid(browser, c, accent, onDone = { showTabs = false })
 }
 
@@ -1000,7 +1020,18 @@ private fun TabCard(browser: Browser, tab: Tab, c: ScydeColors, accent: ScydeAcc
                     .background(c.surfaceSunken, RoundedCornerShape(ScydeRadius.sm)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(tab.site ?: tab.url.substringAfter("://").substringBefore('/'), color = c.textTertiary, fontSize = 11.sp, maxLines = 1, fontFamily = FontFamily.Monospace)
+                val shot = tab.thumbnail
+                if (shot != null) {
+                    // The top of the page, as it last looked.
+                    Image(
+                        bitmap = shot, contentDescription = null, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(ScydeRadius.sm)),
+                    )
+                } else {
+                    // Our own pages by name ("newtab"), not by the extension's address.
+                    val label = tab.site ?: browser.internalPage(tab.url)?.let { "scyde://$it" } ?: tab.url.substringAfter("://").substringBefore('/')
+                    Text(label, color = c.textTertiary, fontSize = 11.sp, maxLines = 1, fontFamily = FontFamily.Monospace)
+                }
                 if (tab.sleeping) {
                     Text(
                         stringResource(R.string.tab_sleeping_short), color = c.textSecondary, fontSize = 11.sp,

@@ -22,6 +22,8 @@ env:
 
 jobs:
   build:
+    permissions:
+      contents: write # screenshots branch (tools/ci/push-shots.sh, owner approval 2026-11-12)
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -63,6 +65,18 @@ jobs:
           Start-Process -FilePath node -ArgumentList 'qa/serve.mjs','8787' -WindowStyle Hidden
           Start-Sleep -Seconds 2
           ./desktop/ci/run.ps1 -Exe $exe -Name smoke -AppArgs '--smoke', "$PWD/smoke.json" -ShotAfter 14
+          # Second start: the extension is not installed again, it must come from the WebView2 profile.
+          ./desktop/ci/run.ps1 -Exe $exe -Name smoke2 -AppArgs '--smoke', "$PWD/smoke2.json" -ShotAfter 11
+          foreach ($f in 'smoke.json', 'smoke2.json') {
+            $qa = (Get-Content $f | ConvertFrom-Json).tabs | Where-Object { $_.url -like '*adblock*' }
+            if ($qa.title -ne 'QA 11/11') { throw "${f}: Shield scored '$($qa.title)' on qa/adblock" }
+          }
+      - name: Publish screenshots to ci-shots-windows (pull requests)
+        if: always() && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: tools/ci/push-shots.sh windows smoke.png smoke.json smoke2.png smoke2.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

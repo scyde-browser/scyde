@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Emulator smoke for scrolling, the island swipe and the settings sheet (android.yml).
 set -euo pipefail
+# The log is saved however the script ends (it is what explains a failure).
+trap 'adb logcat -d | grep -E "SCYDE|GeckoConsole|JavaScript|console\.|AndroidRuntime" | tail -600 > shots/logcat.txt || true' EXIT
+# A slow CI emulator sometimes shows "Pixel Launcher isn't responding" over the app: wait it out.
+dismiss_anr() { adb shell input keyevent KEYCODE_DPAD_DOWN KEYCODE_DPAD_DOWN KEYCODE_ENTER >/dev/null 2>&1 || true; }
 SIZE=$(adb shell wm size | sed 's/.*: //' | tr -d '\r')
 W=${SIZE%x*}
 H=${SIZE#*x}
@@ -10,6 +14,7 @@ echo "screen ${W}x${H}"
 # swipe must move the page (the two screenshots must differ).
 adb shell am start -n dev.scyde.browser/.MainActivity -a android.intent.action.VIEW -d http://10.0.2.2:8787/scroll/index.html
 sleep 15
+if adb shell dumpsys window | grep -q "Application Not Responding"; then dismiss_anr; sleep 3; fi
 adb exec-out screencap -p > shots/qa-scroll-before.png
 adb shell input swipe $((W / 2)) $((H * 6 / 10)) $((W / 2)) $((H * 3 / 10)) 400
 sleep 2
@@ -23,6 +28,26 @@ fi
 adb shell input swipe $((W * 7 / 10)) $((H * 93 / 100)) $((W * 2 / 10)) $((H * 93 / 100)) 300
 sleep 4
 adb exec-out screencap -p > shots/island-swipe.png
+
+# Every surface that grows out of the island, for design review (light, then the menu in dark).
+adb shell am start -n dev.scyde.browser/.MainActivity -a android.intent.action.VIEW -d http://10.0.2.2:8787/scroll/index.html
+sleep 8
+adb exec-out screencap -p > shots/page.png
+for surface in menu shield omnibox tabs; do
+  adb shell am start -n dev.scyde.browser/.MainActivity --es panel "$surface"
+  sleep 4
+  adb exec-out screencap -p > "shots/panel-$surface.png"
+  adb shell input keyevent KEYCODE_BACK
+  sleep 1
+done
+adb shell cmd uimode night yes
+sleep 3
+adb shell am start -n dev.scyde.browser/.MainActivity --es panel menu
+sleep 4
+adb exec-out screencap -p > shots/panel-menu-dark.png
+adb shell input keyevent KEYCODE_BACK
+adb shell cmd uimode night no
+sleep 3
 
 # Settings opens as a sheet with a close button.
 adb shell am start -n dev.scyde.browser/.MainActivity --es page settings

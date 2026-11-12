@@ -50,8 +50,9 @@
         <span class="lamp" aria-hidden="true"></span>
         {#if shield}
           <span><b>{count(shield.blocked)}</b> {t('newtab.shield.blocked')}</span>
-          <span><b>{bytes(shield.bytesSaved)}</b> {t('newtab.shield.saved')}</span>
-          <span><b>{duration(shield.msSaved)}</b> {t('newtab.shield.time')}</span>
+          <!-- Only numbers the platform really measures: no "0 B saved" where it cannot count. -->
+          {#if shield.bytesSaved > 0}<span><b>{bytes(shield.bytesSaved)}</b> {t('newtab.shield.saved')}</span>{/if}
+          {#if shield.msSaved > 0}<span><b>{duration(shield.msSaved)}</b> {t('newtab.shield.time')}</span>{/if}
         {:else}
           <span>{t('newtab.shield_today')}</span>
         {/if}
