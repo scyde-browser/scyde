@@ -127,6 +127,7 @@ jobs:
           (cd core && cargo run --release -p shield-compiler -- --lists ../lists --out ../bundle --version "$(date -u +%Y%m%d)")
           mkdir -p ios/SCYDE/Resources/filters
           cp -R bundle/ios bundle/manifest.json ios/SCYDE/Resources/filters/
+          cp shield-extension/src/scroll-guard.js ios/SCYDE/Resources/filters/
       - name: ScydeCore.xcframework (core/ffi)
         working-directory: core
         run: ffi/build-apple.sh target/ffi-apple
@@ -158,9 +159,12 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -open http://127.0.0.1:8787/adblock/index.html
           sleep 25
           xcrun simctl io "$UDID" screenshot ../../shots/qa-adblock.png
-          xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -open scyde://settings/
+          xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -open http://127.0.0.1:8787/scroll/index.html
+          sleep 12
+          xcrun simctl io "$UDID" screenshot ../../shots/qa-scroll.png
+          xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -page settings
           sleep 8
-          xcrun simctl io "$UDID" screenshot ../../shots/settings.png
+          xcrun simctl io "$UDID" screenshot ../../shots/settings-sheet.png
       - name: Unsigned .ipa (Feather signs it)
         working-directory: ios/SCYDE
         run: |

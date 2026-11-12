@@ -197,8 +197,19 @@ pub fn new_tab(app: &AppHandle, url: Option<&str>, activate: bool) -> tauri::Res
     };
     let target = url.unwrap_or(NEWTAB);
     let parsed: Url = target.parse().unwrap_or_else(|_| NEWTAB.parse().expect("newtab url"));
-    let (app_load, app_title) = (app.clone(), app.clone());
+    let (app_load, app_title, app_nav) = (app.clone(), app.clone(), app.clone());
     let builder = env_opts(WebviewBuilder::new(format!("tab-{id}"), WebviewUrl::External(parsed)), &state)
+        // De-AMP: a Google AMP viewer URL loads the publisher's page instead (rule 6: real domain).
+        .on_navigation(move |url| {
+            let Some(target) = omnibox::deamp(url.as_str()).and_then(|t| t.parse::<Url>().ok()) else { return true };
+            let app = app_nav.clone();
+            let _ = app_nav.run_on_main_thread(move || {
+                if let Some(wv) = app.get_webview(&format!("tab-{id}")) {
+                    let _ = wv.navigate(target);
+                }
+            });
+            false
+        })
         .on_page_load(move |wv, payload| {
             let url = payload.url().to_string();
             let started = matches!(payload.event(), PageLoadEvent::Started);

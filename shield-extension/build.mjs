@@ -28,7 +28,7 @@ if (target === 'gecko-mv2') {
   mkdirSync(path.join(out, 'engine'), { recursive: true });
   for (const f of ['shield_wasm.js', 'shield_wasm_bg.wasm']) copyFileSync(path.join(wasm, f), path.join(out, 'engine', f));
   for (const f of ['engine.dat', 'resources.json']) copyFileSync(path.join(bundle, f), path.join(out, f));
-  for (const f of ['content.js', 'gecko-background.js']) copyFileSync(path.join(here, 'src', f), path.join(out, f));
+  for (const f of ['content.js', 'gecko-background.js', 'scroll-guard.js']) copyFileSync(path.join(here, 'src', f), path.join(out, f));
   if (pages) cpSync(path.resolve(pages), path.join(out, 'pages'), { recursive: true });
   rmSync(path.join(out, 'dnr'), { recursive: true, force: true });
   rmSync(path.join(out, 'cosmetic'), { recursive: true, force: true });
@@ -43,7 +43,10 @@ if (target === 'gecko-mv2') {
         browser_specific_settings: { gecko: { id: 'shield@scyde.dev' } },
         permissions: ['webRequest', 'webRequestBlocking', '<all_urls>', 'nativeMessaging', 'nativeMessagingFromContent', 'geckoViewAddons'],
         background: { scripts: ['engine/shield_wasm.js', 'gecko-background.js'] },
-        content_scripts: [{ matches: ['http://*/*', 'https://*/*'], js: ['content.js'], run_at: 'document_start', all_frames: true }],
+        content_scripts: [
+          { matches: ['http://*/*', 'https://*/*'], js: ['content.js'], run_at: 'document_start', all_frames: true },
+          { matches: ['http://*/*', 'https://*/*'], js: ['scroll-guard.js'], run_at: 'document_end' },
+        ],
         content_security_policy: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
       },
       null,
@@ -79,6 +82,7 @@ const rulesets = manifest.dnr.map((r) => {
   return { id: r.id, enabled: true, path: r.path };
 });
 copyFileSync(path.join(here, 'src', 'content-static.js'), path.join(out, 'content.js'));
+copyFileSync(path.join(here, 'src', 'scroll-guard.js'), path.join(out, 'scroll-guard.js'));
 
 writeFileSync(
   path.join(out, 'manifest.json'),
@@ -92,6 +96,7 @@ writeFileSync(
       host_permissions: ['<all_urls>'],
       content_scripts: [
         { matches: ['http://*/*', 'https://*/*'], css: ['cosmetic/generic.css'], js: ['content.js'], run_at: 'document_start', all_frames: true },
+        { matches: ['http://*/*', 'https://*/*'], js: ['scroll-guard.js'], run_at: 'document_end' },
       ],
       web_accessible_resources: [{ resources: ['cosmetic/hosts/*.json'], matches: ['http://*/*', 'https://*/*'] }],
       declarative_net_request: { rule_resources: rulesets },

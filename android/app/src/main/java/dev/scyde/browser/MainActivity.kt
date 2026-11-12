@@ -1,6 +1,18 @@
 package dev.scyde.browser
 
 import android.content.Intent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.launch
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -9,7 +21,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -87,12 +98,14 @@ class MainActivity : ComponentActivity() {
         browser = Browser(this)
         val start = intent?.dataString ?: intent?.getStringExtra("url")
         if (browser.tabs.isEmpty()) browser.newTab(start)
+        intent?.getStringExtra("page")?.let { browser.openPage(it) } // CI screenshots
         setContent { ScydeApp(browser) }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.dataString?.let { browser.newTab(it) }
+        intent.getStringExtra("page")?.let { browser.openPage(it) }
     }
 }
 
@@ -113,32 +126,101 @@ fun ScydeApp(browser: Browser) {
     val accent = accentFor(browser.appearance["accent"], dark)
     var showTabs by remember { mutableStateOf(false) }
     val active = browser.active
+    val sheet = browser.sheetPage
+    var edgeSide by remember { mutableIntStateOf(0) }
+    var edgeFraction by remember { mutableFloatStateOf(0f) }
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
 
-    // Predictive back (CLAUDE.md): tab grid → page history → exit.
-    BackHandler(enabled = showTabs || active?.canGoBack == true) {
-        if (showTabs) showTabs = false else active?.session?.goBack()
+    // Predictive back (CLAUDE.md): sheet → tab grid → page history → exit.
+    BackHandler(enabled = sheet != null || showTabs || active?.canGoBack == true) {
+        when {
+            sheet != null -> browser.closeSheet()
+            showTabs -> showTabs = false
+            else -> active?.session?.goBack()
+        }
     }
 
     Box(Modifier.fillMaxSize().background(c.surfaceCanvas)) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize().statusBarsPadding(),
-            factory = { ctx -> GeckoView(ctx) },
-            update = { view ->
-                val s = active?.session
-                if (s != null && view.session != s) {
-                    view.releaseSession()
-                    view.setSession(s)
-                }
-            },
-        )
-        Island(
-            browser, c, accent,
-            onTabs = { showTabs = true },
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().imePadding()
-                .padding(horizontal = ScydeSize.islandMobileInset, vertical = ScydeSpace.s8),
-        )
+        Column(Modifier.fillMaxSize()) {
+            if (sheet != null) SheetBar(sheet, c, onClose = { browser.closeSheet() })
+            AndroidView(
+                modifier = Modifier.fillMaxWidth().weight(1f).then(if (sheet == null) Modifier.statusBarsPadding() else Modifier),
+                factory = { ctx ->
+                    val edge = with(density) { ScydeSpace.s40.toPx() }
+                    val distance = with(density) { ScydeSpace.s80.toPx() }
+                    EdgeSwipeLayout(
+                        ctx, edge, distance,
+                        onProgress = { side, f -> edgeSide = side; edgeFraction = f },
+                        onCommit = commit@{ side ->
+                            if (browser.sheetPage != null) return@commit
+                            val tab = browser.active ?: return@commit
+                            if (side < 0 && tab.canGoBack) tab.session.goBack()
+                            if (side > 0 && tab.canGoForward) tab.session.goForward()
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                    ).apply { addView(GeckoView(ctx)) }
+                },
+                update = { frame ->
+                    val view = frame.getChildAt(0) as GeckoView
+                    val s = browser.sheetSession ?: active?.session
+                    if (s != null && view.session != s) {
+                        view.releaseSession()
+                        view.setSession(s)
+                    }
+                },
+            )
+        }
+        if (edgeSide != 0 && sheet == null) {
+            val can = if (edgeSide < 0) active?.canGoBack == true else active?.canGoForward == true
+            EdgeArrow(edgeSide, edgeFraction, can, c, Modifier.align(if (edgeSide < 0) Alignment.CenterStart else Alignment.CenterEnd))
+        }
+        if (sheet == null) {
+            Island(
+                browser, c, accent,
+                onTabs = { showTabs = true },
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().imePadding()
+                    .padding(horizontal = ScydeSize.islandMobileInset, vertical = ScydeSpace.s8),
+            )
+        }
     }
     if (showTabs) TabGrid(browser, c, accent, onDone = { showTabs = false })
+}
+
+/** Title and × for Settings, Library and Shield (they are sheets, not tabs). */
+@Composable
+private fun SheetBar(page: String, c: ScydeColors, onClose: () -> Unit) {
+    val title = when (page) {
+        "library" -> stringResource(R.string.library_title)
+        "shields" -> stringResource(R.string.shield_label)
+        else -> stringResource(R.string.rail_settings)
+    }
+    Row(
+        Modifier.fillMaxWidth().background(c.surfaceRaised).statusBarsPadding().height(ScydeSize.hitAndroid + ScydeSpace.s8)
+            .padding(horizontal = ScydeSpace.s8),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, color = c.textPrimary, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(horizontal = ScydeSpace.s12))
+        IslandButton(stringResource(R.string.sheet_close), c, onClick = onClose) { Text("×", color = c.textPrimary, fontSize = 26.sp) }
+    }
+}
+
+/** The back/forward arrow that follows an edge swipe; full opacity means "release to go". */
+@Composable
+private fun EdgeArrow(side: Int, fraction: Float, enabled: Boolean, c: ScydeColors, modifier: Modifier) {
+    Box(
+        modifier
+            .graphicsLayer {
+                translationX = -side * fraction * ScydeSpace.s48.toPx()
+                alpha = if (enabled) fraction else fraction * 0.4f
+                scaleX = 0.6f + 0.4f * fraction
+                scaleY = 0.6f + 0.4f * fraction
+            }
+            .size(ScydeSize.hitAndroid)
+            .shadow(ScydeSpace.s8, CircleShape)
+            .background(c.islandBg, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { Text(if (side < 0) "‹" else "›", color = c.islandText, fontSize = 26.sp) }
 }
 
 @Composable
@@ -150,6 +232,8 @@ private fun Island(browser: Browser, c: ScydeColors, accent: ScydeAccent, onTabs
     val focus = remember { FocusRequester() }
     val haptic = LocalHapticFeedback.current
     val shape = RoundedCornerShape(ScydeRadius.island)
+    val drag = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
 
     Row(
         modifier
@@ -160,25 +244,44 @@ private fun Island(browser: Browser, c: ScydeColors, accent: ScydeAccent, onTabs
             .background(c.islandBg, shape)
             .border(ScydeSpace.s2 / 2, c.islandBorder, shape)
             .padding(horizontal = ScydeSpace.s8)
-            .pointerInput(browser.tabs.size) {
-                var dx = 0f
-                var dy = 0f
-                detectDragGestures(
-                    onDragStart = { dx = 0f; dy = 0f },
-                    onDrag = { _, d -> dx += d.x; dy += d.y },
-                    onDragEnd = {
-                        if (editing) return@detectDragGestures
-                        if (dy < -ScydeSpace.s40.toPx()) onTabs()
-                        else if (kotlin.math.abs(dx) > ScydeSpace.s48.toPx()) {
-                            val i = browser.tabs.indexOfFirst { it.id == browser.activeId }
-                            if (i >= 0 && browser.tabs.size > 1) {
-                                val j = (i + (if (dx < 0) 1 else -1) + browser.tabs.size) % browser.tabs.size
-                                browser.activeId = browser.tabs[j].id
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
+            .graphicsLayer { translationX = drag.value }
+            // Watches in the Initial pass, before the buttons: a drag that starts on a button (most of
+            // the island) still switches tabs, and once it is a drag the buttons do not get a click.
+            .pointerInput(Unit) {
+                val slop = viewConfiguration.touchSlop
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    var dx = 0f
+                    var dy = 0f
+                    var dragging = false
+                    while (true) {
+                        val ev = awaitPointerEvent(PointerEventPass.Initial)
+                        val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!ch.pressed) break
+                        val d = ch.position - ch.previousPosition
+                        dx += d.x
+                        dy += d.y
+                        if (!dragging && !editing && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) dragging = true
+                        if (dragging) {
+                            ch.consume()
+                            if (kotlin.math.abs(dx) > kotlin.math.abs(dy)) scope.launch { drag.snapTo(dx * 0.35f) }
                         }
-                    },
-                )
+                    }
+                    scope.launch { drag.animateTo(0f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium)) }
+                    if (!dragging) return@awaitEachGesture
+                    if (dy < -ScydeSpace.s40.toPx() && kotlin.math.abs(dy) > kotlin.math.abs(dx)) onTabs()
+                    else if (kotlin.math.abs(dx) > ScydeSpace.s48.toPx()) {
+                        // Like Safari: left → next tab (a new one after the last), right → previous.
+                        val i = browser.tabs.indexOfFirst { it.id == browser.activeId }
+                        val j = i + if (dx < 0) 1 else -1
+                        when {
+                            i < 0 -> Unit
+                            j >= browser.tabs.size -> browser.newTab()
+                            j >= 0 -> browser.activeId = browser.tabs[j].id
+                        }
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                }
             },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s4),

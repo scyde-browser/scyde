@@ -124,9 +124,10 @@ jobs:
         run: |
           ./gradlew --no-daemon assembleRelease
           mkdir -p ../apk
+          V=$(sed -nE 's/.*versionName = "(.*)".*/\1/p' app/build.gradle.kts)
           for f in app/build/outputs/apk/release/*.apk; do
             abi=$(basename "$f" | sed -E 's/app-(.*)-release\.apk/\1/')
-            cp "$f" "../apk/scyde-0.2.0-$abi.apk"
+            cp "$f" "../apk/scyde-$V-$abi.apk"
           done
           ls -la ../apk
           echo "signing: $SIGNING"
@@ -146,7 +147,7 @@ jobs:
           disable-animations: true
           script: |
             mkdir -p shots
-            adb install -r apk/scyde-0.2.0-x86_64.apk
+            adb install -r apk/scyde-*-x86_64.apk
             adb shell am start -n dev.scyde.browser/.MainActivity
             sleep 25
             adb exec-out screencap -p > shots/newtab.png
@@ -155,6 +156,7 @@ jobs:
             sleep 25
             adb exec-out screencap -p > shots/qa-adblock.png
             adb shell pidof dev.scyde.browser || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; echo "::error::SCYDE crashed on the qa page"; exit 1; }
+            bash android/ci/smoke-gestures.sh || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; exit 1; }
             adb logcat -d | grep -E "SCYDE|GeckoView" | tail -80 > shots/logcat.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
