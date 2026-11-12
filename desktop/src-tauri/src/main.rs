@@ -74,6 +74,9 @@ pub struct AppState {
     pub settings: Mutex<settings::Settings>,
     pub settings_path: PathBuf,
     pub extensions: Option<PathBuf>,
+    /// The Shield extension must be (re)installed into the WebView2 profile on this start: first
+    /// run, or a new app or filter version. Otherwise the profile already has it.
+    pub install_extension: bool,
     pub filters_version: String,
     /// The island is hidden while the page scrolls down (DESIGN v2.1 "Hide").
     pub island_hidden: Mutex<bool>,
@@ -85,9 +88,13 @@ static SMOKE: OnceLock<Option<PathBuf>> = OnceLock::new();
 
 /// Every webview must share the same environment options (ADR-0003, ADR-0007).
 fn env_opts(b: WebviewBuilder<tauri::Wry>, state: &AppState) -> WebviewBuilder<tauri::Wry> {
-    match &state.extensions {
-        Some(dir) => b.browser_extensions_enabled(true).extensions_path(dir),
-        None => b,
+    // Tabs only enable extensions. The extension itself is installed once, by the island window
+    // (build_window): installing it again with every tab reloads its rulesets, and pages that load
+    // meanwhile are not blocked (seen in CI: qa/adblock 3/11).
+    if state.extensions.is_some() {
+        b.browser_extensions_enabled(true)
+    } else {
+        b
     }
 }
 
@@ -718,7 +725,10 @@ fn build_window(app: &AppHandle) -> tauri::Result<()> {
     // Same WebView2 environment options as every tab (ADR-0003, ADR-0007).
     let state = app.state::<AppState>();
     let island = match &state.extensions {
-        Some(dir) => island.browser_extensions_enabled(true).extensions_path(dir),
+        Some(dir) if state.install_extension => {
+            island.browser_extensions_enabled(true).extensions_path(dir)
+        }
+        Some(_) => island.browser_extensions_enabled(true),
         None => island,
     };
     #[cfg(windows)]
@@ -796,12 +806,19 @@ fn main() {
                     })
                     .unwrap_or_default();
             let settings_path = data.join("settings.json");
+            // WebView2 keeps an installed extension in the profile, so it is installed only when
+            // the app or the filters changed since the last start.
+            let marker = data.join("shield-extension.version");
+            let stamp = format!("{}+{filters_version}", env!("CARGO_PKG_VERSION"));
+            let install_extension = extensions.is_some()
+                && std::fs::read_to_string(&marker).ok().as_deref() != Some(stamp.as_str());
             app.manage(AppState {
                 tabs: Mutex::new(Tabs::default()),
                 places: Mutex::new(places::Places::open(&data.join("places.sqlite")).ok()),
                 settings: Mutex::new(load_settings(&settings_path)),
                 settings_path,
                 extensions,
+                install_extension,
                 filters_version,
                 island_hidden: Mutex::new(false),
                 scroll: Mutex::new(None),
@@ -810,6 +827,12 @@ fn main() {
             build_window(&handle)?;
             let urls = open_urls.clone();
             std::thread::spawn(move || {
+                // After an install, give WebView2 a moment to load the rulesets before the first
+                // page, then remember the installed version.
+                if install_extension {
+                    std::thread::sleep(std::time::Duration::from_millis(3000));
+                    let _ = std::fs::write(&marker, &stamp);
+                }
                 if urls.is_empty() {
                     // First run: the welcome page (theme, search engine, Shield) instead of New Tab.
                     let first_run = SMOKE.get().is_none_or(Option::is_none)
@@ -868,6 +891,7 @@ fn smoke(app: &AppHandle, out: &PathBuf) {
         "main": main,
         "elapsed_ms": started.elapsed().as_millis(),
         "shield_extension": state.extensions.is_some(),
+        "shield_installed_now": state.install_extension,
         "filters": state.filters_version,
         "tabs": tabs,
     });
