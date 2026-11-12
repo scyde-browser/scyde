@@ -171,8 +171,16 @@ Branch: the session's designated branch (agent sessions may only push there), on
   - Android: blocked counts are per host, not per tab (a second tab or Peek on the same host resets them)
   - Android: "Shield off" does not lift Gecko's own tracking protection for the site
   - Android: the end of a page can sit under the island (GeckoView dynamic toolbar API not wired yet)
-- [ ] `[OWNER]` CI screenshots cannot be reviewed from the agent session (artifact downloads are blocked). A workflow step that pushes them to a `ci-shots-*` branch needs `contents: write` in CI and was not added without the owner's approval. Until then the native design is checked only by reading the code.
-- [ ] v0.6.0:
+- [x] CI screenshots: the owner approved (2026-11-12) publishing them to `ci-shots-ios`, `ci-shots-android` and `ci-shots-windows` (`tools/ci/push-shots.sh`, `contents: write` on those jobs, pull requests only). Review them with `git fetch origin ci-shots-<platform>`.
+- [x] **v0.6.0, fixes found on the real screens:**
+  - Android: every bridge call failed (GeckoView rejects a `JSONObject` reply), so New Tab, Settings, History and Shield were empty. Replies are now JSON text.
+  - Android: generic class/id cosmetics were lost because `engine.dat` was written on a 64-bit host and read in wasm32. It is now written by the wasm engine (`ShieldEngine.toDat`), with a guard in `build.mjs`.
+  - Android: New Tab was `about:blank` on a slow first start.
+  - Windows: the Shield extension was re-installed with every tab (pages loading meanwhile were unblocked). It is installed once (marker file); CI starts the app twice and requires `qa/adblock` 11/11 both times.
+  - iOS: New Tab waited for the rule lists to compile (blank on first launch).
+  - Tab grid: page thumbnails on iOS and Android. New Tab hides Shield numbers the platform cannot measure.
+- Known: `qa/adblock` on iOS scores 10/11 (`net:subframe`): adblock-rust's content-blocking conversion never blocks first-party documents, and the fixture's iframe is first-party. Third-party ad frames are blocked.
+- [ ] v0.7.0:
   - Windows: island v2 (control center, command omnibox), Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
   - Zen mode (annoyance lists, `[OWNER]` licences)
 - Known: the Windows smoke test once scored `qa/adblock` 10/11 (`allow:exception`) and 11/11 on rerun. On first launch the DNR rulesets do not all load at the same moment, so for a few hundred ms a block rule can win over its exception.
