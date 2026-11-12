@@ -22,10 +22,15 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use tauri::webview::PageLoadEvent;
 use tauri::window::WindowBuilder;
-use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Url, Webview, WebviewBuilder, WebviewUrl, Window, WindowEvent};
+use tauri::{
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize, Url, Webview, WebviewBuilder, WebviewUrl,
+    WebviewWindowBuilder, Window, WindowEvent,
+};
 
 /// Island band height: island 60 + 22 inset below + 22 above (DESIGN §4).
 pub const CHROME_H: f64 = 104.0;
+/// The island window's width: `size.island-width-expanded` (760) plus room for its shadow.
+const ISLAND_W: f64 = 784.0;
 const START_W: f64 = 1280.0;
 const START_H: f64 = 820.0;
 pub const NEWTAB: &str = "http://scyde.localhost/newtab/";
@@ -152,22 +157,35 @@ pub fn emit_state(app: &AppHandle) {
 fn content_bounds(window: &Window) -> (LogicalPosition<f64>, LogicalSize<f64>) {
     let scale = window.scale_factor().unwrap_or(1.0);
     let size = window.inner_size().map(|s| s.to_logical::<f64>(scale)).unwrap_or(LogicalSize::new(START_W, START_H));
-    (LogicalPosition::new(0.0, 0.0), LogicalSize::new(size.width, (size.height - CHROME_H).max(0.0)))
+    // The page fills the whole window; the island floats over it in its own window (ADR-0014).
+    (LogicalPosition::new(0.0, 0.0), size)
 }
 
 pub fn relayout(app: &AppHandle) {
     let Some(window) = app.get_window("main") else { return };
-    let scale = window.scale_factor().unwrap_or(1.0);
-    let Ok(size) = window.inner_size().map(|s| s.to_logical::<f64>(scale)) else { return };
     let (pos, content) = content_bounds(&window);
     let state = app.state::<AppState>();
     for t in &lock(&state.tabs).list {
         let _ = t.webview.set_position(pos);
         let _ = t.webview.set_size(content);
     }
-    if let Some(chrome) = app.get_webview("chrome") {
-        let _ = chrome.set_position(LogicalPosition::new(0.0, (size.height - CHROME_H).max(0.0)));
-        let _ = chrome.set_size(LogicalSize::new(size.width, CHROME_H));
+    place_island(app);
+}
+
+/// Keeps the island window centred over the bottom of the main window's client area (screen
+/// coordinates, physical pixels). Its own window is transparent, so the page shows around it.
+fn place_island(app: &AppHandle) {
+    let (Some(main), Some(island)) = (app.get_window("main"), app.get_webview_window("chrome")) else { return };
+    let scale = main.scale_factor().unwrap_or(1.0);
+    let (Ok(pos), Ok(size)) = (main.inner_position(), main.inner_size()) else { return };
+    let w = (ISLAND_W * scale).min(f64::from(size.width));
+    let h = (CHROME_H * scale).min(f64::from(size.height));
+    let x = f64::from(pos.x) + (f64::from(size.width) - w) / 2.0;
+    let y = f64::from(pos.y) + f64::from(size.height) - h;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    {
+        let _ = island.set_size(PhysicalSize::new(w.round() as u32, h.round() as u32));
+        let _ = island.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32));
     }
 }
 
@@ -459,14 +477,32 @@ fn build_window(app: &AppHandle) -> tauri::Result<()> {
         .inner_size(START_W, START_H)
         .min_inner_size(560.0, 420.0)
         .build()?;
+    // The island floats over the page (ADR-0014): a transparent, borderless window owned by the
+    // main window, so it stays above it, hides with it when minimized and closes with it.
+    let island = WebviewWindowBuilder::new(app, "chrome", WebviewUrl::App("index.html".into()))
+        .title("SCYDE island")
+        .transparent(true)
+        .decorations(false)
+        .shadow(false)
+        .resizable(false)
+        .skip_taskbar(true)
+        .focused(false)
+        .inner_size(ISLAND_W.min(START_W), CHROME_H);
+    // Same WebView2 environment options as every tab (ADR-0003, ADR-0007).
     let state = app.state::<AppState>();
-    let chrome = env_opts(WebviewBuilder::new("chrome", WebviewUrl::App("index.html".into())), &state);
-    window.add_child(chrome, LogicalPosition::new(0.0, START_H - CHROME_H), LogicalSize::new(START_W, CHROME_H))?;
+    let island = match &state.extensions {
+        Some(dir) => island.browser_extensions_enabled(true).extensions_path(dir),
+        None => island,
+    };
+    #[cfg(windows)]
+    let island = island.owner_raw(window.hwnd()?);
+    island.build()?;
+    place_island(app);
     let app_ev = app.clone();
-    window.on_window_event(move |e| {
-        if matches!(e, WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }) {
-            relayout(&app_ev);
-        }
+    window.on_window_event(move |e| match e {
+        WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => relayout(&app_ev),
+        WindowEvent::Moved(_) => place_island(&app_ev),
+        _ => {}
     });
     #[cfg(windows)]
     if let Some(c) = app.get_webview("chrome") {

@@ -152,7 +152,7 @@
 </div>
 
 <style>
-  :global(html), :global(body) { height: 100%; overflow: hidden; background: var(--surface-canvas); }
+  :global(html), :global(body) { height: 100%; overflow: hidden; background: transparent; }
   .band { height: 100dvh; display: grid; place-items: center; }
   .island {
     width: min(calc(100% - var(--space-24)), var(--size-island-width)); height: var(--size-island-height);
