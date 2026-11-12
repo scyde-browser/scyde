@@ -25,6 +25,9 @@ SCYDE uses the platform's engine, and the engine vendor may make its own backgro
 
 These are listed in `docs/NETWORK.md` and are turned off where the engine allows it.
 
+## Location, camera and microphone
+SCYDE asks for these only when a website you are on wants them, and only after you allow that site in SCYDE's own prompt (on iOS, WebKit's prompt). The system then asks once for the app as a whole. SCYDE itself never reads your location, camera or microphone. Downloads are saved from the page's own response into Downloads (Android) or the Files app under SCYDE (iOS); no second request is made.
+
 ## What we never do
 - no analytics, telemetry or third-party SDKs
 - no ads, sponsored tiles or affiliate links

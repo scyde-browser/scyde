@@ -31,14 +31,19 @@ targets:
       path: Sources/Info.plist
       properties:
         CFBundleDisplayName: SCYDE
-        CFBundleShortVersionString: "0.6.0"
-        CFBundleVersion: "7"
+        CFBundleShortVersionString: "0.7.0"
+        CFBundleVersion: "8"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         ITSAppUsesNonExemptEncryption: false
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        # Asked only when a site the user allowed wants them (PRIVACY.md); without these keys a
+        # page asking for the camera would end the app.
+        NSCameraUsageDescription: "Websites you allow can use the camera, for example for video calls."
+        NSMicrophoneUsageDescription: "Websites you allow can use the microphone, for example for video calls."
+        NSLocationWhenInUseUsageDescription: "Websites you allow can see your location, for example for maps."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
     settings:

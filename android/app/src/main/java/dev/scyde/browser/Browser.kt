@@ -4,7 +4,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.ActivityNotFoundException
+import android.content.ContentValues
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Base64
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -15,6 +21,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import dev.scyde.browser.theme.ScydeMotion
 import dev.scyde.browser.theme.ScydeSpace
 import org.json.JSONArray
@@ -28,6 +35,8 @@ import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSession.PromptDelegate
 import org.mozilla.geckoview.GeckoSessionSettings
 import org.mozilla.geckoview.WebExtension
+import org.mozilla.geckoview.WebRequestError
+import org.mozilla.geckoview.WebResponse
 import uniffi.scyde_core.OmniboxInput
 import uniffi.scyde_core.PlacesStore
 import uniffi.scyde_core.SettingsStore
@@ -79,6 +88,8 @@ class Tab(firstSession: GeckoSession, val isPrivate: Boolean, firstSpace: String
     var immersive by mutableStateOf(false)
     var bookmarked by mutableStateOf(false)
     var desktop by mutableStateOf(false)
+    /** A video (or any element) the page put in full screen: island and system bars go away. */
+    var fullscreen by mutableStateOf(false)
     var typed = false
     private var lastY = 0
 
@@ -145,6 +156,18 @@ class Browser(appContext: Context) {
     /** Peek: a long-pressed link shown in a preview session. */
     var peekUrl by mutableStateOf<String?>(null)
     var peekSession by mutableStateOf<GeckoSession?>(null)
+    /** What the page asks right now (alert, confirm, select, sign-in, permission…), shown by PromptHost. */
+    var prompt: PagePrompt? by mutableStateOf(null)
+        set(v) {
+            // A new question while one is open: the open one is answered as cancelled.
+            val old = field
+            field = v
+            if (old != null && old !== v) old.cancel()
+        }
+    /** Set by the Activity: the system file picker (mime types, multiple) → chosen files. */
+    var pickFiles: ((Array<String>, Boolean, (List<Uri>) -> Unit) -> Unit)? = null
+    /** Set by the Activity: Android runtime permissions → granted. */
+    var requestAndroidPermissions: ((Array<String>, (Boolean) -> Unit) -> Unit)? = null
     /** Find in page: "current of total", null while nothing was searched. */
     var findResult by mutableStateOf<Pair<Int, Int>?>(null)
 
@@ -218,6 +241,8 @@ class Browser(appContext: Context) {
     }
 
     private fun str(id: Int, vararg args: Any): String = context.getString(id, *args)
+    fun string(id: Int, vararg args: Any): String = context.getString(id, *args)
+    val appContext: Context get() = context
 
     // ------------------------------------------------------------------ tabs
 
@@ -516,6 +541,11 @@ class Browser(appContext: Context) {
     val needsOnboarding: Boolean get() = settings.get("onboarding.completed") != "true"
 
     fun closeSheet() {
+        // Closing the welcome sheet any way (×, back, Skip) finishes onboarding.
+        if (sheetPage == "welcome" && needsOnboarding) {
+            runCatching { settings.set("onboarding.completed", "true") }
+            runCatching { settingsFile.writeText(settings.toJson()) }
+        }
         sheetSession?.close()
         sheetSession = null
         sheetPage = null
@@ -603,6 +633,107 @@ class Browser(appContext: Context) {
 
     private val hideToast = Runnable { toast = null }
 
+    // ------------------------------------------------- downloads, external apps, errors
+
+    private fun isExternal(uri: String): Boolean {
+        val scheme = uri.substringBefore(':', "").lowercase()
+        return scheme.isNotEmpty() && scheme !in INTERNAL_SCHEMES
+    }
+
+    private fun openExternal(uri: String, session: GeckoSession) {
+        val intent = runCatching {
+            if (uri.startsWith("intent:", ignoreCase = true)) {
+                // A page must not reach a private component: only what any browser link may open.
+                Intent.parseUri(uri, Intent.URI_INTENT_SCHEME).apply {
+                    addCategory(Intent.CATEGORY_BROWSABLE)
+                    component = null
+                    selector = null
+                }
+            } else {
+                Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addCategory(Intent.CATEGORY_BROWSABLE)
+            }
+        }.getOrNull() ?: return
+        try {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: ActivityNotFoundException) {
+            val fallback = intent.getStringExtra("browser_fallback_url")
+            if (fallback != null && (fallback.startsWith("https://") || fallback.startsWith("http://"))) session.loadUri(fallback) else show(str(R.string.external_none))
+        } catch (e: SecurityException) {
+            Log.w(TAG, "external app refused", e)
+            show(str(R.string.external_none))
+        }
+    }
+
+    private fun fileName(response: WebResponse): String {
+        val disposition = response.headers.entries.firstOrNull { it.key.equals("content-disposition", true) }?.value
+        val fromHeader = disposition?.let {
+            Regex("filename\\*=(?:UTF-8'')?([^;]+)", RegexOption.IGNORE_CASE).find(it)?.groupValues?.get(1)?.let { v -> Uri.decode(v.trim('"', ' ')) }
+                ?: Regex("filename=\"?([^\";]+)", RegexOption.IGNORE_CASE).find(it)?.groupValues?.get(1)
+        }
+        val raw = fromHeader ?: Uri.parse(response.uri).lastPathSegment ?: "download"
+        // No path parts or control characters in a name the page chose.
+        return raw.substringAfterLast('/').substringAfterLast('\\').filter { it >= ' ' }.trim().ifEmpty { "download" }.take(120)
+    }
+
+    private fun download(response: WebResponse, isPrivate: Boolean) {
+        val body = response.body ?: return show(str(R.string.download_failed))
+        val name = fileName(response)
+        val mime = response.headers.entries.firstOrNull { it.key.equals("content-type", true) }?.value?.substringBefore(';')?.trim()
+            ?: "application/octet-stream"
+        show(str(R.string.download_started, name))
+        Thread {
+            val ok = runCatching {
+                body.use { input ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val resolver = context.contentResolver
+                        val values = ContentValues().apply {
+                            put(MediaStore.Downloads.DISPLAY_NAME, name)
+                            put(MediaStore.Downloads.MIME_TYPE, mime)
+                            put(MediaStore.Downloads.IS_PENDING, 1)
+                        }
+                        val item = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("no entry")
+                        try {
+                            resolver.openOutputStream(item)!!.use { input.copyTo(it) }
+                            resolver.update(item, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
+                        } catch (e: Exception) {
+                            resolver.delete(item, null, null)
+                            throw e
+                        }
+                    } else {
+                        // Android 8–9: the app's own Downloads folder (no storage permission needed).
+                        val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: error("no storage")
+                        File(dir, name).outputStream().use { input.copyTo(it) }
+                    }
+                }
+            }.onFailure { Log.w(TAG, "download", it) }.isSuccess
+            // isPrivate: nothing is recorded about the download beyond the file itself.
+            main.post { show(str(if (ok) R.string.download_done else R.string.download_failed, name)) }
+        }.start()
+    }
+
+    private fun hex(c: androidx.compose.ui.graphics.Color): String = "#%06X".format(c.toArgb() and 0xFFFFFF)
+
+    /** The error page, built from the Aura tokens for both themes (data: URI, no network). */
+    private fun errorPage(uri: String): String {
+        val host = Uri.parse(uri).host ?: uri
+        fun esc(v: String) = v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+        val l = dev.scyde.browser.theme.ScydeColorsLight
+        val d = dev.scyde.browser.theme.ScydeColorsDark
+        val space = ScydeSpace
+        val html = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>${esc(str(R.string.loaderror_title))}</title><style>
+:root{--bg:${hex(l.surfaceCanvas)};--fg:${hex(l.textPrimary)};--muted:${hex(l.textSecondary)};--btn:${hex(l.textPrimary)};--on:${hex(l.surfaceCanvas)}}
+@media (prefers-color-scheme:dark){:root{--bg:${hex(d.surfaceCanvas)};--fg:${hex(d.textPrimary)};--muted:${hex(d.textSecondary)};--btn:${hex(d.textPrimary)};--on:${hex(d.surfaceCanvas)}}}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif}
+main{box-sizing:border-box;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:${space.s24.value.toInt()}px;max-width:${space.s80.value.toInt() * 6}px;margin:0 auto}
+h1{font-size:${dev.scyde.browser.theme.ScydeType.titleSize.value.toInt()}px;margin:0 0 ${space.s8.value.toInt()}px}
+p{color:var(--muted);font-size:${dev.scyde.browser.theme.ScydeType.bodySize.value.toInt()}px;line-height:1.45;margin:0 0 ${space.s24.value.toInt()}px}
+button{align-self:flex-start;min-height:${space.s48.value.toInt()}px;padding:0 ${space.s24.value.toInt()}px;border:0;border-radius:${dev.scyde.browser.theme.ScydeRadius.full.value.toInt()}px;background:var(--btn);color:var(--on);font:inherit;font-weight:500}
+</style></head><body><main><h1>${esc(str(R.string.loaderror_title))}</h1><p>${esc(str(R.string.loaderror_body, host))}</p>
+<button onclick="location.reload()">${esc(str(R.string.loaderror_retry))}</button></main></body></html>"""
+        return "data:text/html;charset=utf-8;base64," + Base64.encodeToString(html.toByteArray(), Base64.NO_WRAP)
+    }
+
     fun openPeek(url: String, isPrivate: Boolean) {
         closePeek()
         val s = newSession(isPrivate)
@@ -662,6 +793,11 @@ class Browser(appContext: Context) {
 
             /** De-AMP: a Google AMP viewer URL loads the publisher's page, so the island shows the real domain. */
             override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<AllowOrDeny>? {
+                if (isExternal(request.uri)) {
+                    // tel:, mailto:, intent:, market:… go to the app that handles them, and only after a tap.
+                    if (request.hasUserGesture) main.post { openExternal(request.uri, session) }
+                    return GeckoResult.fromValue(AllowOrDeny.DENY)
+                }
                 val target = omniboxDeamp(request.uri) ?: return null
                 main.post { session.loadUri(target) }
                 return GeckoResult.fromValue(AllowOrDeny.DENY)
@@ -669,6 +805,12 @@ class Browser(appContext: Context) {
 
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
                 tab.canGoBack = canGoBack
+            }
+
+            /** A page that did not open: our own error page instead of a blank one (never a TLS bypass). */
+            override fun onLoadError(session: GeckoSession, uri: String?, error: WebRequestError): GeckoResult<String>? {
+                if (uri == null || !(uri.startsWith("https://") || uri.startsWith("http://"))) return null
+                return GeckoResult.fromValue(errorPage(uri))
             }
 
             override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
@@ -717,6 +859,15 @@ class Browser(appContext: Context) {
                 close(tab)
             }
 
+            override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
+                tab.fullscreen = fullScreen
+            }
+
+            /** A response the engine does not show (a file): saved to Downloads from the same response. */
+            override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
+                download(response, tab.isPrivate)
+            }
+
             /** Long-press on a link: Peek (preview and actions). */
             override fun onContextMenu(session: GeckoSession, screenX: Int, screenY: Int, element: GeckoSession.ContentDelegate.ContextElement) {
                 val link = element.linkUri ?: return
@@ -729,13 +880,9 @@ class Browser(appContext: Context) {
                 tab.scrolled(scrollY, ScydeSpace.s12.value.toInt(), ScydeSpace.s64.value.toInt())
             }
         }
-        // Gecko blocks window.open without a gesture and asks here: always deny and count (PLAN §5.5).
-        s.promptDelegate = object : PromptDelegate {
-            override fun onPopupPrompt(session: GeckoSession, prompt: PromptDelegate.PopupPrompt): GeckoResult<PromptDelegate.PromptResponse> {
-                popupsBlocked++
-                return GeckoResult.fromValue(prompt.confirm(AllowOrDeny.DENY))
-            }
-        }
+        val prompts = PagePrompts(this) { popupsBlocked++ }
+        s.promptDelegate = prompts
+        s.permissionDelegate = prompts
     }
 
     // -------------------------------------------------------------- settings
@@ -900,6 +1047,8 @@ class Browser(appContext: Context) {
         const val EXT_ID = "shield@scyde.dev"
         const val EXT_URI = "resource://android/assets/extension/"
         const val NATIVE_APP = "scyde"
+        /** Schemes the engine loads itself; any other link goes to the app that handles it. */
+        private val INTERNAL_SCHEMES = setOf("http", "https", "about", "data", "blob", "file", "javascript", "moz-extension", "resource", "chrome", "view-source")
         val METHODS = setOf(
             "newtab.state", "navigate", "settings.schema", "settings.get", "settings.set", "settings.reset",
             "history.query", "history.delete", "history.clear", "bookmarks.children", "bookmarks.remove",
