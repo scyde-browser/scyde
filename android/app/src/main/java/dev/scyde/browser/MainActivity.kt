@@ -62,6 +62,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -123,6 +124,8 @@ import uniffi.scyde_core.themeIslandTint
 
 class MainActivity : ComponentActivity() {
     private lateinit var browser: Browser
+    /** `--es panel menu|shield|omnibox|tabs` opens that surface (CI screenshots). */
+    private val initialPanel = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge() // mandatory for targetSdk 35+ (CLAUDE.md)
@@ -142,7 +145,8 @@ class MainActivity : ComponentActivity() {
             page != null -> browser.openPage(page)
             start == null && browser.needsOnboarding && intent?.getBooleanExtra("skipWelcome", false) != true -> browser.openPage("welcome")
         }
-        setContent { ScydeApp(browser) }
+        initialPanel.value = intent?.getStringExtra("panel")
+        setContent { ScydeApp(browser, initialPanel) }
     }
 
     override fun onPause() {
@@ -158,6 +162,7 @@ class MainActivity : ComponentActivity() {
             browser.newTab(it)
         }
         intent.getStringExtra("page")?.let { browser.openPage(it) }
+        intent.getStringExtra("panel")?.let { initialPanel.value = it }
     }
 }
 
@@ -176,7 +181,7 @@ private fun accentFor(name: String?, dark: Boolean): ScydeAccent = when (name) {
 private fun <T> smooth() = spring<T>(dampingRatio = ScydeMotion.springSmooth.dampingRatio, stiffness = ScydeMotion.springSmooth.stiffness)
 
 @Composable
-fun ScydeApp(browser: Browser) {
+fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStateOf(null)) {
     val system = isSystemInDarkTheme()
     val dark = when (browser.appearance["theme"]) { "dark" -> true; "light" -> false; else -> system }
     val c = if (dark) ScydeColorsDark else ScydeColorsLight
@@ -201,6 +206,17 @@ fun ScydeApp(browser: Browser) {
         bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         bars.isAppearanceLightStatusBars = topColor.luminance() > 0.5f
         if (immersive) bars.hide(WindowInsetsCompat.Type.systemBars()) else bars.show(WindowInsetsCompat.Type.systemBars())
+    }
+
+    LaunchedEffect(initialPanel.value) {
+        when (initialPanel.value) {
+            "menu" -> panel = Panel.MENU
+            "shield" -> panel = Panel.SHIELD
+            "omnibox" -> panel = Panel.OMNIBOX
+            "tabs" -> showTabs = true
+            else -> return@LaunchedEffect
+        }
+        initialPanel.value = null
     }
 
     fun closePanel() {

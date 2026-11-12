@@ -120,6 +120,18 @@ struct RootView: View {
             .animation(ScydeMotion.springSmooth.animation, value: browser.toast)
             .animation(ScydeMotion.springSmooth.animation, value: browser.active?.immersive)
         }
+        .onAppear {
+            // `-panel menu|shield|omnibox|tabs` opens that surface at launch (CI screenshots).
+            let args = CommandLine.arguments
+            guard let i = args.firstIndex(of: "-panel"), i + 1 < args.count else { return }
+            switch args[i + 1] {
+            case "menu": panel = .menu
+            case "shield": panel = .shield
+            case "omnibox": panel = .omnibox
+            case "tabs": showTabs = true
+            default: break
+            }
+        }
         .statusBarHidden(browser.active?.immersive == true && panel == .none)
         .persistentSystemOverlays(browser.active?.immersive == true ? .hidden : .automatic)
         .environment(\.palette, palette)

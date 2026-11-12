@@ -50,6 +50,8 @@ jobs:
 
   app:
     # SCYDE for Android (Phase 5): GeckoView + Compose, per-ABI APKs, emulator screenshots.
+    permissions:
+      contents: write # screenshots branch (tools/ci/push-shots.sh, owner approval 2026-11-12)
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -144,6 +146,7 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
+          profile: pixel_6 # a real phone size for the design screenshots
           disable-animations: true
           script: |
             mkdir -p shots
@@ -158,6 +161,12 @@ jobs:
             adb shell pidof dev.scyde.browser || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; echo "::error::SCYDE crashed on the qa page"; exit 1; }
             bash android/ci/smoke-gestures.sh || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; exit 1; }
             adb logcat -d | grep -E "SCYDE|GeckoView" | tail -80 > shots/logcat.txt || true
+      - name: Publish screenshots to ci-shots-android (pull requests)
+        if: always() && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: tools/ci/push-shots.sh android shots
       - uses: actions/upload-artifact@v4
         if: always()
         with:

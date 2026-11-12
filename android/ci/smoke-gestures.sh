@@ -24,6 +24,26 @@ adb shell input swipe $((W * 7 / 10)) $((H * 93 / 100)) $((W * 2 / 10)) $((H * 9
 sleep 4
 adb exec-out screencap -p > shots/island-swipe.png
 
+# Every surface that grows out of the island, for design review (light, then the menu in dark).
+adb shell am start -n dev.scyde.browser/.MainActivity -a android.intent.action.VIEW -d http://10.0.2.2:8787/scroll/index.html
+sleep 8
+adb exec-out screencap -p > shots/page.png
+for surface in menu shield omnibox tabs; do
+  adb shell am start -n dev.scyde.browser/.MainActivity --es panel "$surface"
+  sleep 4
+  adb exec-out screencap -p > "shots/panel-$surface.png"
+  adb shell input keyevent KEYCODE_BACK
+  sleep 1
+done
+adb shell cmd uimode night yes
+sleep 3
+adb shell am start -n dev.scyde.browser/.MainActivity --es panel menu
+sleep 4
+adb exec-out screencap -p > shots/panel-menu-dark.png
+adb shell input keyevent KEYCODE_BACK
+adb shell cmd uimode night no
+sleep 3
+
 # Settings opens as a sheet with a close button.
 adb shell am start -n dev.scyde.browser/.MainActivity --es page settings
 sleep 8
