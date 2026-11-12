@@ -235,5 +235,6 @@
   "welcome.shield.body": "SCYDE blocks ads, trackers and popups on every site, on your device.",
   "welcome.shield.fact.ads": "Ads and trackers are blocked before they load.",
   "welcome.shield.fact.private": "No account, no telemetry: your history stays on this device.",
-  "welcome.shield.fact.site": "If a site breaks, turn Shield off for just that site from the island."
+  "welcome.shield.fact.site": "If a site breaks, turn Shield off for just that site from the island.",
+  "island.show": "Show controls"
 }

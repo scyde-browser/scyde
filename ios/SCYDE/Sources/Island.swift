@@ -9,7 +9,7 @@ enum Panel: Equatable {
 }
 
 /// The island at the bottom (DESIGN.md §8): mark (menu) · back · address · Shield pebble · tabs.
-/// Swipe left/right switches tabs, swipe up opens the tab grid; scrolling down shrinks it to the pebble.
+/// Swipe left/right switches tabs, up opens the tab grid, down hides it (full screen, like scrolling down).
 struct IslandView: View {
     @EnvironmentObject var browser: Browser
     @Environment(\.palette) private var palette
@@ -21,9 +21,15 @@ struct IslandView: View {
 
     var body: some View {
         let tab = browser.active
-        if (tab?.pebble ?? false) && panel == .none {
-            pebble(tab)
-                .transition(.scale(scale: ScydeMotion.bloomScale).combined(with: .opacity))
+        if (tab?.immersive ?? false) && panel == .none {
+            // Hidden: a strip at the bottom edge brings the island back with a tap or an upward swipe.
+            Color.clear
+                .frame(maxWidth: .infinity, minHeight: ScydeSpace.s24, maxHeight: ScydeSpace.s24)
+                .contentShape(Rectangle())
+                .onTapGesture { reveal(tab) }
+                .gesture(DragGesture(minimumDistance: ScydeSpace.s12).onEnded { g in if g.translation.height < 0 { reveal(tab) } })
+                .accessibilityLabel(String(localized: "island.show"))
+                .accessibilityAddTraits(.isButton)
         } else {
             island(tab)
                 .transition(.scale(scale: ScydeMotion.bloomScale).combined(with: .opacity))
@@ -137,6 +143,8 @@ struct IslandView: View {
                     guard !editing else { return }
                     if g.translation.height < -ScydeSpace.s40, abs(g.translation.height) > abs(g.translation.width) {
                         showTabs = true
+                    } else if g.translation.height > ScydeSpace.s40, abs(g.translation.height) > abs(g.translation.width), tab?.isWeb == true {
+                        withAnimation(ScydeMotion.springSmooth.animation) { tab?.immersive = true }
                     } else if abs(g.translation.width) > ScydeSpace.s48 {
                         browser.switchTab(by: g.translation.width < 0 ? 1 : -1)
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -185,26 +193,8 @@ struct IslandView: View {
         }
     }
 
-    // MARK: pebble (quiet while reading)
-
-    private func pebble(_ tab: Tab?) -> some View {
-        let c = palette.colors
-        return Button {
-            withAnimation(ScydeMotion.springSmooth.animation) { tab?.pebble = false }
-        } label: {
-            HStack(spacing: ScydeSpace.s8) {
-                Circle().fill(browser.shieldOn(for: tab) ? c.islandShield : c.islandTextSecondary).frame(width: ScydeSpace.s8, height: ScydeSpace.s8)
-                Text(tab?.display?.domain ?? "").font(.footnote).lineLimit(1)
-            }
-            .foregroundStyle(c.islandText)
-            .padding(.horizontal, ScydeSpace.s16)
-            .frame(height: ScydeSpace.s40)
-            .background(islandFill(tab), in: Capsule())
-            .overlay(Capsule().stroke(c.islandBorder, lineWidth: 1))
-            .shadow(color: .black.opacity(0.3), radius: ScydeSpace.s12, y: ScydeSpace.s8)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityLabel(String(localized: "island.label"))
+    private func reveal(_ tab: Tab?) {
+        withAnimation(ScydeMotion.springSmooth.animation) { tab?.immersive = false }
     }
 
     /// Aura tint: a little of the page's theme-color, only when the core says text stays AA.

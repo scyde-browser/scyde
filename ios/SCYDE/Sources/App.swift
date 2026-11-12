@@ -73,9 +73,11 @@ struct RootView: View {
         ZStack(alignment: .bottom) {
             palette.colors.surfaceCanvas.ignoresSafeArea()
             if let tab = browser.active {
+                // Edge to edge: the page runs under the status bar and the home indicator (WebKit insets
+                // its content for the safe area), so there is no band around it.
                 WebContainer(webView: tab.webView)
                     .id(tab.id)
-                    .ignoresSafeArea(.container, edges: .bottom)
+                    .ignoresSafeArea()
             }
             if panel != .none {
                 palette.colors.scrim.ignoresSafeArea()
@@ -96,8 +98,10 @@ struct RootView: View {
             .padding(.horizontal, ScydeSize.islandMobileInset)
             .padding(.bottom, ScydeSpace.s4)
             .animation(ScydeMotion.springSmooth.animation, value: browser.toast)
-            .animation(ScydeMotion.springSmooth.animation, value: browser.active?.pebble)
+            .animation(ScydeMotion.springSmooth.animation, value: browser.active?.immersive)
         }
+        .statusBarHidden(browser.active?.immersive == true && panel == .none)
+        .persistentSystemOverlays(browser.active?.immersive == true ? .hidden : .automatic)
         .environment(\.palette, palette)
         .preferredColorScheme(browser.appearance["theme"] == "system" || browser.appearance["theme"] == nil ? nil : scheme)
         .sheet(isPresented: $showTabs) { TabGrid(isPresented: $showTabs).environment(\.palette, palette) }

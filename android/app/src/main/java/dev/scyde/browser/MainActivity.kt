@@ -83,6 +83,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.luminance
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -167,6 +172,19 @@ fun ScydeApp(browser: Browser) {
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
 
+    // Full screen while reading: the system bars hide with the island and come back with a swipe.
+    val immersive = active?.immersive == true && panel == Panel.NONE && sheet == null && browser.peekUrl == null
+    val view = LocalView.current
+    val pageColor = active?.themeColor?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
+    val topColor = if (sheet == null) pageColor ?: c.surfaceCanvas else c.surfaceRaised
+    LaunchedEffect(immersive, topColor) {
+        val window = (view.context as? android.app.Activity)?.window ?: return@LaunchedEffect
+        val bars = WindowCompat.getInsetsController(window, view)
+        bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        bars.isAppearanceLightStatusBars = topColor.luminance() > 0.5f
+        if (immersive) bars.hide(WindowInsetsCompat.Type.systemBars()) else bars.show(WindowInsetsCompat.Type.systemBars())
+    }
+
     fun closePanel() {
         if (panel == Panel.FIND) browser.endFind()
         panel = Panel.NONE
@@ -183,8 +201,9 @@ fun ScydeApp(browser: Browser) {
         }
     }
 
+    // Behind the status bar: the page's own theme-color, so the page has no band around it.
     Box(Modifier.fillMaxSize().background(c.surfaceCanvas)) {
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().background(topColor)) {
             if (sheet != null) SheetBar(sheet, c, onClose = { browser.closeSheet() })
             AndroidView(
                 modifier = Modifier.fillMaxWidth().weight(1f).then(if (sheet == null) Modifier.statusBarsPadding() else Modifier),
@@ -255,7 +274,7 @@ fun ScydeApp(browser: Browser) {
                 }
                 when {
                     panel == Panel.FIND -> FindBar(browser, c, accent, close = { closePanel() })
-                    active?.pebble == true && panel == Panel.NONE -> Pebble(browser, c, dark)
+                    immersive -> RevealStrip(onReveal = { active?.immersive = false })
                     else -> Island(browser, c, accent, dark, panel, setPanel = { panel = it }, onTabs = { showTabs = true })
                 }
             }
@@ -329,6 +348,8 @@ private fun Island(
                     if (!dragging) return@awaitEachGesture
                     if (dy < -ScydeSpace.s40.toPx() && kotlin.math.abs(dy) > kotlin.math.abs(dx)) {
                         onTabs()
+                    } else if (dy > ScydeSpace.s40.toPx() && kotlin.math.abs(dy) > kotlin.math.abs(dx) && tab?.isWeb == true) {
+                        tab.immersive = true // swipe down: full screen
                     } else if (kotlin.math.abs(dx) > ScydeSpace.s48.toPx()) {
                         browser.switchTab(if (dx < 0) 1 else -1)
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -463,23 +484,28 @@ private object OmniboxQuery {
     var text by mutableStateOf("")
 }
 
-/** Quiet while reading: the island shrinks to the Shield light and the domain. */
+/** While the island is hidden: a strip at the bottom edge that brings it back (tap or swipe up). */
 @Composable
-private fun Pebble(browser: Browser, c: ScydeColors, dark: Boolean) {
-    val tab = browser.active
-    Row(
-        Modifier.height(ScydeSpace.s40)
-            .shadow(ScydeSpace.s8, CircleShape)
-            .background(islandFill(tab, c, dark), CircleShape)
-            .border(ScydeSpace.s2 / 2, c.islandBorder, CircleShape)
-            .clickable { tab?.pebble = false }
-            .padding(horizontal = ScydeSpace.s16),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s8),
-    ) {
-        Box(Modifier.size(ScydeSpace.s8).background(if (browser.shieldOn(tab)) c.islandShield else c.islandTextSecondary, CircleShape))
-        Text(tab?.site ?: "", color = c.islandText, fontSize = 13.sp, maxLines = 1)
-    }
+private fun RevealStrip(onReveal: () -> Unit) {
+    val label = stringResource(R.string.island_show)
+    Box(
+        Modifier.fillMaxWidth().height(ScydeSpace.s24)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onReveal)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var dy = 0f
+                    while (true) {
+                        val ev = awaitPointerEvent()
+                        val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!ch.pressed) break
+                        dy += (ch.position - ch.previousPosition).y
+                    }
+                    if (dy < -ScydeSpace.s12.toPx()) onReveal()
+                }
+            }
+            .semantics { contentDescription = label },
+    )
 }
 
 @Composable

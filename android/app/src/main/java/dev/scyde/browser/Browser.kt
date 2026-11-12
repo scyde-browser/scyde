@@ -49,8 +49,11 @@ class Tab(val session: GeckoSession, val isPrivate: Boolean) {
     var canGoForward by mutableStateOf(false)
     /** The page's theme-color as #RRGGBB (Aura tint, DESIGN.md §9). */
     var themeColor by mutableStateOf<String?>(null)
-    /** Scrolling down shrinks the island into the pebble; scrolling up restores it. */
-    var pebble by mutableStateOf(false)
+    /**
+     * Full screen while reading (owner, 2026-11-12): scrolling down hides the island and the system
+     * bars; scrolling up or a tap at the bottom edge brings them back.
+     */
+    var immersive by mutableStateOf(false)
     var bookmarked by mutableStateOf(false)
     var desktop by mutableStateOf(false)
     var typed = false
@@ -64,9 +67,9 @@ class Tab(val session: GeckoSession, val isPrivate: Boolean) {
     fun scrolled(y: Int, threshold: Int, top: Int) {
         val delta = y - lastY
         when {
-            y <= threshold / 2 -> pebble = false
-            delta > threshold && y > top -> pebble = true
-            delta < -threshold -> pebble = false
+            y <= threshold / 2 -> immersive = false
+            delta > threshold && y > top -> immersive = true
+            delta < -threshold -> immersive = false
             else -> return // small moves keep the reference point, so slow scrolls still count
         }
         lastY = y

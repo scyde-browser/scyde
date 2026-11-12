@@ -19,8 +19,9 @@ final class Tab: NSObject, ObservableObject, Identifiable {
     @Published var canGoForward = false
     /// The page's `theme-color` (Aura tint, DESIGN.md §9).
     @Published var themeColor: UIColor?
-    /// Scrolling down collapses the island into the pebble (DESIGN.md §6.3); scrolling up restores it.
-    @Published var pebble = false
+    /// Full screen while reading (owner, 2026-11-12): scrolling down hides the island and the status
+    /// bar; scrolling up, reaching the end of the page or a tap at the bottom edge brings them back.
+    @Published var immersive = false
     @Published var bookmarked = false
     var desktop = false
     var typed = false
@@ -48,19 +49,21 @@ final class Tab: NSObject, ObservableObject, Identifiable {
             webView.observe(\.themeColor) { [weak self] wv, _ in Task { @MainActor in self?.themeColor = wv.themeColor } },
             webView.scrollView.observe(\.contentOffset) { [weak self] sv, _ in
                 let y = sv.contentOffset.y + sv.adjustedContentInset.top
-                Task { @MainActor in self?.scrolled(to: y) }
+                let end = sv.contentSize.height + sv.adjustedContentInset.top + sv.adjustedContentInset.bottom - sv.bounds.height
+                let atEnd = sv.contentSize.height > sv.bounds.height && y >= end - ScydeSpace.s8
+                Task { @MainActor in self?.scrolled(to: y, atEnd: atEnd) }
             },
         ]
     }
 
-    private func scrolled(to y: CGFloat) {
+    private func scrolled(to y: CGFloat, atEnd: Bool) {
         let delta = y - lastOffset
-        if y <= ScydeSpace.s8 {
-            if pebble { pebble = false }
+        if y <= ScydeSpace.s8 || atEnd {
+            if immersive { immersive = false }
         } else if delta > ScydeSpace.s12 && y > ScydeSpace.s64 {
-            if !pebble { pebble = true }
+            if !immersive { immersive = true }
         } else if delta < -ScydeSpace.s12 {
-            if pebble { pebble = false }
+            if immersive { immersive = false }
         } else {
             return // small moves do not move the reference point, so slow scrolls still count
         }
