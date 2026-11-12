@@ -43,7 +43,9 @@
         window.__scydeQa = { results, passed: vals.filter(Boolean).length, total: vals.length, rate: vals.filter(Boolean).length / vals.length };
         document.getElementById('out').innerHTML = Object.entries(results).map(([k, v]) => `<tr><td>${k}</td><td class="${v ? 'ok' : 'fail'}">${v ? 'PASS' : 'FAIL'}</td></tr>`).join('') +
           `<tr><td><b>total</b></td><td><b>${window.__scydeQa.passed}/${window.__scydeQa.total}</b></td></tr>`;
-        document.title = `QA ${window.__scydeQa.passed}/${window.__scydeQa.total}`;
+        // Failed checks are named in the title, so CI logs say what broke.
+        const failed = Object.entries(results).filter(([, v]) => !v).map(([k]) => k);
+        document.title = `QA ${window.__scydeQa.passed}/${window.__scydeQa.total}` + (failed.length ? ` fail: ${failed.join(', ')}` : '');
       }, 500);
     });
   </script>
