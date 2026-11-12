@@ -157,11 +157,13 @@ class Browser(appContext: Context) {
     var peekUrl by mutableStateOf<String?>(null)
     var peekSession by mutableStateOf<GeckoSession?>(null)
     /** What the page asks right now (alert, confirm, select, sign-in, permission…), shown by PromptHost. */
-    var prompt: PagePrompt? by mutableStateOf(null)
+    private var promptState by mutableStateOf<PagePrompt?>(null)
+    var prompt: PagePrompt?
+        get() = promptState
         set(v) {
             // A new question while one is open: the open one is answered as cancelled.
-            val old = field
-            field = v
+            val old = promptState
+            promptState = v
             if (old != null && old !== v) old.cancel()
         }
     /** Set by the Activity: the system file picker (mime types, multiple) → chosen files. */
