@@ -236,5 +236,19 @@
   "welcome.shield.fact.ads": "Ads and trackers are blocked before they load.",
   "welcome.shield.fact.private": "No account, no telemetry: your history stays on this device.",
   "welcome.shield.fact.site": "If a site breaks, turn Shield off for just that site from the island.",
-  "island.show": "Show controls"
+  "island.show": "Show controls",
+  "space.label": "Space",
+  "space.default": "Personal",
+  "space.new": "New Space",
+  "space.name": "Space name",
+  "space.rename": "Rename",
+  "space.color": "Colour",
+  "space.delete": "Delete Space",
+  "space.delete.hint": "Its tabs move to {name}.",
+  "space.move": "Move to Space",
+  "space.create": "Create",
+  "tab.pin": "Pin tab",
+  "tab.unpin": "Unpin tab",
+  "tab.pinned": "Pinned",
+  "tab.sleeping.short": "Sleeping"
 }

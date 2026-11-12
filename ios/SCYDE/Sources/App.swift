@@ -5,6 +5,7 @@ import WebKit
 @main
 struct ScydeApp: App {
     @StateObject private var browser = Browser()
+    @Environment(\.scenePhase) private var phase
 
     var body: some Scene {
         WindowGroup {
@@ -16,7 +17,7 @@ struct ScydeApp: App {
                         let args = CommandLine.arguments
                         if let i = args.firstIndex(of: "-open"), i + 1 < args.count, let url = URL(string: args[i + 1]) {
                             browser.newTab(url)
-                        } else {
+                        } else if !browser.restoreSession() {
                             browser.newTab()
                         }
                         // `-page settings` opens an internal page as a sheet (CI screenshots).
@@ -29,6 +30,7 @@ struct ScydeApp: App {
                 }
                 .onOpenURL { url in browser.newTab(url) }
         }
+        .onChange(of: phase) { p in if p != .active { browser.saveSession() } }
     }
 }
 
@@ -42,13 +44,19 @@ struct Palette {
         let dark = scheme == .dark
         self.dark = dark
         colors = dark ? .dark : .light
+        accent = Palette.accent(name, dark: dark)
+    }
+}
+
+extension Palette {
+    static func accent(_ name: String?, dark: Bool) -> ScydeAccent {
         switch name {
-        case "sky": accent = dark ? ScydeAccents.skyDark : ScydeAccents.skyLight
-        case "periwinkle": accent = dark ? ScydeAccents.periwinkleDark : ScydeAccents.periwinkleLight
-        case "lavender": accent = dark ? ScydeAccents.lavenderDark : ScydeAccents.lavenderLight
-        case "mint": accent = dark ? ScydeAccents.mintDark : ScydeAccents.mintLight
-        case "onyx": accent = dark ? ScydeAccents.onyxDark : ScydeAccents.onyxLight
-        default: accent = dark ? ScydeAccents.emberDark : ScydeAccents.emberLight
+        case "sky": return dark ? ScydeAccents.skyDark : ScydeAccents.skyLight
+        case "periwinkle": return dark ? ScydeAccents.periwinkleDark : ScydeAccents.periwinkleLight
+        case "lavender": return dark ? ScydeAccents.lavenderDark : ScydeAccents.lavenderLight
+        case "mint": return dark ? ScydeAccents.mintDark : ScydeAccents.mintLight
+        case "onyx": return dark ? ScydeAccents.onyxDark : ScydeAccents.onyxLight
+        default: return dark ? ScydeAccents.emberDark : ScydeAccents.emberLight
         }
     }
 }
@@ -75,8 +83,9 @@ struct RootView: View {
             if let tab = browser.active {
                 // Edge to edge: the page runs under the status bar and the home indicator (WebKit insets
                 // its content for the safe area), so there is no band around it.
+                // Keyed by the web view, which a sleeping tab replaces.
                 WebContainer(webView: tab.webView)
-                    .id(tab.id)
+                    .id(ObjectIdentifier(tab.webView))
                     .ignoresSafeArea()
             }
             if panel != .none {

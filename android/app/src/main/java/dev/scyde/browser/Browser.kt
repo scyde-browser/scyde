@@ -39,9 +39,27 @@ import uniffi.scyde_core.omniboxSearchUrl
 import uniffi.scyde_core.settingsSchema
 import java.io.File
 
+/** A Space: a named group of tabs with its own Aura colour (PLAN Phase 6 #8, ADR-0013). */
+data class Space(val id: String, val name: String, val color: String) {
+    companion object {
+        val COLORS = listOf("ember", "sky", "mint", "lavender", "periwinkle", "onyx")
+    }
+}
+
 /** One tab: a GeckoSession and what the island shows for it. */
-class Tab(val session: GeckoSession, val isPrivate: Boolean) {
+class Tab(firstSession: GeckoSession, val isPrivate: Boolean, firstSpace: String) {
     val id: Long = nextId++
+    /** Replaced by a new, closed session while the tab sleeps (that frees its memory). */
+    var session by mutableStateOf(firstSession)
+    var spaceId by mutableStateOf(firstSpace)
+    var pinned by mutableStateOf(false)
+    /** Asleep: no page in memory; it comes back (with its history) when the tab is opened. */
+    var sleeping by mutableStateOf(false)
+    var lastActive = System.currentTimeMillis()
+    /** The latest session state (history), restored when a sleeping tab wakes. */
+    var savedState: GeckoSession.SessionState? = null
+    /** What a restored tab loads when it wakes (it has no saved state). */
+    var pendingUrl: String? = null
     var url by mutableStateOf("")
     var title by mutableStateOf("")
     var progress by mutableIntStateOf(100)
@@ -87,7 +105,20 @@ class Tab(val session: GeckoSession, val isPrivate: Boolean) {
  */
 class Browser(private val context: Context) {
     val tabs = mutableStateListOf<Tab>()
-    var activeId by mutableStateOf<Long?>(null)
+    private var activeState by mutableStateOf<Long?>(null)
+    var activeId: Long?
+        get() = activeState
+        set(v) {
+            activeState = v
+            val tab = active ?: return
+            tab.lastActive = System.currentTimeMillis()
+            wake(tab)
+            if (!tab.isPrivate) spaceId = tab.spaceId
+            saveSession()
+        }
+    /** Spaces (tab groups with their own colour); private tabs belong to none. */
+    val spaces = mutableStateListOf(Space("personal", context.getString(R.string.space_default), "ember"))
+    var spaceId by mutableStateOf("personal")
     var shieldReady by mutableStateOf(false)
     var blocked by mutableIntStateOf(0)
     var popupsBlocked by mutableIntStateOf(0)
@@ -133,8 +164,17 @@ class Browser(private val context: Context) {
             .build(),
     ).also { shared = it }
 
+    private val sessionFile = File(context.filesDir, "session.json")
+    private var restoring = false
+
     init {
         refreshAppearance()
+        main.postDelayed(object : Runnable {
+            override fun run() {
+                sleepIdleTabs()
+                main.postDelayed(this, 60_000)
+            }
+        }, 60_000)
         // Requests pass unfiltered until the engine is ready: the first loads wait for it, at most 5 s.
         main.postDelayed({ flushPending() }, 5000)
         runtime.webExtensionController.ensureBuiltIn(EXT_URI, EXT_ID).accept(
@@ -182,13 +222,13 @@ class Browser(private val context: Context) {
 
     fun newTab(url: String? = null, session: GeckoSession? = null, activate: Boolean = true, isPrivate: Boolean = false): Tab {
         val s = session ?: newSession(isPrivate)
-        val tab = Tab(s, isPrivate)
+        val tab = Tab(s, isPrivate, spaceId)
         attach(tab)
         // A session from onNewSession must stay closed: GeckoView opens it itself.
         if (session == null) s.open(runtime)
         extension?.let { s.webExtensionController.setMessageDelegate(it, messages, NATIVE_APP) }
         tabs += tab
-        if (activate) activeId = tab.id
+        if (activate) activeId = tab.id else saveSession()
         if (session == null) {
             whenReady { s.loadUri(url ?: internalUrl("newtab") ?: "about:blank") }
         }
@@ -200,23 +240,183 @@ class Browser(private val context: Context) {
         if (i < 0) return
         tab.session.close()
         tabs.removeAt(i)
-        if (activeId == tab.id) {
-            // Stay in the same mode (private or not) when a tab is left in it.
-            activeId = (tabs.lastOrNull { it.isPrivate == tab.isPrivate } ?: tabs.lastOrNull())?.id
+        if (activeState == tab.id) {
+            // Stay in the same mode and Space when a tab is left in it.
+            val same = visibleTabs(tab.isPrivate).ifEmpty { visibleTabs(false) }
+            activeState = null
+            same.maxByOrNull { it.lastActive }?.let { activeId = it.id }
         }
-        if (tabs.isEmpty()) newTab()
+        if (active == null) newTab()
+        saveSession()
     }
 
+    /** Closes the private tabs, or the unpinned tabs of the current Space. */
     fun closeAll(isPrivate: Boolean) {
-        tabs.filter { it.isPrivate == isPrivate }.forEach { it.session.close() }
-        tabs.removeAll { it.isPrivate == isPrivate }
-        if (tabs.isEmpty()) newTab() else if (active == null) activeId = tabs.last().id
+        val doomed = tabs.filter { if (isPrivate) it.isPrivate else !it.isPrivate && it.spaceId == spaceId && !it.pinned }
+        doomed.forEach { it.session.close() }
+        tabs.removeAll { it in doomed }
+        if (active == null) {
+            val left = visibleTabs(false)
+            if (left.isNotEmpty()) activeId = left.first().id else newTab()
+        }
+        saveSession()
+    }
+
+    /** What the island counts and swipes through: the active mode and, for normal tabs, the Space. */
+    fun visibleTabs(isPrivate: Boolean): List<Tab> {
+        val list = tabs.filter { it.isPrivate == isPrivate && (isPrivate || it.spaceId == spaceId) }
+        return list.filter { it.pinned } + list.filter { !it.pinned }
+    }
+
+    fun togglePin(tab: Tab) {
+        tab.pinned = !tab.pinned
+        saveSession()
+    }
+
+    // ---------------------------------------------------------------- Spaces
+
+    val currentSpace: Space get() = spaces.firstOrNull { it.id == spaceId } ?: spaces.first()
+
+    fun switchSpace(id: String) {
+        if (spaces.none { it.id == id }) return
+        spaceId = id
+        val last = tabs.filter { !it.isPrivate && it.spaceId == id }.maxByOrNull { it.lastActive }
+        if (last != null) activeId = last.id else newTab()
+    }
+
+    fun addSpace(name: String) {
+        val used = spaces.map { it.color }.toSet()
+        val color = Space.COLORS.firstOrNull { it !in used } ?: Space.COLORS[spaces.size % Space.COLORS.size]
+        val space = Space(java.util.UUID.randomUUID().toString(), name.trim().ifEmpty { str(R.string.space_new) }, color)
+        spaces += space
+        switchSpace(space.id)
+    }
+
+    fun renameSpace(id: String, name: String) {
+        val i = spaces.indexOfFirst { it.id == id }
+        if (i < 0 || name.isBlank()) return
+        spaces[i] = spaces[i].copy(name = name.trim())
+        saveSession()
+    }
+
+    fun recolorSpace(id: String, color: String) {
+        val i = spaces.indexOfFirst { it.id == id }
+        if (i < 0) return
+        spaces[i] = spaces[i].copy(color = color)
+        saveSession()
+    }
+
+    /** Deletes a Space; its tabs move to the first remaining Space. */
+    fun deleteSpace(id: String) {
+        if (spaces.size < 2) return
+        spaces.removeAll { it.id == id }
+        val target = spaces.first().id
+        tabs.filter { it.spaceId == id }.forEach { it.spaceId = target }
+        if (spaceId == id) switchSpace(target) else saveSession()
+    }
+
+    fun move(tab: Tab, space: String) {
+        tab.spaceId = space
+        if (tab.id == activeId) spaceId = space
+        saveSession()
+    }
+
+    // ----------------------------------------------------- sleeping tabs
+
+    private fun sleepIdleTabs() {
+        val minutes = settings.get("tabs.sleep_after_minutes")?.toIntOrNull() ?: 15
+        if (minutes <= 0) return
+        val limit = System.currentTimeMillis() - minutes * 60_000L
+        tabs.filter { it.id != activeId && !it.sleeping && it.lastActive < limit }.forEach { sleep(it) }
+    }
+
+    /** Frees a tab's page: keeps its history (SessionState) and swaps in a new, closed session. */
+    private fun sleep(tab: Tab) {
+        if (tab.sleeping) return
+        tab.pendingUrl = tab.url
+        tab.session.close()
+        tab.session = newSession(tab.isPrivate)
+        attach(tab)
+        tab.sleeping = true
+    }
+
+    private fun wake(tab: Tab) {
+        if (!tab.sleeping) return
+        tab.sleeping = false
+        val s = tab.session
+        if (!s.isOpen) s.open(runtime)
+        extension?.let { s.webExtensionController.setMessageDelegate(it, messages, NATIVE_APP) }
+        val state = tab.savedState
+        val url = tab.pendingUrl
+        tab.pendingUrl = null
+        whenReady {
+            if (state != null) s.restoreState(state) else if (url != null) s.loadUri(url)
+        }
+    }
+
+    // ------------------------------------------------------------ session
+
+    /** Saves the open (non-private) tabs and Spaces; private tabs are never written anywhere. */
+    fun saveSession() {
+        if (restoring) return
+        val json = JSONObject()
+            .put("version", 1)
+            .put("space", spaceId)
+            .put("active", tabs.filter { !it.isPrivate }.indexOfFirst { it.id == activeId })
+            .put("spaces", JSONArray().apply { spaces.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("color", it.color)) } })
+            .put(
+                "tabs",
+                JSONArray().apply {
+                    tabs.filter { !it.isPrivate }.forEach {
+                        put(JSONObject().put("url", it.url.ifEmpty { it.pendingUrl ?: "" }).put("title", it.title).put("pinned", it.pinned).put("space", it.spaceId))
+                    }
+                },
+            )
+        runCatching { sessionFile.writeText(json.toString()) }
+    }
+
+    /**
+     * Restores the last session as sleeping tabs (only the active one loads). False when there is
+     * nothing to restore; `startup.open = newtab` keeps only pinned tabs.
+     */
+    fun restoreSession(): Boolean {
+        val json = runCatching { JSONObject(sessionFile.readText()) }.getOrNull() ?: return false
+        val mode = settings.get("startup.open")?.trim('"') ?: "restore"
+        json.optJSONArray("spaces")?.let { a ->
+            val list = (0 until a.length()).map { a.getJSONObject(it) }.map { Space(it.optString("id"), it.optString("name"), it.optString("color", "ember")) }
+            if (list.isNotEmpty()) { spaces.clear(); spaces.addAll(list) }
+        }
+        spaceId = json.optString("space").takeIf { id -> spaces.any { it.id == id } } ?: spaces.first().id
+        val saved = json.optJSONArray("tabs") ?: return false
+        restoring = true
+        val activeIndex = json.optInt("active", -1)
+        var activeTab: Tab? = null
+        for (i in 0 until saved.length()) {
+            val o = saved.getJSONObject(i)
+            val pinned = o.optBoolean("pinned")
+            val url = o.optString("url")
+            if (url.isEmpty() || (mode != "restore" && !pinned)) continue
+            val space = o.optString("space").takeIf { id -> spaces.any { it.id == id } } ?: spaces.first().id
+            val tab = Tab(newSession(false), false, space)
+            attach(tab)
+            tab.url = url
+            tab.title = o.optString("title")
+            tab.pinned = pinned
+            tab.pendingUrl = url
+            tab.sleeping = true
+            tabs += tab
+            if (i == activeIndex) activeTab = tab
+        }
+        restoring = false
+        if (tabs.isEmpty()) return false
+        if (mode != "restore") newTab() else activeId = (activeTab ?: tabs.firstOrNull { it.spaceId == spaceId } ?: tabs.first()).id
+        return true
     }
 
     /** The neighbouring tab of the same mode; past the last one a new tab opens (like Safari). */
     fun switchTab(by: Int) {
         val current = active ?: return
-        val list = tabs.filter { it.isPrivate == current.isPrivate }
+        val list = visibleTabs(current.isPrivate)
         val i = list.indexOfFirst { it.id == current.id }
         val j = i + by
         when {
@@ -438,8 +638,13 @@ class Browser(private val context: Context) {
                 tab.progress = progress
             }
 
+            override fun onSessionStateChange(session: GeckoSession, sessionState: GeckoSession.SessionState) {
+                tab.savedState = sessionState
+            }
+
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 tab.progress = 100
+                if (!tab.isPrivate) saveSession()
                 val url = tab.url
                 // Private tabs leave no history.
                 if (success && !tab.isPrivate && (url.startsWith("https://") || url.startsWith("http://"))) {

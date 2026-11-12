@@ -99,7 +99,7 @@ struct IslandView: View {
                 .accessibilityLabel(String(localized: "shield.label"))
 
                 Button { showTabs = true } label: {
-                    Text("\(browser.tabs.filter { $0.isPrivate == (tab?.isPrivate ?? false) }.count)")
+                    Text("\(browser.visibleTabs(isPrivate: tab?.isPrivate ?? false).count)")
                         .font(.system(.footnote, design: .monospaced).weight(.medium))
                         .frame(minWidth: ScydeSpace.s24 + ScydeSpace.s2, minHeight: ScydeSpace.s24 + ScydeSpace.s2)
                         .overlay(RoundedRectangle(cornerRadius: ScydeRadius.xs).stroke(c.islandText, lineWidth: 1.5))
@@ -119,7 +119,7 @@ struct IslandView: View {
         .padding(.horizontal, ScydeSpace.s6)
         .frame(height: ScydeSize.islandMobileHeight)
         .background(islandFill(tab), in: RoundedRectangle(cornerRadius: ScydeRadius.island, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: ScydeRadius.island, style: .continuous).stroke(c.islandBorder, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: ScydeRadius.island, style: .continuous).stroke(edge(tab), lineWidth: spaced(tab) ? 1.5 : 1))
         .shadow(color: .black.opacity(0.35), radius: ScydeSpace.s20, y: ScydeSpace.s12)
         .overlay(alignment: .bottom) {
             if let tab, tab.loading, !editing {
@@ -191,6 +191,13 @@ struct IslandView: View {
                 } label: { Label(String(localized: "omnibox.paste_go"), systemImage: "doc.on.clipboard") }
             }
         }
+    }
+
+    /// With more than one Space, the island's edge takes the Space's colour.
+    private func spaced(_ tab: Tab?) -> Bool { browser.spaces.count > 1 && tab?.isPrivate != true }
+
+    private func edge(_ tab: Tab?) -> Color {
+        spaced(tab) ? Palette.accent(browser.currentSpace.color, dark: palette.dark).ring : palette.colors.islandBorder
     }
 
     private func reveal(_ tab: Tab?) {
@@ -520,49 +527,29 @@ struct FlowChips: View {
 
 // MARK: - tab grid
 
-/// All tabs as a grid (DESIGN.md §8: a full-screen shelf), with normal and private tabs apart.
+/// All tabs as a grid (DESIGN.md §8: a full-screen shelf): Spaces on top, pinned tabs first,
+/// private tabs apart.
 struct TabGrid: View {
     @EnvironmentObject var browser: Browser
     @Environment(\.palette) private var palette
     @Binding var isPresented: Bool
     @State private var showPrivate = false
+    @State private var naming: Space?
+    @State private var creating = false
+    @State private var name = ""
 
     var body: some View {
         let c = palette.colors
-        let list = browser.tabs.filter { $0.isPrivate == showPrivate }
+        let list = browser.visibleTabs(isPrivate: showPrivate)
         NavigationStack {
             ScrollView {
+                if !showPrivate { spaceBar }
                 if list.isEmpty {
                     Text(String(localized: "private.hint")).font(.footnote).foregroundStyle(c.textSecondary)
                         .multilineTextAlignment(.center).padding(ScydeSpace.s40)
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: ScydeSpace.s12)], spacing: ScydeSpace.s12) {
-                    ForEach(list) { tab in
-                        Button {
-                            browser.activeID = tab.id
-                            isPresented = false
-                        } label: {
-                            VStack(alignment: .leading, spacing: ScydeSpace.s8) {
-                                RoundedRectangle(cornerRadius: ScydeRadius.sm).fill(c.surfaceSunken).aspectRatio(3 / 4, contentMode: .fit)
-                                    .overlay(Text(tab.display?.domain ?? (tab.url?.host ?? "")).font(.caption.monospaced()).foregroundStyle(c.textTertiary))
-                                Text(tab.title.isEmpty ? String(localized: "tab.new") : tab.title).font(.footnote).lineLimit(1)
-                                    .foregroundStyle(c.textPrimary)
-                            }
-                            .padding(ScydeSpace.s8)
-                            .background(c.surfaceRaised, in: RoundedRectangle(cornerRadius: ScydeRadius.md))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: ScydeRadius.md)
-                                    .stroke(tab.id == browser.activeID ? palette.accent.ring : .clear, lineWidth: 2)
-                            )
-                        }
-                        .overlay(alignment: .topTrailing) {
-                            Button { browser.close(tab) } label: {
-                                Image(systemName: "xmark").font(.caption.weight(.semibold)).frame(width: ScydeSize.hitIos, height: ScydeSize.hitIos)
-                            }
-                            .foregroundStyle(c.textSecondary)
-                            .accessibilityLabel(String(localized: "tab.close"))
-                        }
-                    }
+                    ForEach(list) { tab in card(tab) }
                 }
                 .padding(ScydeSpace.s16)
             }
@@ -571,7 +558,7 @@ struct TabGrid: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(String(localized: "mobile.tabs.close_all"), role: .destructive) { browser.closeAll(isPrivate: showPrivate) }
-                        .disabled(list.isEmpty)
+                        .disabled(list.allSatisfy(\.pinned))
                 }
                 ToolbarItem(placement: .principal) {
                     Picker(String(localized: "mobile.tabs"), selection: $showPrivate) {
@@ -594,8 +581,115 @@ struct TabGrid: View {
                 }
             }
             .onAppear { showPrivate = browser.active?.isPrivate ?? false }
+            .alert(String(localized: "space.new"), isPresented: $creating) {
+                TextField(String(localized: "space.name"), text: $name)
+                Button(String(localized: "space.create")) { browser.addSpace(name: name) }
+                Button(String(localized: "omnibox.cancel"), role: .cancel) {}
+            }
+            .alert(String(localized: "space.rename"), isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
+                TextField(String(localized: "space.name"), text: $name)
+                Button(String(localized: "space.rename")) { if let s = naming { browser.renameSpace(s.id, to: name) } }
+                Button(String(localized: "omnibox.cancel"), role: .cancel) {}
+            }
         }
         .presentationDetents([.large])
+    }
+
+    /// Spaces as chips: tap to switch, long-press to rename, recolour or delete, + to create.
+    private var spaceBar: some View {
+        let c = palette.colors
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: ScydeSpace.s8) {
+                ForEach(browser.spaces) { space in
+                    let on = space.id == browser.spaceID
+                    let tint = Palette.accent(space.color, dark: palette.dark)
+                    Button { browser.switchSpace(space.id) } label: {
+                        HStack(spacing: ScydeSpace.s6) {
+                            Circle().fill(tint.fill).frame(width: ScydeSpace.s12, height: ScydeSpace.s12)
+                            Text(space.name).font(.subheadline.weight(on ? .medium : .regular)).lineLimit(1)
+                        }
+                        .padding(.horizontal, ScydeSpace.s12)
+                        .frame(minHeight: ScydeSize.hitIos)
+                        .foregroundStyle(c.textPrimary)
+                        .background(on ? c.surfaceRaised : c.surfaceSunken, in: Capsule())
+                        .overlay(Capsule().stroke(on ? tint.ring : .clear, lineWidth: 1.5))
+                    }
+                    .contextMenu {
+                        Button { name = space.name; naming = space } label: { Label(String(localized: "space.rename"), systemImage: "pencil") }
+                        Menu(String(localized: "space.color")) {
+                            ForEach(Space.colors, id: \.self) { color in
+                                Button(String(localized: String.LocalizationValue("settings.appearance.accent.\(color)"))) { browser.recolorSpace(space.id, to: color) }
+                            }
+                        }
+                        if browser.spaces.count > 1 {
+                            Button(role: .destructive) { browser.deleteSpace(space.id) } label: {
+                                Label(String(localized: "space.delete"), systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+                Button { name = ""; creating = true } label: {
+                    Image(systemName: "plus").frame(width: ScydeSize.hitIos, height: ScydeSize.hitIos)
+                        .background(c.surfaceSunken, in: Circle())
+                }
+                .accessibilityLabel(String(localized: "space.new"))
+            }
+            .padding(.horizontal, ScydeSpace.s16)
+            .padding(.top, ScydeSpace.s8)
+        }
+    }
+
+    private func card(_ tab: Tab) -> some View {
+        let c = palette.colors
+        return Button {
+            browser.activeID = tab.id
+            isPresented = false
+        } label: {
+            VStack(alignment: .leading, spacing: ScydeSpace.s8) {
+                RoundedRectangle(cornerRadius: ScydeRadius.sm).fill(c.surfaceSunken).aspectRatio(3 / 4, contentMode: .fit)
+                    .overlay(Text(tab.display?.domain ?? (tab.url?.host ?? "")).font(.caption.monospaced()).foregroundStyle(c.textTertiary))
+                    .overlay(alignment: .bottomLeading) {
+                        if tab.sleeping {
+                            Label(String(localized: "tab.sleeping.short"), systemImage: "moon.zzz")
+                                .font(.caption2).foregroundStyle(c.textSecondary).padding(ScydeSpace.s8)
+                        }
+                    }
+                    .opacity(tab.sleeping ? ScydeMotion.sleepOpacity : 1)
+                HStack(spacing: ScydeSpace.s4) {
+                    if tab.pinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(palette.accent.ink) }
+                    Text(tab.title.isEmpty ? String(localized: "tab.new") : tab.title).font(.footnote).lineLimit(1)
+                        .foregroundStyle(c.textPrimary)
+                }
+            }
+            .padding(ScydeSpace.s8)
+            .background(c.surfaceRaised, in: RoundedRectangle(cornerRadius: ScydeRadius.md))
+            .overlay(
+                RoundedRectangle(cornerRadius: ScydeRadius.md)
+                    .stroke(tab.id == browser.activeID ? palette.accent.ring : .clear, lineWidth: 2)
+            )
+        }
+        .overlay(alignment: .topTrailing) {
+            Button { browser.close(tab) } label: {
+                Image(systemName: "xmark").font(.caption.weight(.semibold)).frame(width: ScydeSize.hitIos, height: ScydeSize.hitIos)
+            }
+            .foregroundStyle(c.textSecondary)
+            .accessibilityLabel(String(localized: "tab.close"))
+        }
+        .contextMenu {
+            if !tab.isPrivate {
+                Button { browser.togglePin(tab) } label: {
+                    Label(String(localized: tab.pinned ? "tab.unpin" : "tab.pin"), systemImage: tab.pinned ? "pin.slash" : "pin")
+                }
+                if browser.spaces.count > 1 {
+                    Menu(String(localized: "space.move")) {
+                        ForEach(browser.spaces.filter { $0.id != tab.spaceID }) { space in
+                            Button(space.name) { browser.move(tab, to: space.id) }
+                        }
+                    }
+                }
+            }
+            Button(role: .destructive) { browser.close(tab) } label: { Label(String(localized: "tab.close"), systemImage: "xmark") }
+        }
     }
 }
 
