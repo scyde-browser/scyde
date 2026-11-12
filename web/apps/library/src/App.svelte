@@ -133,7 +133,7 @@
   h1 { margin: 0; font-family: var(--font-family-brand); font-size: var(--type-headline-size); line-height: var(--type-headline-line-height); letter-spacing: var(--type-headline-tracking); font-weight: var(--font-weight-medium); }
   .panel { display: grid; gap: var(--space-16); }
   .bar { display: flex; gap: var(--space-12); align-items: center; }
-  .search { flex: 1; display: flex; align-items: center; gap: var(--space-8); min-height: var(--size-hit-desktop); padding: 0 var(--space-16); border-radius: var(--radius-full); background: var(--surface-sunken); color: var(--text-tertiary); }
+  .search { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-8); min-height: var(--size-hit-desktop); padding: 0 var(--space-16); border-radius: var(--radius-full); background: var(--surface-sunken); color: var(--text-tertiary); }
   .search:focus-within { outline: var(--size-focus-ring) solid var(--accent-ring); outline-offset: var(--size-focus-offset); }
   .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font-size: var(--type-body-lg-size); }
   .list { list-style: none; margin: 0; padding: 0; }

@@ -142,8 +142,11 @@
   /* Phone (DESIGN §3: hero 54/56), island at the bottom */
   @media (max-width: 760px) {
     .nt { grid-template-columns: 1fr; gap: var(--space-40); padding: var(--space-48) var(--space-20) calc(var(--size-island-mobile-height) + var(--space-48)); }
-    .ask input { font-size: var(--type-display-size); line-height: var(--type-display-line-height); }
+    /* The question must fit one line on the narrowest phones. */
+    .ask input { font-size: min(var(--type-display-size), 10.5vw); line-height: var(--type-display-line-height); }
     .recent { align-self: start; }
     a { font-size: var(--type-body-lg-size); }
   }
+  /* Keyboard hints make no sense without a keyboard. */
+  @media (hover: none) { .hints { display: none; } }
 </style>

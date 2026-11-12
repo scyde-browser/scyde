@@ -71,5 +71,7 @@
   ul { list-style: none; margin: 0; padding: 0; }
   li + li { border-top: 1px solid var(--border-hairline); }
   .empty { margin: 0; color: var(--text-secondary); }
-  @media (max-width: 520px) { .stats { grid-template-columns: 1fr 1fr; } }
+  li { padding: var(--space-8) 0; }
+  /* Phones: three numbers stay on one row, one step smaller. */
+  @media (max-width: 520px) { .stats { gap: var(--space-8); --stat-size: var(--type-title-size); } }
 </style>

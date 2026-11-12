@@ -20,7 +20,7 @@
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: var(--space-8);
     min-height: var(--size-hit-desktop); padding: 0 var(--space-16);
-    border: 0; border-radius: var(--radius-full);
+    border: 0; border-radius: var(--radius-full); white-space: nowrap;
     font-size: var(--type-label-size); line-height: var(--type-label-line-height); font-weight: var(--font-weight-medium);
     transition: transform var(--motion-duration-instant) var(--motion-ease-out), background-color var(--motion-duration-instant) var(--motion-ease-out);
   }

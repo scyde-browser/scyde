@@ -63,6 +63,9 @@ final class Tab: NSObject, ObservableObject, Identifiable {
         wv.allowsLinkPreview = true
         wv.isFindInteractionEnabled = true
         wv.scrollView.contentInsetAdjustmentBehavior = .always
+        // Room below the page, so its last lines can scroll clear of the island.
+        wv.scrollView.contentInset.bottom = ScydeSize.islandMobileHeight + ScydeSpace.s8
+        wv.scrollView.verticalScrollIndicatorInsets.bottom = ScydeSize.islandMobileHeight + ScydeSpace.s8
         #if DEBUG
         wv.isInspectable = true
         #endif
@@ -590,6 +593,8 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         guard navigationAction.targetFrame?.isMainFrame != false, let url = navigationAction.request.url else {
             return (.allow, preferences)
         }
+        // A new page starts with the island visible.
+        if tab?.immersive == true { tab?.immersive = false }
         if let target = omniboxDeamp(url: url.absoluteString).flatMap(URL.init(string:)) {
             webView.load(URLRequest(url: target))
             return (.cancel, preferences)

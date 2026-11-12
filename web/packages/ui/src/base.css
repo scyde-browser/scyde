@@ -42,3 +42,8 @@ a { color: inherit; }
   :root:not([data-motion="full"]) .rise { animation-name: fade; animation-duration: var(--motion-duration-reduced); animation-delay: 0ms; }
   :root:not([data-motion="full"]) * { scroll-behavior: auto; }
 }
+
+/* Embedded in a native sheet that has its own title bar (see styles.ts). */
+[data-embedded] .page > header > :is(h1, svg) { display: none; }
+[data-embedded] .page > header:not(:has(> :not(h1, svg))) { display: none; }
+html[data-embedded] .page { padding-top: var(--space-16); }

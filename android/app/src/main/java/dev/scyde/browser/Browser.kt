@@ -447,7 +447,9 @@ class Browser(private val context: Context) {
         // Before the extension is loaded there is no page URL yet: try again once it is.
         val name = page.substringBefore('#')
         val fragment = page.substringAfter('#', "").let { if (it.isEmpty()) "" else "#$it" }
-        val url = internalUrl(name)?.plus(fragment) ?: return if (!gateOpen) whenReady { openPage(page) } else Unit
+        // `?embedded`: the sheet has its own title bar, the page hides its heading (welcome keeps its header).
+        val query = if (name == "welcome") "" else "?embedded"
+        val url = internalUrl(name)?.plus(query + fragment) ?: return if (!gateOpen) whenReady { openPage(page) } else Unit
         closeSheet()
         val s = GeckoSession()
         s.navigationDelegate = object : GeckoSession.NavigationDelegate {
@@ -607,6 +609,7 @@ class Browser(private val context: Context) {
             ) {
                 tab.url = url ?: ""
                 tab.themeColor = null
+                tab.immersive = false // a new page starts with the island visible
                 tab.bookmarked = tab.isWeb && runCatching { places?.isBookmarked(tab.url) }.getOrNull() == true
             }
 
