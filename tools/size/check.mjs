@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const KB = 1024;
-export const BUDGETS = { newtab: 120 * KB, settings: 120 * KB, shields: 120 * KB, library: 120 * KB, 'desktop-chrome': 80 * KB };
+export const BUDGETS = { newtab: 120 * KB, settings: 120 * KB, shields: 120 * KB, library: 120 * KB, welcome: 120 * KB, 'desktop-chrome': 80 * KB };
 
 let failed = false;
 const rows = [];

@@ -109,6 +109,18 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
 
+  web/apps/welcome:
+    dependencies:
+      '@scyde/bridge':
+        specifier: workspace:*
+        version: link:../../packages/bridge
+      '@scyde/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@scyde/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+
   web/e2e:
     devDependencies:
       '@axe-core/playwright':

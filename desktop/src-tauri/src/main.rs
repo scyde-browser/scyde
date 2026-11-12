@@ -510,7 +510,14 @@ fn main() {
             let urls = open_urls.clone();
             std::thread::spawn(move || {
                 if urls.is_empty() {
-                    let _ = new_tab(&handle, None, true);
+                    // First run: the welcome page (theme, search engine, Shield) instead of New Tab.
+                    let first_run = SMOKE.get().is_none_or(Option::is_none)
+                        && !lock(&handle.state::<AppState>().settings)
+                            .get("onboarding.completed")
+                            .and_then(serde_json::Value::as_bool)
+                            .unwrap_or(false);
+                    let start = first_run.then_some("http://scyde.localhost/welcome/");
+                    let _ = new_tab(&handle, start, true);
                 } else {
                     for u in &urls {
                         let _ = new_tab(&handle, Some(u), true);

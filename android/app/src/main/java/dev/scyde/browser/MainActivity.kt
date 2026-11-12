@@ -123,7 +123,11 @@ class MainActivity : ComponentActivity() {
         browser = Browser(this)
         val start = intent?.dataString ?: intent?.getStringExtra("url")
         if (browser.tabs.isEmpty()) browser.newTab(start)
-        intent?.getStringExtra("page")?.let { browser.openPage(it) } // CI screenshots
+        val page = intent?.getStringExtra("page") // CI screenshots
+        when {
+            page != null -> browser.openPage(page)
+            start == null && browser.needsOnboarding && intent?.getBooleanExtra("skipWelcome", false) != true -> browser.openPage("welcome")
+        }
         setContent { ScydeApp(browser) }
     }
 
@@ -806,6 +810,7 @@ private fun SheetBar(page: String, c: ScydeColors, onClose: () -> Unit) {
     val title = when (page) {
         "library" -> stringResource(R.string.library_title)
         "shields" -> stringResource(R.string.shield_label)
+        "welcome" -> stringResource(R.string.welcome_title)
         else -> stringResource(R.string.rail_settings)
     }
     Row(

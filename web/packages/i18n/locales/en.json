@@ -220,5 +220,20 @@
   "toast.background": "Opened in background",
   "toast.shield_off": "Shield off for {site}",
   "toast.shield_on": "Shield on for {site}",
-  "omnibox.paste_go": "Paste and go"
+  "omnibox.paste_go": "Paste and go",
+  "welcome.title": "Welcome",
+  "welcome.step": "{n} of 3",
+  "welcome.skip": "Skip",
+  "welcome.back": "Back",
+  "welcome.next": "Continue",
+  "welcome.done": "Start browsing",
+  "welcome.theme.title": "Make it yours",
+  "welcome.theme.body": "Light, dark or with your system. The accent marks what you can act on.",
+  "welcome.search.title": "Where should searches go?",
+  "welcome.search.body": "What you type in the address goes to this search engine. You can change it any time in Settings.",
+  "welcome.shield.title": "Shield is already on",
+  "welcome.shield.body": "SCYDE blocks ads, trackers and popups on every site, on your device.",
+  "welcome.shield.fact.ads": "Ads and trackers are blocked before they load.",
+  "welcome.shield.fact.private": "No account, no telemetry: your history stays on this device.",
+  "welcome.shield.fact.site": "If a site breaks, turn Shield off for just that site from the island."
 }

@@ -222,6 +222,9 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     func open(page: String) { sheetPage = page }
 
+    /// First run: the welcome sheet (theme, search engine, Shield) until it is finished or skipped.
+    var needsOnboarding: Bool { settings.get(path: "onboarding.completed") != "true" }
+
     // MARK: page tools (control center)
 
     func reloadOrStop() {
@@ -465,8 +468,11 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             let data = try JSONSerialization.data(withJSONObject: [value], options: [.fragmentsAllowed])
             let text = String(decoding: data, as: UTF8.self).dropFirst().dropLast() // [v] → v
             do {
-                try settings.set(path: p["path"] as? String ?? "", jsonValue: String(text))
+                let path = p["path"] as? String ?? ""
+                try settings.set(path: path, jsonValue: String(text))
                 saveSettings()
+                // The welcome page is finished: close its sheet.
+                if path == "onboarding.completed", value as? Bool == true { sheetPage = nil }
                 return ["ok": true]
             } catch {
                 return ["ok": false, "error": "\(error)"]

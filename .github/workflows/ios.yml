@@ -112,10 +112,10 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm tokens
-          for a in newtab settings shields library; do pnpm --filter "@scyde/app-$a" build; done
+          for a in newtab settings shields library welcome; do pnpm --filter "@scyde/app-$a" build; done
           R=ios/SCYDE
           mkdir -p $R/Resources/pages $R/Sources/Generated
-          for a in newtab settings shields library; do cp -R web/apps/$a/dist $R/Resources/pages/$a; done
+          for a in newtab settings shields library welcome; do cp -R web/apps/$a/dist $R/Resources/pages/$a; done
           cp web/packages/tokens/dist/swift/ScydeTokens.swift $R/Sources/Generated/
           node tools/i18n-native/build.mjs --ios $R/Sources/Generated/Localizable.xcstrings
           node tools/icon-export/export.mjs --out dist/icons
@@ -151,7 +151,7 @@ jobs:
           (cd ../.. && node qa/serve.mjs 8787 > /dev/null 2>&1 &)
           for mode in light dark; do
             xcrun simctl ui "$UDID" appearance $mode
-            xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser
+            xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -skipWelcome
             sleep 12
             xcrun simctl io "$UDID" screenshot ../../shots/newtab-$mode.png
           done
@@ -165,6 +165,9 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -page settings
           sleep 8
           xcrun simctl io "$UDID" screenshot ../../shots/settings-sheet.png
+          xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -page welcome
+          sleep 8
+          xcrun simctl io "$UDID" screenshot ../../shots/welcome-sheet.png
       - name: Unsigned .ipa (Feather signs it)
         working-directory: ios/SCYDE
         run: |

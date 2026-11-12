@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdirSync } from 'node:fs';
 
-const PAGES = ['newtab', 'settings', 'shields', 'library'];
+const PAGES = ['newtab', 'settings', 'shields', 'library', 'welcome'];
 const SHOTS = process.env.SHOTS_DIR ?? 'screenshots';
 
 /** Collects console errors and CSP violations; both fail the test. */

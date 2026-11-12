@@ -27,6 +27,7 @@
       "../../web/apps/settings/dist/": "pages/settings/",
       "../../web/apps/shields/dist/": "pages/shields/",
       "../../web/apps/library/dist/": "pages/library/",
+      "../../web/apps/welcome/dist/": "pages/welcome/",
       "../extensions/": "extensions/"
     },
     "windows": {

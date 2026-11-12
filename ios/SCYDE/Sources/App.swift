@@ -20,7 +20,11 @@ struct ScydeApp: App {
                             browser.newTab()
                         }
                         // `-page settings` opens an internal page as a sheet (CI screenshots).
-                        if let i = args.firstIndex(of: "-page"), i + 1 < args.count { browser.open(page: args[i + 1]) }
+                        if let i = args.firstIndex(of: "-page"), i + 1 < args.count {
+                            browser.open(page: args[i + 1])
+                        } else if browser.needsOnboarding && !args.contains("-open") && !args.contains("-skipWelcome") {
+                            browser.open(page: "welcome")
+                        }
                     }
                 }
                 .onOpenURL { url in browser.newTab(url) }
@@ -118,6 +122,7 @@ struct PageSheet: View {
         switch page.split(separator: "#").first.map(String.init) ?? page {
         case "library": return String(localized: "library.title")
         case "shields": return String(localized: "shield.label")
+        case "welcome": return String(localized: "welcome.title")
         default: return String(localized: "rail.settings")
         }
     }

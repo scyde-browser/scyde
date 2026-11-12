@@ -79,14 +79,14 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm tokens
-          for a in newtab settings shields library; do pnpm --filter "@scyde/app-$a" build; done
+          for a in newtab settings shields library welcome; do pnpm --filter "@scyde/app-$a" build; done
           A=android/app/src/main
           mkdir -p $A/java/dev/scyde/browser/theme pages
           cp web/packages/tokens/dist/kotlin/ScydeTokens.kt $A/java/dev/scyde/browser/theme/
           node tools/i18n-native/build.mjs --android $A/res/values/strings.xml
           node tools/icon-export/export.mjs --out dist/icons
           cp -R dist/icons/owner-s/android/res/. $A/res/
-          for a in newtab settings shields library; do cp -R web/apps/$a/dist pages/$a; done
+          for a in newtab settings shields library welcome; do cp -R web/apps/$a/dist pages/$a; done
       - name: Shield extension (gecko-mv2, WASM engine + engine.dat, ADR-0004)
         run: |
           node tools/filters/fetch.mjs --out lists || { echo "::warning::list download failed, using the fixture"; rm -rf lists; mkdir lists; }
@@ -148,7 +148,7 @@ jobs:
           script: |
             mkdir -p shots
             adb install -r apk/scyde-*-x86_64.apk
-            adb shell am start -n dev.scyde.browser/.MainActivity
+            adb shell am start -n dev.scyde.browser/.MainActivity --ez skipWelcome true
             sleep 25
             adb exec-out screencap -p > shots/newtab.png
             adb shell pidof dev.scyde.browser || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; echo "::error::SCYDE is not running (crash at start)"; exit 1; }

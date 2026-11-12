@@ -265,6 +265,9 @@ class Browser(private val context: Context) {
         sheetPage = name
     }
 
+    /** First run: the welcome sheet (theme, search engine, Shield) until it is finished or skipped. */
+    val needsOnboarding: Boolean get() = settings.get("onboarding.completed") != "true"
+
     fun closeSheet() {
         sheetSession?.close()
         sheetSession = null
@@ -580,6 +583,8 @@ class Browser(private val context: Context) {
             try {
                 settings.set(p.optString("path"), text)
                 saveSettings()
+                // The welcome page is finished: close its sheet.
+                if (p.optString("path") == "onboarding.completed" && v == true) closeSheet()
                 JSONObject().put("ok", true)
             } catch (e: Exception) {
                 JSONObject().put("ok", false).put("error", e.message)
