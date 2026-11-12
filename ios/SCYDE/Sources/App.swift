@@ -91,7 +91,9 @@ struct RootView: View {
             if let tab = browser.active, !tab.immersive {
                 // Behind the status bar: the page's own colour, so text never runs under the clock.
                 // The band covers only the top safe area (zero height plus the ignored safe area).
-                Color(uiColor: tab.themeColor ?? tab.webView.underPageBackgroundColor ?? .systemBackground)
+                // The status-bar text follows the app's scheme, so the page colour is used only when the
+                // clock stays readable on it; otherwise the band is the app's canvas.
+                bandColor(tab, palette)
                     .ignoresSafeArea(edges: .top)
                     .frame(height: 0)
                     .frame(maxHeight: .infinity, alignment: .top)
@@ -194,6 +196,13 @@ final class SheetWeb: NSObject, ObservableObject, WKNavigationDelegate {
         browser?.go(url.absoluteString)
         return .cancel
     }
+}
+
+@MainActor
+private func bandColor(_ tab: Tab, _ palette: Palette) -> Color {
+    let page: UIColor? = tab.themeColor ?? tab.webView.underPageBackgroundColor
+    if let page, page.isLight != palette.dark { return Color(uiColor: page) }
+    return palette.colors.surfaceCanvas
 }
 
 struct WebContainer: UIViewRepresentable {

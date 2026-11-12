@@ -450,7 +450,7 @@ struct OmniboxPanel: View {
         guard !q.isEmpty else { return [] }
         let needle = q.lowercased()
         return browser.tabs.filter {
-            $0.id != browser.activeID && ($0.title.lowercased().contains(needle) || ($0.url?.absoluteString.lowercased().contains(needle) ?? false))
+            $0.id != browser.activeID && $0.isPrivate == (browser.active?.isPrivate ?? false) && ($0.title.lowercased().contains(needle) || ($0.url?.absoluteString.lowercased().contains(needle) ?? false))
         }
         .prefix(3).map { $0 }
     }
@@ -761,6 +761,13 @@ final class PeekController: UIViewController {
 }
 
 extension UIColor {
+    /// Perceived lightness above the middle (for choosing readable status-bar text).
+    var isLight: Bool {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getRed(&r, green: &g, blue: &b, alpha: &a) else { return true }
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5
+    }
+
     /// `#RRGGBB` in sRGB (extended values clamped).
     var hex: String? {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
