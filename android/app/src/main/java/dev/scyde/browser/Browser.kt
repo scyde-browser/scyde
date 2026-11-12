@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asImageBitmap
 import dev.scyde.browser.theme.ScydeMotion
 import dev.scyde.browser.theme.ScydeSpace
 import org.json.JSONArray
@@ -62,6 +63,8 @@ class Tab(firstSession: GeckoSession, val isPrivate: Boolean, firstSpace: String
     var pendingUrl: String? = null
     /** The next finished load is a reload or a wake, not a visit (history counts stay honest). */
     var skipVisit = false
+    /** The page as it last looked, for the tab grid. */
+    var thumbnail by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     var url by mutableStateOf("")
     var title by mutableStateOf("")
     var progress by mutableIntStateOf(100)
@@ -114,6 +117,7 @@ class Browser(appContext: Context) {
         set(v) {
             // Stamp the tab being left too, or a long-read tab would fall asleep the moment it is left.
             active?.lastActive = System.currentTimeMillis()
+            if (v != activeState) snapshotActive()
             activeState = v
             val tab = active ?: return
             tab.lastActive = System.currentTimeMillis()
@@ -274,6 +278,25 @@ class Browser(appContext: Context) {
             if (left.isNotEmpty()) activeId = left.first().id else newTab()
         }
         saveSession()
+    }
+
+    /** The GeckoView on screen (set by the UI), for page thumbnails. */
+    var view: java.lang.ref.WeakReference<org.mozilla.geckoview.GeckoView>? = null
+
+    /** Keeps a small picture of the active page for its card in the tab grid. */
+    fun snapshotActive() {
+        val tab = active ?: return
+        val v = view?.get() ?: return
+        if (sheetSession != null || tab.sleeping || v.session !== tab.session || v.width == 0) return
+        runCatching {
+            v.capturePixels().accept({ bitmap ->
+                if (bitmap != null) {
+                    val w = bitmap.width / 4
+                    val h = bitmap.height / 4
+                    if (w > 0 && h > 0) tab.thumbnail = android.graphics.Bitmap.createScaledBitmap(bitmap, w, h, true).asImageBitmap()
+                }
+            }, { })
+        }
     }
 
     /** What the island counts and swipes through: the active mode and, for normal tabs, the Space. */

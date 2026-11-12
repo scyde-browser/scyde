@@ -630,6 +630,7 @@ struct TabGrid: View {
                 }
                 Button { name = ""; creating = true } label: {
                     Image(systemName: "plus").frame(width: ScydeSize.hitIos, height: ScydeSize.hitIos)
+                        .foregroundStyle(c.textPrimary)
                         .background(c.surfaceSunken, in: Circle())
                 }
                 .accessibilityLabel(String(localized: "space.new"))
@@ -647,7 +648,17 @@ struct TabGrid: View {
         } label: {
             VStack(alignment: .leading, spacing: ScydeSpace.s8) {
                 RoundedRectangle(cornerRadius: ScydeRadius.sm).fill(c.surfaceSunken).aspectRatio(3 / 4, contentMode: .fit)
-                    .overlay(Text(tab.display?.domain ?? (tab.url?.host ?? "")).font(.caption.monospaced()).foregroundStyle(c.textTertiary))
+                    .overlay {
+                        if let shot = tab.snapshot {
+                            // The top of the page, as it last looked.
+                            Image(uiImage: shot).resizable().aspectRatio(contentMode: .fill)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                .accessibilityHidden(true)
+                        } else {
+                            Text(tab.display?.domain ?? (tab.url?.host ?? "")).font(.caption.monospaced()).foregroundStyle(c.textTertiary)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: ScydeRadius.sm))
                     .overlay(alignment: .bottomLeading) {
                         if tab.sleeping {
                             Label(String(localized: "tab.sleeping.short"), systemImage: "moon.zzz")

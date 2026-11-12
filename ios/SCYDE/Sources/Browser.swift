@@ -39,6 +39,8 @@ final class Tab: NSObject, ObservableObject, Identifiable {
     @Published var pinned = false
     /// Asleep: no page in memory; it comes back (with its history) when the tab is opened.
     @Published var sleeping = false
+    /// The page as it last looked, for the tab grid.
+    @Published var snapshot: UIImage?
     var lastActive = Date()
     var desktop = false
     var typed = false
@@ -168,7 +170,10 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     @Published var tabs: [Tab] = []
     @Published var activeID: UUID? {
         // Stamp the tab being left too, or a long-read tab would fall asleep the moment it is left.
-        willSet { active?.lastActive = Date() }
+        willSet {
+            active?.lastActive = Date()
+            if newValue != activeID { snapshotActive() }
+        }
         didSet {
             guard let tab = active else { return }
             tab.lastActive = Date()
@@ -229,6 +234,11 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         bridge.browser = self
         refreshAppearance()
         loadShield()
+        // Compiling the lists on first launch can take a while: web pages wait at most 4 s for it.
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            self?.shieldDidLoad()
+        }
         // Sleeping tabs (PLAN Phase 6 #3): once a minute, tabs unused for `tabs.sleep_after_minutes`.
         sleepTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.sleepIdleTabs() }
@@ -264,7 +274,12 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         }
         if configuration == nil {
             let target = url ?? InternalPages.newTab
-            whenShieldLoaded { [weak tab] in tab?.webView.load(URLRequest(url: target)) }
+            // Our own pages need no Shield: New Tab must not wait for the rule lists to compile.
+            if InternalPages.isInternal(target) {
+                tab.webView.load(URLRequest(url: target))
+            } else {
+                whenShieldLoaded { [weak tab] in tab?.webView.load(URLRequest(url: target)) }
+            }
         }
         if activate { activeID = tab.id } else { saveSession() }
         return tab
@@ -296,6 +311,16 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             if let pinned = tabs.first(where: { !$0.isPrivate && $0.spaceID == spaceID }) { activeID = pinned.id } else { newTab() }
         }
         saveSession()
+    }
+
+    /// Keeps a picture of the active page for its card in the tab grid.
+    func snapshotActive() {
+        guard let tab = active, !tab.sleeping, tab.webView.bounds.width > 0 else { return }
+        let config = WKSnapshotConfiguration()
+        config.snapshotWidth = NSNumber(value: Double(ScydeSpace.s80 * 4))
+        tab.webView.takeSnapshot(with: config) { [weak tab] image, _ in
+            if let image { tab?.snapshot = image }
+        }
     }
 
     /// The tabs the island counts and swipes through: the active mode and, for normal tabs, the Space.
@@ -551,6 +576,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     }
 
     private func shieldDidLoad() {
+        guard !shieldLoaded else { return }
         shieldLoaded = true
         let run = afterShield
         afterShield = []

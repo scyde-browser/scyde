@@ -14,6 +14,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -254,7 +257,7 @@ fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStat
                             if (side > 0 && tab.canGoForward) tab.session.goForward()
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         },
-                    ).apply { addView(GeckoView(ctx)) }
+                    ).apply { addView(GeckoView(ctx).also { browser.view = java.lang.ref.WeakReference(it) }) }
                 },
                 update = { frame ->
                     val view = frame.getChildAt(0) as GeckoView
@@ -315,6 +318,7 @@ fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStat
         }
         if (browser.peekUrl != null) Peek(browser, c, accent)
     }
+    LaunchedEffect(showTabs) { if (showTabs) browser.snapshotActive() }
     if (showTabs) TabGrid(browser, c, accent, onDone = { showTabs = false })
 }
 
@@ -1016,7 +1020,16 @@ private fun TabCard(browser: Browser, tab: Tab, c: ScydeColors, accent: ScydeAcc
                     .background(c.surfaceSunken, RoundedCornerShape(ScydeRadius.sm)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(tab.site ?: tab.url.substringAfter("://").substringBefore('/'), color = c.textTertiary, fontSize = 11.sp, maxLines = 1, fontFamily = FontFamily.Monospace)
+                val shot = tab.thumbnail
+                if (shot != null) {
+                    // The top of the page, as it last looked.
+                    Image(
+                        bitmap = shot, contentDescription = null, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(ScydeRadius.sm)),
+                    )
+                } else {
+                    Text(tab.site ?: tab.url.substringAfter("://").substringBefore('/'), color = c.textTertiary, fontSize = 11.sp, maxLines = 1, fontFamily = FontFamily.Monospace)
+                }
                 if (tab.sleeping) {
                     Text(
                         stringResource(R.string.tab_sleeping_short), color = c.textSecondary, fontSize = 11.sp,

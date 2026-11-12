@@ -136,6 +136,7 @@ struct RootView: View {
         .persistentSystemOverlays(browser.active?.immersive == true ? .hidden : .automatic)
         .environment(\.palette, palette)
         .preferredColorScheme(browser.appearance["theme"] == "system" || browser.appearance["theme"] == nil ? nil : scheme)
+        .onChange(of: showTabs) { open in if open { browser.snapshotActive() } }
         .sheet(isPresented: $showTabs) { TabGrid(isPresented: $showTabs).environment(\.palette, palette) }
         .background {
             // A second sheet modifier on its own view, so it never competes with the tab grid.
