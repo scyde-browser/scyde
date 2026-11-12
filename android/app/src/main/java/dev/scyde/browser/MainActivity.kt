@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -127,13 +128,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         browser = Browser(this)
         val start = intent?.dataString ?: intent?.getStringExtra("url")
-        if (browser.tabs.isEmpty()) browser.newTab(start)
+        // Restore the last session (sleeping tabs) unless a link opened the app.
+        if (browser.tabs.isEmpty() && (start != null || !browser.restoreSession())) browser.newTab(start)
         val page = intent?.getStringExtra("page") // CI screenshots
         when {
             page != null -> browser.openPage(page)
             start == null && browser.needsOnboarding && intent?.getBooleanExtra("skipWelcome", false) != true -> browser.openPage("welcome")
         }
         setContent { ScydeApp(browser) }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        browser.saveSession()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -312,6 +319,7 @@ private fun Island(
     val scope = rememberCoroutineScope()
 
     fun toggle(p: Panel) = setPanel(if (panel == p) Panel.NONE else p)
+    val spaced = browser.spaces.size > 1 && tab?.isPrivate != true
 
     Row(
         Modifier
@@ -320,7 +328,12 @@ private fun Island(
             .graphicsLayer { translationX = drag.value }
             .shadow(ScydeSpace.s16, shape)
             .background(islandFill(tab, c, dark), shape)
-            .border(ScydeSpace.s2 / 2, c.islandBorder, shape)
+            // With more than one Space, the island's edge takes the Space's colour.
+            .border(
+                if (spaced) ScydeSpace.s2 * 0.75f else ScydeSpace.s2 / 2,
+                if (spaced) accentFor(browser.currentSpace.color, dark).ring else c.islandBorder,
+                shape,
+            )
             .padding(horizontal = ScydeSpace.s4)
             // Watches in the Initial pass, before the buttons: a drag that starts on a button still
             // switches tabs, and once it is a drag the buttons do not get a click.
@@ -457,7 +470,7 @@ private fun Island(
                 if (count != null && count > 0) Text("$count", color = c.islandText, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
             }
             Box {
-                val n = browser.tabs.count { it.isPrivate == (tab?.isPrivate ?: false) }
+                val n = browser.visibleTabs(tab?.isPrivate ?: false).size
                 Box(
                     Modifier.size(ScydeSize.hitAndroid)
                         .combinedClickable(onClick = onTabs, onLongClick = { tabMenu = true })
@@ -877,23 +890,56 @@ private fun IslandButton(label: String, enabled: Boolean = true, onClick: () -> 
     ) { content() }
 }
 
-/** All tabs as a grid (a full-screen shelf), normal and private apart. */
+/** All tabs as a grid (a full-screen shelf): Spaces on top, pinned first, private apart. */
 @Composable
 private fun TabGrid(browser: Browser, c: ScydeColors, accent: ScydeAccent, onDone: () -> Unit) {
     var showPrivate by remember { mutableStateOf(browser.active?.isPrivate ?: false) }
-    val list = browser.tabs.filter { it.isPrivate == showPrivate }
+    var editing by remember { mutableStateOf<Space?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    val dark = isSystemInDarkTheme().let { sys -> when (browser.appearance["theme"]) { "dark" -> true; "light" -> false; else -> sys } }
+    val list = browser.visibleTabs(showPrivate)
     Dialog(onDismissRequest = onDone, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Column(Modifier.fillMaxSize().background(c.surfaceCanvas).windowInsetsPadding(WindowInsets.safeDrawing)) {
             Row(Modifier.fillMaxWidth().padding(ScydeSpace.s8), verticalAlignment = Alignment.CenterVertically) {
+                val closable = list.any { !it.pinned }
                 Text(
-                    stringResource(R.string.mobile_tabs_close_all), color = if (list.isEmpty()) c.textTertiary else c.statusDanger,
-                    modifier = Modifier.clickable(enabled = list.isNotEmpty()) { browser.closeAll(showPrivate); if (!showPrivate) onDone() }.padding(ScydeSpace.s12),
+                    stringResource(R.string.mobile_tabs_close_all), color = if (closable) c.statusDanger else c.textTertiary,
+                    modifier = Modifier.clickable(enabled = closable) { browser.closeAll(showPrivate) }.padding(ScydeSpace.s12),
                 )
                 Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center) {
                     Segment(stringResource(R.string.mobile_tabs), !showPrivate, c) { showPrivate = false }
                     Segment(stringResource(R.string.private_label), showPrivate, c) { showPrivate = true }
                 }
                 Text(stringResource(R.string.mobile_tabs_done), color = accent.ink, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onDone).padding(ScydeSpace.s12))
+            }
+            if (!showPrivate) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = ScydeSpace.s16, vertical = ScydeSpace.s4),
+                    horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s8),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    browser.spaces.forEach { space ->
+                        val on = space.id == browser.spaceId
+                        val tint = accentFor(space.color, dark)
+                        Row(
+                            Modifier.height(ScydeSize.hitAndroid)
+                                .background(if (on) c.surfaceRaised else c.surfaceSunken, CircleShape)
+                                .border(ScydeSpace.s2 * 0.75f, if (on) tint.ring else Color.Transparent, CircleShape)
+                                .combinedClickable(onClick = { browser.switchSpace(space.id) }, onLongClick = { editing = space })
+                                .padding(horizontal = ScydeSpace.s12),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s6),
+                        ) {
+                            Box(Modifier.size(ScydeSpace.s12).background(tint.fill, CircleShape))
+                            Text(space.name, color = c.textPrimary, fontSize = 14.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, maxLines = 1)
+                        }
+                    }
+                    Box(
+                        Modifier.size(ScydeSize.hitAndroid).background(c.surfaceSunken, CircleShape).clickable { creating = true }
+                            .semantics { contentDescription = "new space" },
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(ScydeIcons.plus, null, tint = c.textPrimary, modifier = Modifier.size(ScydeSpace.s20)) }
+                }
             }
             if (list.isEmpty()) {
                 Text(stringResource(R.string.private_hint), color = c.textSecondary, fontSize = 14.sp, modifier = Modifier.padding(ScydeSpace.s40))
@@ -903,24 +949,7 @@ private fun TabGrid(browser: Browser, c: ScydeColors, accent: ScydeAccent, onDon
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(ScydeSpace.s16),
                 horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s12), verticalArrangement = Arrangement.spacedBy(ScydeSpace.s12),
             ) {
-                items(list, key = { it.id }) { tab ->
-                    val on = tab.id == browser.activeId
-                    Column(
-                        Modifier.background(c.surfaceRaised, RoundedCornerShape(ScydeRadius.md))
-                            .border(ScydeSpace.s2, if (on) accent.ring else c.surfaceRaised, RoundedCornerShape(ScydeRadius.md))
-                            .clickable { browser.activeId = tab.id; onDone() }.padding(ScydeSpace.s8),
-                    ) {
-                        Box(Modifier.fillMaxWidth().aspectRatio(0.75f).background(c.surfaceSunken, RoundedCornerShape(ScydeRadius.sm)), contentAlignment = Alignment.Center) {
-                            Text(tab.site ?: tab.url.substringAfter("://").substringBefore('/'), color = c.textTertiary, fontSize = 11.sp, maxLines = 1, fontFamily = FontFamily.Monospace)
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(tab.title.ifEmpty { stringResource(R.string.tab_new) }, color = c.textPrimary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(top = ScydeSpace.s8))
-                            Box(Modifier.size(ScydeSize.hitAndroid).clickable { browser.close(tab) }.semantics { contentDescription = "close tab" }, contentAlignment = Alignment.Center) {
-                                Icon(ScydeIcons.close, null, tint = c.textSecondary, modifier = Modifier.size(ScydeSpace.s16))
-                            }
-                        }
-                    }
-                }
+                items(list, key = { it.id }) { tab -> TabCard(browser, tab, c, accent, onOpen = { browser.activeId = tab.id; onDone() }) }
             }
             Row(
                 Modifier.fillMaxWidth().padding(ScydeSpace.s12).height(ScydeSize.hitAndroid).background(c.surfaceRaised, CircleShape)
@@ -933,7 +962,122 @@ private fun TabGrid(browser: Browser, c: ScydeColors, accent: ScydeAccent, onDon
                 Text(stringResource(if (showPrivate) R.string.menu_new_private_tab else R.string.island_new_tab), color = c.textPrimary, fontSize = 15.sp)
             }
         }
+        if (creating) {
+            SpaceNameDialog(stringResource(R.string.space_new), "", c, onDone = { name -> creating = false; if (name != null) browser.addSpace(name) })
+        }
+        editing?.let { space ->
+            SpaceEditDialog(browser, space, c, dark, onDone = { editing = null })
+        }
     }
+}
+
+@Composable
+private fun TabCard(browser: Browser, tab: Tab, c: ScydeColors, accent: ScydeAccent, onOpen: () -> Unit) {
+    val on = tab.id == browser.activeId
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        Column(
+            Modifier.background(c.surfaceRaised, RoundedCornerShape(ScydeRadius.md))
+                .border(ScydeSpace.s2, if (on) accent.ring else c.surfaceRaised, RoundedCornerShape(ScydeRadius.md))
+                .combinedClickable(onClick = onOpen, onLongClick = { menu = true }).padding(ScydeSpace.s8),
+        ) {
+            Box(
+                Modifier.fillMaxWidth().aspectRatio(0.75f).graphicsLayer { alpha = if (tab.sleeping) ScydeMotion.sleepOpacity else 1f }
+                    .background(c.surfaceSunken, RoundedCornerShape(ScydeRadius.sm)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(tab.site ?: tab.url.substringAfter("://").substringBefore('/'), color = c.textTertiary, fontSize = 11.sp, maxLines = 1, fontFamily = FontFamily.Monospace)
+                if (tab.sleeping) {
+                    Text(
+                        stringResource(R.string.tab_sleeping_short), color = c.textSecondary, fontSize = 11.sp,
+                        modifier = Modifier.align(Alignment.BottomStart).padding(ScydeSpace.s8),
+                    )
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (tab.pinned) {
+                    Text("•", color = accent.ink, fontSize = 16.sp, modifier = Modifier.padding(top = ScydeSpace.s8, end = ScydeSpace.s4).semantics { contentDescription = "pinned" })
+                }
+                Text(tab.title.ifEmpty { stringResource(R.string.tab_new) }, color = c.textPrimary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(top = ScydeSpace.s8))
+                Box(Modifier.size(ScydeSize.hitAndroid).clickable { browser.close(tab) }.semantics { contentDescription = "close tab" }, contentAlignment = Alignment.Center) {
+                    Icon(ScydeIcons.close, null, tint = c.textSecondary, modifier = Modifier.size(ScydeSpace.s16))
+                }
+            }
+        }
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            if (!tab.isPrivate) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (tab.pinned) R.string.tab_unpin else R.string.tab_pin)) },
+                    onClick = { menu = false; browser.togglePin(tab) },
+                )
+                browser.spaces.filter { it.id != tab.spaceId }.forEach { space ->
+                    DropdownMenuItem(
+                        text = { Text("${stringResource(R.string.space_move)}: ${space.name}") },
+                        onClick = { menu = false; browser.move(tab, space.id) },
+                    )
+                }
+            }
+            DropdownMenuItem(text = { Text(stringResource(R.string.tab_close)) }, onClick = { menu = false; browser.close(tab) })
+        }
+    }
+}
+
+/** A name for a new Space (or a renamed one); `null` when cancelled. */
+@Composable
+private fun SpaceNameDialog(title: String, initial: String, c: ScydeColors, onDone: (String?) -> Unit) {
+    var name by remember { mutableStateOf(initial) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { onDone(null) },
+        title = { Text(title) },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                value = name, onValueChange = { name = it }, singleLine = true,
+                label = { Text(stringResource(R.string.space_name)) },
+            )
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { onDone(name) }) { Text(stringResource(R.string.space_create)) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { onDone(null) }) { Text(stringResource(R.string.omnibox_cancel)) } },
+        containerColor = c.surfaceRaised,
+    )
+}
+
+/** Rename, recolour or delete a Space. */
+@Composable
+private fun SpaceEditDialog(browser: Browser, space: Space, c: ScydeColors, dark: Boolean, onDone: () -> Unit) {
+    var name by remember { mutableStateOf(space.name) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDone,
+        title = { Text(stringResource(R.string.space_rename)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(ScydeSpace.s16)) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = name, onValueChange = { name = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.space_name)) },
+                )
+                Text(stringResource(R.string.space_color), color = c.textSecondary, fontSize = 13.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s8)) {
+                    Space.COLORS.forEach { color ->
+                        val tint = accentFor(color, dark)
+                        Box(
+                            Modifier.size(ScydeSize.hitAndroid - ScydeSpace.s8).background(tint.fill, CircleShape)
+                                .border(ScydeSpace.s2, if (color == space.color) tint.ring else Color.Transparent, CircleShape)
+                                .clickable { browser.recolorSpace(space.id, color) }
+                                .semantics { contentDescription = color },
+                        )
+                    }
+                }
+                if (browser.spaces.size > 1) {
+                    Text(
+                        stringResource(R.string.space_delete), color = c.statusDanger, fontSize = 15.sp,
+                        modifier = Modifier.clickable { browser.deleteSpace(space.id); onDone() }.padding(vertical = ScydeSpace.s8),
+                    )
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { browser.renameSpace(space.id, name); onDone() }) { Text(stringResource(R.string.space_rename)) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDone) { Text(stringResource(R.string.omnibox_cancel)) } },
+        containerColor = c.surfaceRaised,
+    )
 }
 
 @Composable
