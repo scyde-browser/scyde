@@ -68,6 +68,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -126,10 +127,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge() // mandatory for targetSdk 35+ (CLAUDE.md)
         super.onCreate(savedInstanceState)
-        browser = Browser(this)
+        browser = Browser.get(this)
         val start = intent?.dataString ?: intent?.getStringExtra("url")
         // Restore the last session (sleeping tabs) unless a link opened the app.
-        if (browser.tabs.isEmpty() && (start != null || !browser.restoreSession())) browser.newTab(start)
+        // Restore the last session first (a link must not overwrite it), then open the link on top.
+        if (browser.tabs.isEmpty()) {
+            val restored = browser.restoreSession()
+            if (start != null) browser.newTab(start) else if (!restored) browser.newTab()
+        } else if (start != null && savedInstanceState == null) {
+            browser.newTab(start)
+        }
         val page = intent?.getStringExtra("page") // CI screenshots
         when {
             page != null -> browser.openPage(page)
@@ -145,7 +152,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.dataString?.let { browser.newTab(it) }
+        intent.dataString?.let {
+            browser.closePeek()
+            browser.closeSheet()
+            browser.newTab(it)
+        }
         intent.getStringExtra("page")?.let { browser.openPage(it) }
     }
 }
@@ -319,6 +330,9 @@ private fun Island(
     val scope = rememberCoroutineScope()
 
     fun toggle(p: Panel) = setPanel(if (panel == p) Panel.NONE else p)
+    // The gesture block below lives across recompositions: it must read the current tab and mode.
+    val currentTab by rememberUpdatedState(tab)
+    val currentEditing by rememberUpdatedState(editing)
     val spaced = browser.spaces.size > 1 && tab?.isPrivate != true
 
     Row(
@@ -351,7 +365,7 @@ private fun Island(
                         val d = ch.position - ch.previousPosition
                         dx += d.x
                         dy += d.y
-                        if (!dragging && !editing && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) dragging = true
+                        if (!dragging && !currentEditing && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) dragging = true
                         if (dragging) {
                             ch.consume()
                             if (kotlin.math.abs(dx) > kotlin.math.abs(dy)) scope.launch { drag.snapTo(dx * 0.35f) }
@@ -361,8 +375,8 @@ private fun Island(
                     if (!dragging) return@awaitEachGesture
                     if (dy < -ScydeSpace.s40.toPx() && kotlin.math.abs(dy) > kotlin.math.abs(dx)) {
                         onTabs()
-                    } else if (dy > ScydeSpace.s40.toPx() && kotlin.math.abs(dy) > kotlin.math.abs(dx) && tab?.isWeb == true) {
-                        tab.immersive = true // swipe down: full screen
+                    } else if (dy > ScydeSpace.s40.toPx() && kotlin.math.abs(dy) > kotlin.math.abs(dx) && currentTab?.isWeb == true) {
+                        currentTab?.immersive = true // swipe down: full screen
                     } else if (kotlin.math.abs(dx) > ScydeSpace.s48.toPx()) {
                         browser.switchTab(if (dx < 0) 1 else -1)
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)

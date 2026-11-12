@@ -60,6 +60,8 @@ class Tab(firstSession: GeckoSession, val isPrivate: Boolean, firstSpace: String
     var savedState: GeckoSession.SessionState? = null
     /** What a restored tab loads when it wakes (it has no saved state). */
     var pendingUrl: String? = null
+    /** The next finished load is a reload or a wake, not a visit (history counts stay honest). */
+    var skipVisit = false
     var url by mutableStateOf("")
     var title by mutableStateOf("")
     var progress by mutableIntStateOf(100)
@@ -103,12 +105,15 @@ class Tab(firstSession: GeckoSession, val isPrivate: Boolean, firstSpace: String
  * (webRequestBlocking + WASM engine, ADR-0004) which also hosts the internal pages, and ScydeCore
  * (omnibox, history, settings) via UniFFI.
  */
-class Browser(private val context: Context) {
+class Browser(appContext: Context) {
+    private val context: Context = appContext.applicationContext
     val tabs = mutableStateListOf<Tab>()
     private var activeState by mutableStateOf<Long?>(null)
     var activeId: Long?
         get() = activeState
         set(v) {
+            // Stamp the tab being left too, or a long-read tab would fall asleep the moment it is left.
+            active?.lastActive = System.currentTimeMillis()
             activeState = v
             val tab = active ?: return
             tab.lastActive = System.currentTimeMillis()
@@ -149,7 +154,6 @@ class Browser(private val context: Context) {
     private var extension: WebExtension? = null
     private var port: WebExtension.Port? = null
     private val pending = mutableListOf<() -> Unit>()
-    private val density = context.resources.displayMetrics.density
 
     val runtime: GeckoRuntime = shared ?: GeckoRuntime.create(
         context.applicationContext,
@@ -185,7 +189,8 @@ class Browser(private val context: Context) {
                 ext.setMessageDelegate(messages, NATIVE_APP)
                 for (t in tabs) t.session.webExtensionController.setMessageDelegate(ext, messages, NATIVE_APP)
                 // Shield must also run in private tabs.
-                runtime.webExtensionController.setAllowedInPrivateBrowsing(ext, true)
+                // Only when needed: the call reloads the extension (and its engine).
+                if (!ext.metaData.allowedInPrivateBrowsing) runtime.webExtensionController.setAllowedInPrivateBrowsing(ext, true)
             },
             { e -> Log.e(TAG, "Shield extension failed", e); flushPending() },
         )
@@ -336,6 +341,10 @@ class Browser(private val context: Context) {
         tab.pendingUrl = tab.url
         tab.session.close()
         tab.session = newSession(tab.isPrivate)
+        if (tab.desktop) {
+            tab.session.settings.userAgentMode = GeckoSessionSettings.USER_AGENT_MODE_DESKTOP
+            tab.session.settings.viewportMode = GeckoSessionSettings.VIEWPORT_MODE_DESKTOP
+        }
         attach(tab)
         tab.sleeping = true
     }
@@ -343,6 +352,7 @@ class Browser(private val context: Context) {
     private fun wake(tab: Tab) {
         if (!tab.sleeping) return
         tab.sleeping = false
+        tab.skipVisit = true
         val s = tab.session
         if (!s.isOpen) s.open(runtime)
         extension?.let { s.webExtensionController.setMessageDelegate(it, messages, NATIVE_APP) }
@@ -447,7 +457,9 @@ class Browser(private val context: Context) {
         // Before the extension is loaded there is no page URL yet: try again once it is.
         val name = page.substringBefore('#')
         val fragment = page.substringAfter('#', "").let { if (it.isEmpty()) "" else "#$it" }
-        val url = internalUrl(name)?.plus(fragment) ?: return if (!gateOpen) whenReady { openPage(page) } else Unit
+        // `?embedded`: the sheet has its own title bar, the page hides its heading (welcome keeps its header).
+        val query = if (name == "welcome") "" else "?embedded"
+        val url = internalUrl(name)?.plus(query + fragment) ?: return if (!gateOpen) whenReady { openPage(page) } else Unit
         closeSheet()
         val s = GeckoSession()
         s.navigationDelegate = object : GeckoSession.NavigationDelegate {
@@ -491,7 +503,7 @@ class Browser(private val context: Context) {
 
     fun reloadOrStop() {
         val tab = active ?: return
-        if (tab.progress in 1..99) tab.session.stop() else tab.session.reload()
+        if (tab.progress in 1..99) tab.session.stop() else { tab.skipVisit = true; tab.session.reload() }
     }
 
     fun toggleBookmark() {
@@ -585,7 +597,7 @@ class Browser(private val context: Context) {
         runCatching { settings.set("shield.disabled_sites", JSONArray(disabledSites.sorted()).toString()) }
         runCatching { settingsFile.writeText(settings.toJson()) }
         sendAllowlist()
-        tabs.filter { it.site == site }.forEach { it.session.reload() }
+        tabs.filter { it.site == site && !it.sleeping }.forEach { it.skipVisit = true; it.session.reload() }
         show(str(if (on) R.string.toast_shield_on else R.string.toast_shield_off, site))
     }
 
@@ -605,8 +617,14 @@ class Browser(private val context: Context) {
                 perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean,
             ) {
-                tab.url = url ?: ""
-                tab.themeColor = null
+                val next = url ?: ""
+                // Hash links and history.pushState are not a new page: keep the tint and full screen.
+                val samePage = next.substringBefore('#').substringBefore('?') == tab.url.substringBefore('#').substringBefore('?')
+                tab.url = next
+                if (!samePage) {
+                    tab.themeColor = null
+                    tab.immersive = false // a new page starts with the island visible
+                }
                 tab.bookmarked = tab.isWeb && runCatching { places?.isBookmarked(tab.url) }.getOrNull() == true
             }
 
@@ -647,7 +665,9 @@ class Browser(private val context: Context) {
                 if (!tab.isPrivate) saveSession()
                 val url = tab.url
                 // Private tabs leave no history.
-                if (success && !tab.isPrivate && (url.startsWith("https://") || url.startsWith("http://"))) {
+                val skip = tab.skipVisit
+                tab.skipVisit = false
+                if (success && !skip && !tab.isPrivate && (url.startsWith("https://") || url.startsWith("http://"))) {
                     val kind = if (tab.typed) VisitKind.TYPED else VisitKind.LINK
                     tab.typed = false
                     runCatching { places?.recordVisit(url, tab.title.ifEmpty { null }, kind, System.currentTimeMillis() / 1000) }
@@ -673,7 +693,8 @@ class Browser(private val context: Context) {
         }
         s.scrollDelegate = object : GeckoSession.ScrollDelegate {
             override fun onScrollChanged(session: GeckoSession, scrollX: Int, scrollY: Int) {
-                tab.scrolled(scrollY, (ScydeSpace.s12.value * density).toInt(), (ScydeSpace.s64.value * density).toInt())
+                // GeckoView reports CSS pixels (about 1 dp on mobile pages), so no density factor.
+                tab.scrolled(scrollY, ScydeSpace.s12.value.toInt(), ScydeSpace.s64.value.toInt())
             }
         }
         // Gecko blocks window.open without a gesture and asks here: always deny and count (PLAN §5.5).
@@ -844,5 +865,13 @@ class Browser(private val context: Context) {
         )
 
         @Volatile private var shared: GeckoRuntime? = null
+
+        /**
+         * One Browser per process: the GeckoRuntime and the extension (its native port, its `ready`
+         * message) are process-wide, so a recreated Activity must reuse the same Browser.
+         */
+        @Volatile private var instance: Browser? = null
+
+        fun get(context: Context): Browser = instance ?: synchronized(this) { instance ?: Browser(context).also { instance = it } }
     }
 }

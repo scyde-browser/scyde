@@ -162,8 +162,18 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - [x] **v0.4.0:**
   - phones (ADR-0013): session restore (`session.json`), sleeping tabs (`tabs.sleep_after_minutes`), pinned tabs, Spaces with their own colour
   - Windows (ADR-0014): the island floats in a transparent window over the page, with no black band
-- [ ] v0.5.0:
-  - Windows: island v2 (control center, command omnibox, hide while reading), Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
+- [x] **v0.5.0, quality pass** (owner, 2026-11-12: "fix all bugs and page display, check the design"):
+  - internal pages on phones: sleep timer as 6 choices (was 1441 segments), New Tab hero fits, buttons do not wrap, Shield stats on one row, no duplicate title inside sheets (`?embedded`)
+  - Windows: the island hides while reading (`watch_island`, scroll read with `ExecuteScript`), Alt+F4 on the island closes the app, menu fixes
+  - iOS: page colour band behind the status bar, room below the page, plus 9 findings from a code review (sleep timing, new windows, Shield before first load, visit counts, titles)
+  - Android: 11 findings from a code review (session overwritten by links, one Browser per process, island gestures, IDN allowlist, visit counts, desktop mode after sleep)
+- [ ] Open from the reviews:
+  - Android: blocked counts are per host, not per tab (a second tab or Peek on the same host resets them)
+  - Android: "Shield off" does not lift Gecko's own tracking protection for the site
+  - Android: the end of a page can sit under the island (GeckoView dynamic toolbar API not wired yet)
+- [ ] `[OWNER]` CI screenshots cannot be reviewed from the agent session (artifact downloads are blocked). A workflow step that pushes them to a `ci-shots-*` branch needs `contents: write` in CI and was not added without the owner's approval. Until then the native design is checked only by reading the code.
+- [ ] v0.6.0:
+  - Windows: island v2 (control center, command omnibox), Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
   - Zen mode (annoyance lists, `[OWNER]` licences)
 - Known: the Windows smoke test once scored `qa/adblock` 10/11 (`allow:exception`) and 11/11 on rerun. On first launch the DNR rulesets do not all load at the same moment, so for a few hundred ms a block rule can win over its exception.
 - Skills `animate`, `break-ui` and others from PLAN §12 are not installed; DESIGN §6 was followed directly

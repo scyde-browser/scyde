@@ -13,6 +13,7 @@
     maximum?: number;
     properties?: Record<string, Node>;
     'x-scyde-hidden'?: boolean;
+    'x-scyde-options'?: number[];
   };
   // Hidden nodes (per-site lists, onboarding state) are managed elsewhere, not on this page.
   const shown = (n: Node) => !n['x-scyde-hidden'];
@@ -104,13 +105,14 @@
                   />
                 {:else if field.type === 'integer'}
                   <span class="name">{label(path)}</span>
+                  {#if hint}<span class="hint">{hint}</span>{/if}
                   <Segmented
                     label={label(path)}
                     value={String(value)}
-                    options={Array.from({ length: (field.maximum ?? 1) - (field.minimum ?? 0) + 1 }, (_, i) => {
-                      const n = String((field.minimum ?? 0) + i);
-                      return { value: n, label: n };
-                    })}
+                    options={(
+                      field['x-scyde-options'] ??
+                      Array.from({ length: Math.min((field.maximum ?? 1) - (field.minimum ?? 0) + 1, 12) }, (_, i) => (field.minimum ?? 0) + i)
+                    ).map((n) => ({ value: String(n), label: n === 0 && field['x-scyde-options'] ? t('settings.off') : String(n) }))}
                     onchange={(v) => set(section, key, Number(v))}
                   />
                 {:else if key === 'custom_accent'}

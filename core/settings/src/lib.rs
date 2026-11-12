@@ -24,6 +24,7 @@ pub const SUPPORTED_KEYWORDS: &[&str] = &[
     "items",
     "maxItems",
     "x-scyde-hidden",
+    "x-scyde-options",
     "$schema",
     "$id",
     "title",

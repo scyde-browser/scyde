@@ -74,6 +74,11 @@
     api.runtime.sendNativeMessage('scyde', { type: 'theme', color: hex }).catch(() => {});
   }
 
+  // Back/forward from the page cache and in-page navigations do not run this script again.
+  addEventListener('pageshow', (e) => e.persisted && themeColor());
+  addEventListener('popstate', themeColor);
+  addEventListener('hashchange', themeColor);
+
   const start = () => {
     themeColor();
     generic(document);

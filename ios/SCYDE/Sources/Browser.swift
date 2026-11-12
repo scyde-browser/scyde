@@ -42,6 +42,8 @@ final class Tab: NSObject, ObservableObject, Identifiable {
     var lastActive = Date()
     var desktop = false
     var typed = false
+    /// The next finished load is a wake, reload or back/forward, not a visit.
+    var skipVisit = false
     private var lastOffset: CGFloat = 0
     private var observers: [NSKeyValueObservation] = []
     /// What a sleeping or restored tab loads when it wakes.
@@ -63,6 +65,9 @@ final class Tab: NSObject, ObservableObject, Identifiable {
         wv.allowsLinkPreview = true
         wv.isFindInteractionEnabled = true
         wv.scrollView.contentInsetAdjustmentBehavior = .always
+        // Room below the page, so its last lines can scroll clear of the island.
+        wv.scrollView.contentInset.bottom = ScydeSize.islandMobileHeight + ScydeSpace.s8
+        wv.scrollView.verticalScrollIndicatorInsets.bottom = ScydeSize.islandMobileHeight + ScydeSpace.s8
         #if DEBUG
         wv.isInspectable = true
         #endif
@@ -78,11 +83,14 @@ final class Tab: NSObject, ObservableObject, Identifiable {
             webView.observe(\.canGoBack) { [weak self] wv, _ in Task { @MainActor in self?.canGoBack = wv.canGoBack } },
             webView.observe(\.canGoForward) { [weak self] wv, _ in Task { @MainActor in self?.canGoForward = wv.canGoForward } },
             webView.observe(\.themeColor) { [weak self] wv, _ in Task { @MainActor in self?.themeColor = wv.themeColor } },
+            // The status-bar band uses it when the page has no theme-color.
+            webView.observe(\.underPageBackgroundColor) { [weak self] _, _ in Task { @MainActor in self?.objectWillChange.send() } },
             webView.scrollView.observe(\.contentOffset) { [weak self] sv, _ in
                 let y = sv.contentOffset.y + sv.adjustedContentInset.top
                 let end = sv.contentSize.height + sv.adjustedContentInset.top + sv.adjustedContentInset.bottom - sv.bounds.height
                 let atEnd = sv.contentSize.height > sv.bounds.height && y >= end - ScydeSpace.s8
-                Task { @MainActor in self?.scrolled(to: y, atEnd: atEnd) }
+                let raw = sv.contentOffset.y
+                Task { @MainActor in self?.scrolled(to: y, raw: raw, atEnd: atEnd) }
             },
         ]
     }
@@ -112,6 +120,7 @@ final class Tab: NSObject, ObservableObject, Identifiable {
     func wake() {
         guard sleeping else { return }
         sleeping = false
+        skipVisit = true
         if let state = savedState {
             webView.interactionState = state
         } else if let url = pendingURL {
@@ -121,8 +130,10 @@ final class Tab: NSObject, ObservableObject, Identifiable {
         pendingURL = nil
     }
 
-    private func scrolled(to y: CGFloat, atEnd: Bool) {
-        let delta = y - lastOffset
+    /// `raw` (the plain content offset) gives the direction: unlike `y` it does not jump when the
+    /// status bar hides and the top inset changes, so full screen cannot flip back and forth.
+    private func scrolled(to y: CGFloat, raw: CGFloat, atEnd: Bool) {
+        let delta = raw - lastOffset
         if y <= ScydeSpace.s8 || atEnd {
             if immersive { immersive = false }
         } else if delta > ScydeSpace.s12 && y > ScydeSpace.s64 {
@@ -132,7 +143,7 @@ final class Tab: NSObject, ObservableObject, Identifiable {
         } else {
             return // small moves do not move the reference point, so slow scrolls still count
         }
-        lastOffset = y
+        lastOffset = raw
     }
 
     var display: DisplayUrl? {
@@ -156,10 +167,13 @@ final class Tab: NSObject, ObservableObject, Identifiable {
 final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate {
     @Published var tabs: [Tab] = []
     @Published var activeID: UUID? {
+        // Stamp the tab being left too, or a long-read tab would fall asleep the moment it is left.
+        willSet { active?.lastActive = Date() }
         didSet {
             guard let tab = active else { return }
             tab.lastActive = Date()
-            tab.wake()
+            // Not before the rule lists are installed: the first page must not load unblocked.
+            whenShieldLoaded { [weak tab] in tab?.wake() }
             if !tab.isPrivate { spaceID = tab.spaceID }
             saveSession()
         }
@@ -187,6 +201,9 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     /// One in-memory store for all private tabs; replaced when the last private tab closes.
     private var privateStore = WKWebsiteDataStore.nonPersistent()
     private var toastTask: Task<Void, Never>?
+    /// Loads wait for the rule lists (or for knowing there are none).
+    private var shieldLoaded = false
+    private var afterShield: [() -> Void] = []
     private let sessionURL: URL
     private var sleepTimer: Timer?
     private var restoring = false
@@ -245,7 +262,10 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             // Only the visible tab drives the island; background tabs do not re-render it.
             if let self, let tab, tab.id == self.activeID { self.objectWillChange.send() }
         }
-        if configuration == nil { tab.webView.load(URLRequest(url: url ?? InternalPages.newTab)) }
+        if configuration == nil {
+            let target = url ?? InternalPages.newTab
+            whenShieldLoaded { [weak tab] in tab?.webView.load(URLRequest(url: target)) }
+        }
         if activate { activeID = tab.id } else { saveSession() }
         return tab
     }
@@ -518,8 +538,23 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     /// off simply loads without them.
     private func applyShield(to webView: WKWebView, on: Bool) {
         let ucc = webView.configuration.userContentController
+        // A popup shares its opener's controller (WebKit hands over the same one), so Shield stays on
+        // for both unless every tab on that controller has it off.
+        let sharing = tabs.filter { $0.webView.configuration.userContentController === ucc }
+        let enabled = sharing.count > 1 ? sharing.contains { shieldOn(for: $0) } || on : on
         ucc.removeAllContentRuleLists()
-        if on { for list in ruleLists { ucc.add(list) } }
+        if enabled { for list in ruleLists { ucc.add(list) } }
+    }
+
+    private func whenShieldLoaded(_ block: @escaping () -> Void) {
+        if shieldLoaded { block() } else { afterShield.append(block) }
+    }
+
+    private func shieldDidLoad() {
+        shieldLoaded = true
+        let run = afterShield
+        afterShield = []
+        run.forEach { $0() }
     }
 
     private func loadShield() {
@@ -527,7 +562,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
               let data = try? Data(contentsOf: dir.appendingPathComponent("manifest.json")),
               let manifest = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let lists = manifest["ios"] as? [[String: Any]]
-        else { return }
+        else { return shieldDidLoad() }
         let version = manifest["version"] as? String ?? "dev"
         filtersVersion = version
         let store = WKContentRuleListStore.default()!
@@ -540,7 +575,9 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
                     compiled.append(cached)
                     continue
                 }
-                guard let json = try? String(contentsOf: dir.appendingPathComponent(path), encoding: .utf8),
+                // Several MB of JSON: read off the main thread (ADR-0006).
+                let file = dir.appendingPathComponent(path)
+                guard let json = await Task.detached(operation: { try? String(contentsOf: file, encoding: .utf8) }).value,
                       let list = try? await store.compileContentRuleList(forIdentifier: id, encodedContentRuleList: json)
                 else { continue }
                 compiled.append(list)
@@ -548,6 +585,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             ruleLists = compiled
             for tab in tabs { applyShield(to: tab.webView, on: shieldOn(for: tab)) }
             shieldReady = !compiled.isEmpty
+            shieldDidLoad()
             // Drop lists from older bundles.
             if let ids = try? await store.availableIdentifiers() {
                 for old in ids where old.hasPrefix("scyde-") && !old.hasPrefix("scyde-\(version)-") {
@@ -587,9 +625,14 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     ) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
         let tab = tab(for: webView)
         preferences.preferredContentMode = tab?.desktop == true ? .desktop : .mobile
-        guard navigationAction.targetFrame?.isMainFrame != false, let url = navigationAction.request.url else {
+        // No target frame = a new window (target=_blank, window.open): createWebViewWith handles it,
+        // and it must not touch this tab's Shield or replace its page.
+        guard let frame = navigationAction.targetFrame, frame.isMainFrame, let url = navigationAction.request.url else {
             return (.allow, preferences)
         }
+        if navigationAction.navigationType == .reload || navigationAction.navigationType == .backForward { tab?.skipVisit = true }
+        // A new page starts with the island visible.
+        if tab?.immersive == true { tab?.immersive = false }
         if let target = omniboxDeamp(url: url.absoluteString).flatMap(URL.init(string:)) {
             webView.load(URLRequest(url: target))
             return (.cancel, preferences)
@@ -600,11 +643,18 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         return (.allow, preferences)
     }
 
+    /// A new page starts without the previous page's title (PDFs and images never set one).
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        tab(for: webView)?.title = webView.title ?? ""
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard let tab = tab(for: webView), let url = webView.url else { return }
         if !tab.isPrivate { saveSession() }
         tab.bookmarked = tab.isWeb && ((try? places?.isBookmarked(url: url.absoluteString)) ?? false)
-        guard tab.isWeb, !tab.isPrivate else { return } // private tabs leave no history
+        let skip = tab.skipVisit
+        tab.skipVisit = false
+        guard tab.isWeb, !tab.isPrivate, !skip else { return } // private tabs leave no history
         let kind: VisitKind = tab.typed ? .typed : .link
         tab.typed = false
         _ = try? places?.recordVisit(url: url.absoluteString, title: webView.title, kind: kind, at: Int64(Date().timeIntervalSince1970))

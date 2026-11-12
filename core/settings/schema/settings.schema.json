@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://scyde.dev/schema/settings.schema.json",
   "title": "SCYDE settings",
-  "description": "Source of truth for user settings (PLAN §11 Phase 1.7). core/settings validates against it; defaults come from it. Supported keywords (core/settings validator): type, properties, required, additionalProperties, enum, const, default, minimum, maximum, minLength, maxLength, x-scyde-format (hex-color, search-template), items + maxItems (arrays of leaves), x-scyde-hidden (not shown on the Settings page).",
+  "description": "Source of truth for user settings (PLAN §11 Phase 1.7). core/settings validates against it; defaults come from it. Supported keywords (core/settings validator): type, properties, required, additionalProperties, enum, const, default, minimum, maximum, minLength, maxLength, x-scyde-format (hex-color, search-template), items + maxItems (arrays of leaves), x-scyde-hidden (not shown on the Settings page), x-scyde-options (the choices the Settings page offers for a wide integer range; 0 is shown as Off).",
   "type": "object",
   "additionalProperties": false,
   "required": ["version"],
@@ -103,7 +103,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "sleep_after_minutes": { "type": "integer", "minimum": 0, "maximum": 1440, "default": 15 }
+        "sleep_after_minutes": { "type": "integer", "minimum": 0, "maximum": 1440, "default": 15, "x-scyde-options": [0, 5, 15, 30, 60, 120] }
       }
     },
     "onboarding": {

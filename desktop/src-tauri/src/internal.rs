@@ -17,14 +17,23 @@ const ORIGIN: &str = "http://scyde.localhost/";
 
 /// The path of an internal page URL (`/settings/`), or `None` for anything else.
 pub fn page_path(url: &str) -> Option<&str> {
-    url.strip_prefix("http://scyde.localhost").or_else(|| url.strip_prefix("https://scyde.localhost"))
+    url.strip_prefix("http://scyde.localhost")
+        .or_else(|| url.strip_prefix("https://scyde.localhost"))
 }
 
 /// `scyde://settings` → `http://scyde.localhost/settings/`. Unknown pages go to New Tab.
 pub fn to_protocol_url(url: &str) -> Option<String> {
     let rest = url.strip_prefix("scyde://")?;
-    let page = rest.trim_matches('/').split(['/', '?', '#']).next().unwrap_or("");
-    let page = if PAGES.contains(&page) { page } else { "newtab" };
+    let page = rest
+        .trim_matches('/')
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or("");
+    let page = if PAGES.contains(&page) {
+        page
+    } else {
+        "newtab"
+    };
     Some(format!("{ORIGIN}{page}/"))
 }
 
@@ -46,16 +55,29 @@ fn mime(path: &str) -> &'static str {
 }
 
 /// Protocol handler: `/<page>/<file>` from `resources/pages/<page>/`.
-pub fn serve(ctx: UriSchemeContext<'_, tauri::Wry>, request: Request<Vec<u8>>) -> Response<Cow<'static, [u8]>> {
+pub fn serve(
+    ctx: UriSchemeContext<'_, tauri::Wry>,
+    request: Request<Vec<u8>>,
+) -> Response<Cow<'static, [u8]>> {
     let path = request.uri().path().to_owned();
     let mut parts = path.trim_start_matches('/').splitn(2, '/');
     let page = parts.next().unwrap_or("");
-    let file = parts.next().filter(|f| !f.is_empty()).unwrap_or("index.html");
-    let not_found = || Response::builder().status(404).body(Cow::Borrowed(&b"not found"[..])).expect("response");
+    let file = parts
+        .next()
+        .filter(|f| !f.is_empty())
+        .unwrap_or("index.html");
+    let not_found = || {
+        Response::builder()
+            .status(404)
+            .body(Cow::Borrowed(&b"not found"[..]))
+            .expect("response")
+    };
     if !PAGES.contains(&page) || file.contains("..") || file.contains('\\') {
         return not_found();
     }
-    let Ok(base) = ctx.app_handle().path().resource_dir() else { return not_found() };
+    let Ok(base) = ctx.app_handle().path().resource_dir() else {
+        return not_found();
+    };
     match std::fs::read(base.join("pages").join(page).join(file)) {
         Ok(bytes) => Response::builder()
             .status(200)
@@ -100,7 +122,9 @@ fn err(id: &Value, e: impl std::fmt::Display) -> Value {
 pub fn bridge(webview: Webview, app: AppHandle, message: Value) -> Value {
     let id = message.get("id").cloned().unwrap_or(Value::Null);
     let trusted = webview.label().starts_with("tab-")
-        && webview.url().is_ok_and(|u| u.scheme() == "http" && u.host_str() == Some("scyde.localhost"));
+        && webview
+            .url()
+            .is_ok_and(|u| u.scheme() == "http" && u.host_str() == Some("scyde.localhost"));
     if !trusted {
         return err(&id, "untrusted origin");
     }
@@ -116,7 +140,10 @@ pub fn bridge(webview: Webview, app: AppHandle, message: Value) -> Value {
 }
 
 fn s(p: &Value, k: &str) -> String {
-    p.get(k).and_then(Value::as_str).unwrap_or_default().to_owned()
+    p.get(k)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned()
 }
 
 fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
@@ -139,10 +166,19 @@ fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
                 .into_iter()
                 .map(|t| json!({ "url": t.url, "title": t.title, "pinned": t.pinned }))
                 .collect::<Vec<_>>();
-            let popups: u32 = lock(&state.tabs).list.iter().map(|t| t.popups_blocked).sum();
-            let stories = lock(&state.settings).get("newtab.top_stories").and_then(Value::as_bool).unwrap_or(false);
+            let popups: u32 = lock(&state.tabs)
+                .list
+                .iter()
+                .map(|t| t.popups_blocked)
+                .sum();
+            let stories = lock(&state.settings)
+                .get("newtab.top_stories")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
             // DNR does not report per-request matches in release builds (ADR-0003); only popups are counted.
-            Ok(json!({ "shield": { "blocked": popups, "bytesSaved": 0, "msSaved": 0 }, "recent": recent, "topSites": top, "storiesEnabled": stories }))
+            Ok(
+                json!({ "shield": { "blocked": popups, "bytesSaved": 0, "msSaved": 0 }, "recent": recent, "topSites": top, "storiesEnabled": stories }),
+            )
         }
         "navigate" => {
             let input = s(p, "input");
@@ -151,10 +187,14 @@ fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
             std::thread::spawn(move || go(&app, &input, new_tab));
             Ok(json!({ "ok": true }))
         }
-        "settings.schema" => Ok(json!({ "schema": serde_json::from_str::<Value>(settings::SCHEMA_JSON).unwrap_or(Value::Null) })),
+        "settings.schema" => Ok(
+            json!({ "schema": serde_json::from_str::<Value>(settings::SCHEMA_JSON).unwrap_or(Value::Null) }),
+        ),
         "settings.get" => {
             let json = lock(&state.settings).to_json();
-            Ok(json!({ "settings": serde_json::from_str::<Value>(&json).unwrap_or(Value::Null), "issues": [] }))
+            Ok(
+                json!({ "settings": serde_json::from_str::<Value>(&json).unwrap_or(Value::Null), "issues": [] }),
+            )
         }
         "settings.set" => {
             let path = s(p, "path");
@@ -170,7 +210,9 @@ fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
                         let welcome: Vec<_> = lock(&state.tabs)
                             .list
                             .iter()
-                            .filter(|t| page_path(&t.url).is_some_and(|p| p.starts_with("/welcome")))
+                            .filter(|t| {
+                                page_path(&t.url).is_some_and(|p| p.starts_with("/welcome"))
+                            })
                             .map(|t| t.webview.clone())
                             .collect();
                         if let Ok(url) = NEWTAB.parse::<tauri::Url>() {
@@ -185,17 +227,24 @@ fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
             }
         }
         "settings.reset" => {
-            lock(&state.settings).reset(&s(p, "path")).map_err(|e| e.to_string())?;
+            lock(&state.settings)
+                .reset(&s(p, "path"))
+                .map_err(|e| e.to_string())?;
             save_settings(app);
             emit_state(app);
             Ok(json!({ "ok": true }))
         }
         "history.query" => {
             let places = lock(&state.places);
-            let Some(pl) = places.as_ref() else { return Ok(json!({ "entries": [] })) };
+            let Some(pl) = places.as_ref() else {
+                return Ok(json!({ "entries": [] }));
+            };
             let q = p.get("query").and_then(Value::as_str);
-            let limit = u32::try_from(p.get("limit").and_then(Value::as_u64).unwrap_or(50)).unwrap_or(50).min(500);
-            let offset = u32::try_from(p.get("offset").and_then(Value::as_u64).unwrap_or(0)).unwrap_or(0);
+            let limit = u32::try_from(p.get("limit").and_then(Value::as_u64).unwrap_or(50))
+                .unwrap_or(50)
+                .min(500);
+            let offset =
+                u32::try_from(p.get("offset").and_then(Value::as_u64).unwrap_or(0)).unwrap_or(0);
             let entries: Vec<Value> = pl
                 .history(q, limit, offset)
                 .map_err(places_err)?
@@ -218,8 +267,13 @@ fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
         }
         "bookmarks.children" => {
             let places = lock(&state.places);
-            let Some(pl) = places.as_ref() else { return Ok(json!({ "items": [] })) };
-            let parent = p.get("parent").and_then(Value::as_i64).unwrap_or(places::BOOKMARKS_BAR);
+            let Some(pl) = places.as_ref() else {
+                return Ok(json!({ "items": [] }));
+            };
+            let parent = p
+                .get("parent")
+                .and_then(Value::as_i64)
+                .unwrap_or(places::BOOKMARKS_BAR);
             let items: Vec<Value> = pl
                 .children(parent)
                 .map_err(places_err)?
@@ -230,16 +284,25 @@ fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
         }
         "bookmarks.remove" => {
             if let Some(pl) = lock(&state.places).as_mut() {
-                pl.remove_bookmark(p.get("id").and_then(Value::as_i64).unwrap_or(0)).map_err(places_err)?;
+                pl.remove_bookmark(p.get("id").and_then(Value::as_i64).unwrap_or(0))
+                    .map_err(places_err)?;
             }
             Ok(json!({ "ok": true }))
         }
         "shield.summary" => {
-            let popups: u32 = lock(&state.tabs).list.iter().map(|t| t.popups_blocked).sum();
+            let popups: u32 = lock(&state.tabs)
+                .list
+                .iter()
+                .map(|t| t.popups_blocked)
+                .sum();
             let zero = json!({ "blocked": popups, "bytesSaved": 0, "msSaved": 0 });
-            Ok(json!({ "today": zero, "total": zero, "filtersVersion": state.filters_version, "sites": [] }))
+            Ok(
+                json!({ "today": zero, "total": zero, "filtersVersion": state.filters_version, "sites": [] }),
+            )
         }
-        "shield.setSite" => Ok(json!({ "ok": false, "error": "Per-site Shield switches arrive in a later update on Windows." })),
+        "shield.setSite" => Ok(
+            json!({ "ok": false, "error": "Per-site Shield switches arrive in a later update on Windows." }),
+        ),
         _ => Err(format!("method not allowed: {method}")),
     }
 }
