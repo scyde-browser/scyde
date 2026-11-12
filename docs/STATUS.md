@@ -180,7 +180,13 @@ Branch: the session's designated branch (agent sessions may only push there), on
   - iOS: New Tab waited for the rule lists to compile (blank on first launch).
   - Tab grid: page thumbnails on iOS and Android. New Tab hides Shield numbers the platform cannot measure.
 - Known: `qa/adblock` on iOS scores 10/11 (`net:subframe`): adblock-rust's content-blocking conversion never blocks first-party documents, and the fixture's iframe is first-party. Third-party ad frames are blocked.
-- [ ] v0.7.0:
+- [x] **v0.7.0, the basics every browser needs (whole-app review, 2026-11-12):**
+  - Android: GeckoView shows nothing by itself, so `alert`/`confirm`/`prompt`, `<select>`, file inputs, HTTP sign-in, date/time inputs, "leave page?" and form re-send did nothing. `Prompts.kt` implements `PromptDelegate` with Compose dialogs (system file picker and date/time pickers).
+  - Android: location, camera and microphone (`PermissionDelegate`: SCYDE's prompt per site, then the Android permission); muted autoplay allowed, notifications and cross-site storage access denied.
+  - Android: full-screen video (island and system bars hide, back leaves full screen); downloads saved from the page's own response to Downloads (MediaStore; Android 8–9: the app's Downloads folder); `tel:`/`mailto:`/`intent:` links open the right app after a tap (`intent:` limited to browsable, no explicit component); a page that does not open shows an error page (tokens, light/dark, never a TLS bypass).
+  - iOS: JavaScript `alert`/`confirm`/`prompt` (titled with the asking site), downloads (`WKDownload` into Files › SCYDE › Downloads), links for other apps after a tap, error page; camera/microphone/location usage descriptions (without them a page asking for the camera ended the app).
+  - Closing the welcome sheet any way finishes onboarding on iOS and Android (it came back on the next launch).
+- [ ] v0.8.0:
   - Windows: island v2 (control center, command omnibox), Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
   - Zen mode (annoyance lists, `[OWNER]` licences)
 - Known: the Windows smoke test once scored `qa/adblock` 10/11 (`allow:exception`) and 11/11 on rerun. On first launch the DNR rulesets do not all load at the same moment, so for a few hundred ms a block rule can win over its exception.

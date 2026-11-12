@@ -124,12 +124,16 @@ struct RootView: View {
             // `-panel menu|shield|omnibox|tabs` opens that surface at launch (CI screenshots).
             let args = CommandLine.arguments
             guard let i = args.firstIndex(of: "-panel"), i + 1 < args.count else { return }
-            switch args[i + 1] {
-            case "menu": panel = .menu
-            case "shield": panel = .shield
-            case "omnibox": panel = .omnibox
-            case "tabs": showTabs = true
-            default: break
+            let surface = args[i + 1]
+            // After the page has loaded, so the tab grid has a thumbnail to show.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                switch surface {
+                case "menu": panel = .menu
+                case "shield": panel = .shield
+                case "omnibox": panel = .omnibox
+                case "tabs": showTabs = true
+                default: break
+                }
             }
         }
         .statusBarHidden(browser.active?.immersive == true && panel == .none)

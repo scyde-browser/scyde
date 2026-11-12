@@ -190,9 +190,15 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     @Published var filtersVersion = ""
     @Published var appearance: [String: String] = [:]
     /// Settings, Library and Shield open as a sheet over the tabs, not as tabs (closed with Done or a swipe down).
-    @Published var sheetPage: String?
+    @Published var sheetPage: String? {
+        // Closing the welcome sheet any way (Done, swipe down, Skip) finishes onboarding: it must
+        // not come back on the next launch.
+        didSet { if oldValue == "welcome", sheetPage != "welcome" { finishOnboarding() } }
+    }
     /// Sites (eTLD+1) where the owner turned Shield off (`shield.disabled_sites`).
     @Published var disabledSites: Set<String> = []
+    /// Downloads in progress → the file name they are saved under.
+    var downloads: [ObjectIdentifier: String] = [:]
     /// A short message that rises out of the island (DESIGN.md §8 Toast).
     @Published var toast: String?
 
@@ -491,6 +497,12 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     func open(page: String) { sheetPage = page }
 
+    private func finishOnboarding() {
+        guard needsOnboarding else { return }
+        try? settings.set(path: "onboarding.completed", jsonValue: "true")
+        try? settings.toJson().write(to: settingsURL, atomically: true, encoding: .utf8)
+    }
+
     /// First run: the welcome sheet (theme, search engine, Shield) until it is finished or skipped.
     var needsOnboarding: Bool { settings.get(path: "onboarding.completed") != "true" }
 
@@ -651,6 +663,8 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     ) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
         let tab = tab(for: webView)
         preferences.preferredContentMode = tab?.desktop == true ? .desktop : .mobile
+        if openExternal(navigationAction) { return (.cancel, preferences) }
+        if navigationAction.shouldPerformDownload { return (.download, preferences) }
         // No target frame = a new window (target=_blank, window.open): createWebViewWith handles it,
         // and it must not touch this tab's Shield or replace its page.
         guard let frame = navigationAction.targetFrame, frame.isMainFrame, let url = navigationAction.request.url else {

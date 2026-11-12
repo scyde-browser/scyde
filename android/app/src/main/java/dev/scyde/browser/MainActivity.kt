@@ -130,10 +130,36 @@ class MainActivity : ComponentActivity() {
     /** `--es panel menu|shield|omnibox|tabs` opens that surface (CI screenshots). */
     private val initialPanel = mutableStateOf<String?>(null)
 
+    /** Pending answers for the page's file input and for Android permissions (one of each at a time). */
+    private var filesChosen: ((List<android.net.Uri>) -> Unit)? = null
+    private var permissionsAnswered: ((Boolean) -> Unit)? = null
+    private val pickOne = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        filesChosen?.invoke(listOfNotNull(uri)); filesChosen = null
+    }
+    private val pickMany = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        filesChosen?.invoke(uris); filesChosen = null
+    }
+    private val askPermissions = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        permissionsAnswered?.invoke(result.isNotEmpty() && result.values.all { it }); permissionsAnswered = null
+    }
+
+    private val pickFiles: (Array<String>, Boolean, (List<android.net.Uri>) -> Unit) -> Unit = { types, multiple, done ->
+        filesChosen?.invoke(emptyList())
+        filesChosen = done
+        if (multiple) pickMany.launch(types) else pickOne.launch(types)
+    }
+    private val requestPermissions: (Array<String>, (Boolean) -> Unit) -> Unit = { permissions, done ->
+        permissionsAnswered?.invoke(false)
+        permissionsAnswered = done
+        askPermissions.launch(permissions)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge() // mandatory for targetSdk 35+ (CLAUDE.md)
         super.onCreate(savedInstanceState)
         browser = Browser.get(this)
+        browser.pickFiles = pickFiles
+        browser.requestAndroidPermissions = requestPermissions
         val start = intent?.dataString ?: intent?.getStringExtra("url")
         // Restore the last session (sleeping tabs) unless a link opened the app.
         // Restore the last session first (a link must not overwrite it), then open the link on top.
@@ -150,6 +176,16 @@ class MainActivity : ComponentActivity() {
         }
         initialPanel.value = intent?.getStringExtra("panel")
         setContent { ScydeApp(browser, initialPanel) }
+    }
+
+    override fun onDestroy() {
+        // The Browser outlives the Activity: it must not keep this Activity's launchers.
+        filesChosen?.invoke(emptyList()); filesChosen = null
+        permissionsAnswered?.invoke(false); permissionsAnswered = null
+        // A newer Activity may already have registered its own.
+        if (browser.pickFiles === pickFiles) browser.pickFiles = null
+        if (browser.requestAndroidPermissions === requestPermissions) browser.requestAndroidPermissions = null
+        super.onDestroy()
     }
 
     override fun onPause() {
@@ -200,15 +236,17 @@ fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStat
 
     // Full screen while reading: the system bars hide with the island and come back with a swipe.
     val immersive = active?.immersive == true && panel == Panel.NONE && sheet == null && browser.peekUrl == null
+    // A video in full screen: nothing of SCYDE stays on the screen.
+    val fullscreen = active?.fullscreen == true && sheet == null
     val view = LocalView.current
     val pageColor = active?.themeColor?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
     val topColor = if (sheet == null) pageColor ?: c.surfaceCanvas else c.surfaceRaised
-    LaunchedEffect(immersive, topColor) {
+    LaunchedEffect(immersive, fullscreen, topColor) {
         val window = (view.context as? android.app.Activity)?.window ?: return@LaunchedEffect
         val bars = WindowCompat.getInsetsController(window, view)
         bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         bars.isAppearanceLightStatusBars = topColor.luminance() > 0.5f
-        if (immersive) bars.hide(WindowInsetsCompat.Type.systemBars()) else bars.show(WindowInsetsCompat.Type.systemBars())
+        if (immersive || fullscreen) bars.hide(WindowInsetsCompat.Type.systemBars()) else bars.show(WindowInsetsCompat.Type.systemBars())
     }
 
     LaunchedEffect(initialPanel.value) {
@@ -228,8 +266,9 @@ fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStat
     }
 
     // Predictive back (CLAUDE.md): peek → sheet → panel → tab grid → page history → exit.
-    BackHandler(enabled = browser.peekUrl != null || sheet != null || panel != Panel.NONE || showTabs || active?.canGoBack == true) {
+    BackHandler(enabled = fullscreen || browser.peekUrl != null || sheet != null || panel != Panel.NONE || showTabs || active?.canGoBack == true) {
         when {
+            fullscreen -> active?.session?.exitFullScreen()
             browser.peekUrl != null -> browser.closePeek()
             sheet != null -> browser.closeSheet()
             panel != Panel.NONE -> closePanel()
@@ -243,7 +282,7 @@ fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStat
         Column(Modifier.fillMaxSize().background(topColor)) {
             if (sheet != null) SheetBar(sheet, c, onClose = { browser.closeSheet() })
             AndroidView(
-                modifier = Modifier.fillMaxWidth().weight(1f).then(if (sheet == null) Modifier.statusBarsPadding() else Modifier),
+                modifier = Modifier.fillMaxWidth().weight(1f).then(if (sheet == null && !fullscreen) Modifier.statusBarsPadding() else Modifier),
                 factory = { ctx ->
                     val edge = with(density) { ScydeSpace.s40.toPx() }
                     val distance = with(density) { ScydeSpace.s80.toPx() }
@@ -273,7 +312,7 @@ fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStat
             val can = if (edgeSide < 0) active?.canGoBack == true else active?.canGoForward == true
             EdgeArrow(edgeSide, edgeFraction, can, c, Modifier.align(if (edgeSide < 0) Alignment.CenterStart else Alignment.CenterEnd))
         }
-        if (sheet == null) {
+        if (sheet == null && !fullscreen) {
             AnimatedVisibility(
                 visible = panel != Panel.NONE && panel != Panel.FIND,
                 enter = fadeIn(),
@@ -320,6 +359,7 @@ fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStat
     }
     LaunchedEffect(showTabs) { if (showTabs) browser.snapshotActive() }
     if (showTabs) TabGrid(browser, c, accent, onDone = { showTabs = false })
+    PromptHost(browser, c)
 }
 
 /** Aura tint: a little of the page's theme-color, only when the core says island text stays AA. */
