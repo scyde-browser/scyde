@@ -159,10 +159,13 @@ Branch: the session's designated branch (agent sessions may only push there), on
   - private tabs, find in page, desktop site, bookmark star, Peek, Aura tint (`theme::aura`)
   - welcome on first run (`web/apps/welcome`, also on Windows)
   - prototype states in `design/prototypes/mobile`
-- [ ] v0.4.0:
-  - phones: sleeping tabs (`tabs.sleep_after_minutes`), session restore, pinned tabs, Spaces
-  - Windows: island v2, Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
-  - Zen mode (annoyance lists `[OWNER]` licences)
+- [x] **v0.4.0:**
+  - phones (ADR-0013): session restore (`session.json`), sleeping tabs (`tabs.sleep_after_minutes`), pinned tabs, Spaces with their own colour
+  - Windows (ADR-0014): the island floats in a transparent window over the page, with no black band
+- [ ] v0.5.0:
+  - Windows: island v2 (control center, command omnibox, hide while reading), Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
+  - Zen mode (annoyance lists, `[OWNER]` licences)
+- Known: the Windows smoke test once scored `qa/adblock` 10/11 (`allow:exception`) and 11/11 on rerun. On first launch the DNR rulesets do not all load at the same moment, so for a few hundred ms a block rule can win over its exception.
 - Skills `animate`, `break-ui` and others from PLAN §12 are not installed; DESIGN §6 was followed directly
 
 ## Next (owner)
