@@ -851,7 +851,21 @@ fn smoke(app: &AppHandle, out: &PathBuf) {
         .iter()
         .map(|t| json!({ "url": user_url(&t.url), "title": t.title, "popups_blocked": t.popups_blocked }))
         .collect();
+    // Where the island window is, so CI can tell "not shown" from "not captured".
+    let island = app.get_webview_window("chrome").map(|w| {
+        json!({
+            "visible": w.is_visible().ok(),
+            "position": w.outer_position().ok().map(|p| [p.x, p.y]),
+            "size": w.outer_size().ok().map(|s| [s.width, s.height]),
+            "hidden_for_reading": *lock(&state.island_hidden),
+        })
+    });
+    let main = app.get_window("main").map(|w| {
+        json!({ "position": w.inner_position().ok().map(|p| [p.x, p.y]), "size": w.inner_size().ok().map(|s| [s.width, s.height]) })
+    });
     let report = json!({
+        "island": island,
+        "main": main,
         "elapsed_ms": started.elapsed().as_millis(),
         "shield_extension": state.extensions.is_some(),
         "filters": state.filters_version,

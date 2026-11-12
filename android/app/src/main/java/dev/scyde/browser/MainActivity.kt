@@ -1028,7 +1028,9 @@ private fun TabCard(browser: Browser, tab: Tab, c: ScydeColors, accent: ScydeAcc
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(ScydeRadius.sm)),
                     )
                 } else {
-                    Text(tab.site ?: tab.url.substringAfter("://").substringBefore('/'), color = c.textTertiary, fontSize = 11.sp, maxLines = 1, fontFamily = FontFamily.Monospace)
+                    // Our own pages by name ("newtab"), not by the extension's address.
+                    val label = tab.site ?: browser.internalPage(tab.url)?.let { "scyde://$it" } ?: tab.url.substringAfter("://").substringBefore('/')
+                    Text(label, color = c.textTertiary, fontSize = 11.sp, maxLines = 1, fontFamily = FontFamily.Monospace)
                 }
                 if (tab.sleeping) {
                     Text(
