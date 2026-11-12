@@ -147,6 +147,9 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - [x] **v0.2.0 published** (release run 43109526691): `SCYDE-v0.2.0-windows-x64-setup.exe` (in the CI smoke test, `qa/adblock` scores 11/11 in WebView2 and the popup is blocked), `SCYDE-v0.2.0-ios-unsigned.ipa`, `scyde-0.2.0-{arm64-v8a,armeabi-v7a,x86_64}.apk`
 - [x] Phase 7 (partial): `NOTICE.md`, `PRIVACY.md` (draft), `docs/release.md`; `NETWORK.md` records that v0.2.0 makes no calls of its own
 
+- [x] **v0.2.1** (owner's phone test, 2026-11-12): scroll guard (all platforms), iOS island follows the active tab, De-AMP (core `omnibox::deamp`), internal pages as sheets (iOS sheet, Android sheet session with ×), island swipe in the Initial pass / simultaneous gesture, Android edge swipe back/forward (`EdgeSwipeLayout`). CI: Android emulator swipes `qa/scroll` and fails if the page does not move
+- [ ] Open: redirect stubs (`$redirect` resources) and scriptlets. Blocking `gpt.js`/`gtm.js` without uBO-style stubs can break sites that call them; we need our own stub resources (not uBO's GPL files). `[OWNER]`: send sites that still break
+
 ## Next (owner)
 - `[OWNER]` Phase 6: confirm the order of the unique features (Aura tint, Shield pill, sleeping tabs, split view + Ctrl+K, web panels, Peek, Zen mode, Spaces)
 - `[OWNER]` Phase 7: SCYDE Sync yes/no; licence of our own code; privacy policy contact

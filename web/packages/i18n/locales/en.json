@@ -174,5 +174,6 @@
   "library.bookmarks.empty": "This folder is empty.",
   "library.bookmarks.remove": "Remove {title}",
   "library.bookmarks.up": "Back to {title}",
-  "error.bridge": "Could not reach SCYDE. Reload the page."
+  "error.bridge": "Could not reach SCYDE. Reload the page.",
+  "sheet.close": "Close"
 }

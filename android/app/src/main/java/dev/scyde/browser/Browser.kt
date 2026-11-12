@@ -25,6 +25,7 @@ import uniffi.scyde_core.SettingsStore
 import uniffi.scyde_core.VisitKind
 import uniffi.scyde_core.bookmarksBarId
 import uniffi.scyde_core.omniboxClassify
+import uniffi.scyde_core.omniboxDeamp
 import uniffi.scyde_core.omniboxSearchUrl
 import uniffi.scyde_core.settingsSchema
 import java.io.File
@@ -57,6 +58,9 @@ class Browser(private val context: Context) {
     var popupsBlocked by mutableIntStateOf(0)
     var appearance by mutableStateOf<Map<String, String>>(emptyMap())
     var filtersVersion by mutableStateOf("")
+    /** Settings, Library and Shield open over the tabs in their own session, closed with × or back. */
+    var sheetPage by mutableStateOf<String?>(null)
+    var sheetSession by mutableStateOf<GeckoSession?>(null)
 
     val active: Tab? get() = tabs.firstOrNull { it.id == activeId }
 
@@ -125,7 +129,8 @@ class Browser(private val context: Context) {
         val s = session ?: GeckoSession()
         val tab = Tab(s)
         attach(tab)
-        if (!s.isOpen) s.open(runtime)
+        // A session from onNewSession must stay closed: GeckoView opens it itself.
+        if (session == null) s.open(runtime)
         extension?.let { s.webExtensionController.setMessageDelegate(it, messages, NATIVE_APP) }
         tabs += tab
         if (activate) activeId = tab.id
@@ -168,7 +173,32 @@ class Browser(private val context: Context) {
     }
 
     fun openPage(page: String) {
-        internalUrl(page)?.let { newTab(it) }
+        // Before the extension is loaded there is no page URL yet: try again once it is.
+        val url = internalUrl(page) ?: return if (!gateOpen) whenReady { openPage(page) } else Unit
+        closeSheet()
+        val s = GeckoSession()
+        s.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            /** A link to a website opens in the current tab, not inside the sheet. */
+            override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<AllowOrDeny> {
+                val u = request.uri
+                if (u.startsWith("http://") || u.startsWith("https://")) {
+                    main.post { closeSheet(); go(u) }
+                    return GeckoResult.fromValue(AllowOrDeny.DENY)
+                }
+                return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+            }
+        }
+        s.open(runtime)
+        extension?.let { s.webExtensionController.setMessageDelegate(it, messages, NATIVE_APP) }
+        s.loadUri(url)
+        sheetSession = s
+        sheetPage = page
+    }
+
+    fun closeSheet() {
+        sheetSession?.close()
+        sheetSession = null
+        sheetPage = null
     }
 
     /** Inline completion: the rest of the best host-prefix match from history. */
@@ -193,6 +223,13 @@ class Browser(private val context: Context) {
                 tab.url = url ?: ""
             }
 
+            /** De-AMP: a Google AMP viewer URL loads the publisher's page, so the island shows the real domain. */
+            override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<AllowOrDeny>? {
+                val target = omniboxDeamp(request.uri) ?: return null
+                main.post { session.loadUri(target) }
+                return GeckoResult.fromValue(AllowOrDeny.DENY)
+            }
+
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
                 tab.canGoBack = canGoBack
             }
@@ -203,8 +240,9 @@ class Browser(private val context: Context) {
 
             /** A popup that passed Gecko's gesture check opens as a tab and keeps its opener. */
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession> {
+                // Called on the UI thread: the tab and its delegates exist before Gecko opens the session.
                 val child = GeckoSession()
-                main.post { newTab(session = child) }
+                newTab(session = child)
                 return GeckoResult.fromValue(child)
             }
         }
@@ -308,6 +346,7 @@ class Browser(private val context: Context) {
             .put("topSites", JSONArray().apply { places?.topSites(8u)?.forEach { put(JSONObject().put("url", it.url).put("title", it.title).put("pinned", it.pinned)) } })
             .put("storiesEnabled", settings.get("newtab.top_stories") == "true")
         "navigate" -> {
+            closeSheet()
             go(p.optString("input"), p.optBoolean("newTab"))
             JSONObject().put("ok", true)
         }

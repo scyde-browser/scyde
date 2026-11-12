@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import ScydeCore
 import SwiftUI
@@ -54,6 +55,8 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     @Published var shieldReady = false
     @Published var filtersVersion = ""
     @Published var appearance: [String: String] = [:]
+    /// Settings, Library and Shield open as a sheet over the tabs, not as tabs (closed with Done or a swipe down).
+    @Published var sheetPage: String?
 
     let places: PlacesStore?
     let settings: SettingsStore
@@ -62,6 +65,13 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     private let bridge = Bridge()
     private var ruleLists: [WKContentRuleList] = []
     private let processPool = WKProcessPool()
+    /// Tab changes (URL, title, progress, back/forward) re-render the island.
+    private var tabChanges: [UUID: AnyCancellable] = [:]
+    private lazy var scrollGuard: WKUserScript? = {
+        guard let url = Bundle.main.url(forResource: "scroll-guard", withExtension: "js", subdirectory: "filters"),
+              let source = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        return WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+    }()
 
     var active: Tab? { tabs.first { $0.id == activeID } }
 
@@ -91,6 +101,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         c.preferences.javaScriptCanOpenWindowsAutomatically = false // popups need a gesture (PLAN §5.5)
         c.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "scyde")
         for list in ruleLists { c.userContentController.add(list) }
+        if let scrollGuard { c.userContentController.addUserScript(scrollGuard) }
         return c
     }
 
@@ -100,6 +111,10 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         tab.webView.navigationDelegate = self
         tab.webView.uiDelegate = self
         tabs.append(tab)
+        tabChanges[tab.id] = tab.objectWillChange.sink { [weak self, weak tab] _ in
+            // Only the visible tab drives the island; background tabs do not re-render it.
+            if let self, let tab, tab.id == self.activeID { self.objectWillChange.send() }
+        }
         if configuration == nil { tab.webView.load(URLRequest(url: url ?? InternalPages.newTab)) }
         if activate { activeID = tab.id }
         return tab
@@ -108,12 +123,14 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
     func close(_ tab: Tab) {
         guard let i = tabs.firstIndex(where: { $0.id == tab.id }) else { return }
         tab.webView.stopLoading()
+        tabChanges[tab.id] = nil
         tabs.remove(at: i)
         if activeID == tab.id { activeID = tabs.isEmpty ? nil : tabs[min(i, tabs.count - 1)].id }
         if tabs.isEmpty { newTab() }
     }
 
     func closeAll() {
+        tabChanges.removeAll()
         tabs.removeAll()
         newTab()
     }
@@ -145,7 +162,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         return host.hasPrefix(typed) && host.count > typed.count ? String(host.dropFirst(typed.count)) : nil
     }
 
-    func open(page: String) { newTab(URL(string: "scyde://\(page)/")) }
+    func open(page: String) { sheetPage = page }
 
     // MARK: Shield (ADR-0006: compile once, cache, never on the main thread's critical path)
 
@@ -203,6 +220,14 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     // MARK: navigation delegate
 
+    /// De-AMP: a Google AMP viewer URL loads the publisher's page, so the island shows the real domain.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        guard navigationAction.targetFrame?.isMainFrame != false, let url = navigationAction.request.url,
+              let target = omniboxDeamp(url: url.absoluteString).flatMap(URL.init(string:)) else { return .allow }
+        webView.load(URLRequest(url: target))
+        return .cancel
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard let tab = tabs.first(where: { $0.webView === webView }), let url = webView.url,
               url.scheme == "https" || url.scheme == "http" else { return }
@@ -241,6 +266,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
                 "storiesEnabled": settings.get(path: "newtab.top_stories") == "true",
             ]
         case "navigate":
+            sheetPage = nil
             go(p["input"] as? String ?? "", inNewTab: p["newTab"] as? Bool ?? false)
             return ["ok": true]
         case "settings.schema":

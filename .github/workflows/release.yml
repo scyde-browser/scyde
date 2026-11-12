@@ -100,7 +100,7 @@ jobs:
             [ -f "$f" ] && cp "$f" "dist/release/SCYDE-${V}-ios-unsigned.ipa"
           done
           for f in builds/scyde-android/apk/*.apk builds/scyde-android/*.apk; do
-            [ -f "$f" ] && cp "$f" "dist/release/$(basename "$f" | sed "s/0\.2\.0/${V#v}/; s/^scyde-/scyde-/")"
+            [ -f "$f" ] && cp "$f" "dist/release/$(basename "$f")"
           done
           ls -la dist/release
           {

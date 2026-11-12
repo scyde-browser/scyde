@@ -10,6 +10,7 @@ struct IslandView: View {
     @Binding var showTabs: Bool
     @State private var editing = false
     @State private var text = ""
+    @State private var drag: CGFloat = 0
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -72,12 +73,21 @@ struct IslandView: View {
                 .padding(.horizontal, ScydeSpace.s24)
             }
         }
-        .gesture(
-            DragGesture(minimumDistance: ScydeSpace.s24).onEnded { g in
-                guard !editing else { return }
-                if g.translation.height < -ScydeSpace.s40 { showTabs = true }
-                else if abs(g.translation.width) > ScydeSpace.s48 { switchTab(by: g.translation.width < 0 ? 1 : -1) }
-            }
+        .offset(x: drag)
+        // Simultaneous, so a drag that starts on a button (most of the island) still switches tabs.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: ScydeSpace.s16)
+                .onChanged { g in
+                    guard !editing, abs(g.translation.width) > abs(g.translation.height) else { return }
+                    // The island follows the finger with resistance (transform only, rule 5).
+                    drag = g.translation.width * 0.35
+                }
+                .onEnded { g in
+                    withAnimation(ScydeMotion.springSmooth.animation) { drag = 0 }
+                    guard !editing else { return }
+                    if g.translation.height < -ScydeSpace.s40, abs(g.translation.height) > abs(g.translation.width) { showTabs = true }
+                    else if abs(g.translation.width) > ScydeSpace.s48 { switchTab(by: g.translation.width < 0 ? 1 : -1) }
+                }
         )
         .animation(ScydeMotion.springSmooth.animation, value: editing)
     }
@@ -124,12 +134,15 @@ struct IslandView: View {
         }
     }
 
+    /// Like Safari: left → next tab, and past the last tab a new one; right → previous tab.
     private func switchTab(by delta: Int) {
-        guard let i = browser.tabs.firstIndex(where: { $0.id == browser.activeID }), !browser.tabs.isEmpty else { return }
-        let j = (i + delta + browser.tabs.count) % browser.tabs.count
-        browser.activeID = browser.tabs[j].id
+        guard let i = browser.tabs.firstIndex(where: { $0.id == browser.activeID }) else { return }
+        let j = i + delta
+        if j >= browser.tabs.count { browser.newTab() }
+        else if j >= 0 { browser.activeID = browser.tabs[j].id }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
+
 }
 
 /// All tabs as a grid (DESIGN.md §8: a full-screen shelf).

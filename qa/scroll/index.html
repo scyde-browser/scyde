@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCYDE QA · scroll</title>
+<style>
+  /* The site locks scrolling for its overlay; Shield has hidden the overlay (display:none below). */
+  html, body { overflow: hidden; margin: 0; font: 600 28px/1.4 system-ui, sans-serif; }
+  .wall { position: fixed; inset: 0; background: #000c; display: none; }
+  .row { padding: 24px; border-bottom: 1px solid #8884; }
+  #state { position: sticky; top: 0; padding: 24px; background: #fff; }
+</style>
+</head>
+<body>
+<div id="state">checking…</div>
+<div class="wall">Please disable your ad blocker</div>
+<script>
+  for (let i = 1; i <= 60; i++) document.write(`<div class="row">Post ${i}</div>`);
+  // The scroll guard should unlock the page within a few seconds.
+  setTimeout(() => {
+    const ok = getComputedStyle(document.body).overflowY !== 'hidden';
+    document.getElementById('state').textContent = ok ? 'SCROLL OK' : 'SCROLL LOCKED';
+    document.title = ok ? 'SCROLL OK' : 'SCROLL LOCKED';
+  }, 4000);
+</script>
+</body>
+</html>

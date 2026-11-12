@@ -19,6 +19,8 @@ struct ScydeApp: App {
                         } else {
                             browser.newTab()
                         }
+                        // `-page settings` opens an internal page as a sheet (CI screenshots).
+                        if let i = args.firstIndex(of: "-page"), i + 1 < args.count { browser.open(page: args[i + 1]) }
                     }
                 }
                 .onOpenURL { url in browser.newTab(url) }
@@ -74,6 +76,70 @@ struct RootView: View {
         .environment(\.palette, palette)
         .preferredColorScheme(browser.appearance["theme"] == "system" || browser.appearance["theme"] == nil ? nil : scheme)
         .sheet(isPresented: $showTabs) { TabGrid(isPresented: $showTabs).environment(\.palette, palette) }
+        .background {
+            // A second sheet modifier on its own view, so it never competes with the tab grid.
+            Color.clear.sheet(isPresented: Binding(get: { browser.sheetPage != nil }, set: { if !$0 { browser.sheetPage = nil } })) {
+                PageSheet(page: browser.sheetPage ?? "settings").environmentObject(browser).environment(\.palette, palette)
+            }
+        }
+    }
+}
+
+/// Settings, Library and Shield as a sheet over the tabs: Done or a swipe down closes it, and a link
+/// to a website opens in the current tab instead of inside the sheet.
+struct PageSheet: View {
+    @EnvironmentObject var browser: Browser
+    @Environment(\.palette) private var palette
+    let page: String
+    @StateObject private var web = SheetWeb()
+
+    private var title: String {
+        switch page {
+        case "library": return String(localized: "library.title")
+        case "shields": return String(localized: "shield.label")
+        default: return String(localized: "rail.settings")
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            WebContainer(webView: web.webView(for: page, browser: browser))
+                .ignoresSafeArea(.container, edges: .bottom)
+                .background(palette.colors.surfaceCanvas)
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(String(localized: "mobile.tabs.done")) { browser.sheetPage = nil }.bold()
+                    }
+                }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+@MainActor
+final class SheetWeb: NSObject, ObservableObject, WKNavigationDelegate {
+    private var view: WKWebView?
+    private weak var browser: Browser?
+
+    func webView(for page: String, browser: Browser) -> WKWebView {
+        if let view { return view }
+        self.browser = browser
+        let v = WKWebView(frame: .zero, configuration: browser.makeConfiguration())
+        v.navigationDelegate = self
+        v.isOpaque = false
+        v.load(URLRequest(url: URL(string: "scyde://\(page)/")!))
+        view = v
+        return v
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        guard let url = navigationAction.request.url, url.scheme == "http" || url.scheme == "https" else { return .allow }
+        browser?.sheetPage = nil
+        browser?.go(url.absoluteString)
+        return .cancel
     }
 }
 

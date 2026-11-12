@@ -209,6 +209,13 @@ pub fn omnibox_display_url(url: String) -> Option<DisplayUrl> {
     })
 }
 
+/// The publisher URL for a Google AMP viewer URL (`google.<tld>/amp/s/…`), `None` otherwise.
+#[uniffi::export]
+#[must_use]
+pub fn omnibox_deamp(url: String) -> Option<String> {
+    omnibox::deamp(&url)
+}
+
 /// The host shortened to `max_chars` from the start, never cutting the registrable domain.
 #[uniffi::export]
 #[must_use]
