@@ -32,7 +32,8 @@ const off = (host) => {
 try {
   const port = browser.runtime.connectNative(NATIVE);
   port.onMessage.addListener((m) => {
-    if (m?.type === 'allowlist') disabled = new Set(m.sites ?? []);
+    // The app sends display names (IDNs in Unicode); requests carry punycode hosts.
+    if (m?.type === 'allowlist') disabled = new Set((m.sites ?? []).map((s) => hostOf(`https://${s}/`) || s));
   });
 } catch {}
 
