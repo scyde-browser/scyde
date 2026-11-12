@@ -774,7 +774,10 @@ class Browser(appContext: Context) {
         }
 
         override fun onMessage(nativeApp: String, message: Any, sender: WebExtension.MessageSender): GeckoResult<Any>? {
-            val json = message as? JSONObject ?: return null
+            val json = message as? JSONObject ?: run {
+                Log.w(TAG, "bridge: message is ${message.javaClass.name}, not an object")
+                return null
+            }
             when (json.optString("type")) {
                 "ready" -> {
                     main.post { shieldReady = true; flushPending() }
@@ -805,13 +808,20 @@ class Browser(appContext: Context) {
             val trusted = base != null && sender.url.startsWith(base + "pages/") &&
                 sender.environmentType == WebExtension.MessageSender.ENV_TYPE_EXTENSION
             val reply = JSONObject().put("id", json.opt("id"))
-            if (!trusted) return GeckoResult.fromValue(reply.put("ok", false).put("error", "untrusted origin"))
-            if (method !in METHODS) return GeckoResult.fromValue(reply.put("ok", false).put("error", "method not allowed"))
+            if (!trusted) {
+                Log.w(TAG, "bridge: untrusted sender url=${sender.url} env=${sender.environmentType} base=$base")
+                return GeckoResult.fromValue(reply.put("ok", false).put("error", "untrusted origin"))
+            }
+            if (method !in METHODS) {
+                Log.w(TAG, "bridge: method not allowed: $method")
+                return GeckoResult.fromValue(reply.put("ok", false).put("error", "method not allowed"))
+            }
             val result = GeckoResult<Any>()
             main.post {
                 try {
                     result.complete(reply.put("ok", true).put("result", handle(method, json.optJSONObject("params") ?: JSONObject())))
                 } catch (e: Exception) {
+                    Log.e(TAG, "bridge: $method failed", e)
                     result.complete(reply.put("ok", false).put("error", e.message ?: "error"))
                 }
             }

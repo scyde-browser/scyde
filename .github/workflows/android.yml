@@ -147,7 +147,8 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
-          profile: pixel_6 # a real phone size for the design screenshots
+          profile: pixel_2 # a real phone size for the design screenshots (pixel_6 was too slow: launcher ANR)
+          emulator-boot-timeout: 900
           disable-animations: true
           script: |
             mkdir -p shots
@@ -162,7 +163,6 @@ jobs:
             adb exec-out screencap -p > shots/qa-adblock.png
             adb shell pidof dev.scyde.browser || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; echo "::error::SCYDE crashed on the qa page"; exit 1; }
             bash android/ci/smoke-gestures.sh || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; exit 1; }
-            adb logcat -d | grep -E "SCYDE|GeckoConsole|JavaScript|console\.|AndroidRuntime" | tail -400 > shots/logcat.txt || true
       - name: Publish screenshots to ci-shots-android (pull requests)
         if: always() && github.event_name == 'pull_request'
         shell: bash
