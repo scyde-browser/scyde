@@ -622,6 +622,25 @@ impl Places {
         Ok(())
     }
 
+    /// Removes every bookmark of `url` (the star in the island toggles a URL, not one bookmark).
+    /// Returns how many were removed.
+    ///
+    /// # Errors
+    /// `SQLite` errors.
+    pub fn unbookmark_url(&mut self, url: &str) -> Result<usize> {
+        let ids: Vec<i64> = {
+            let mut st = self.conn.prepare(
+                "SELECT b.id FROM bookmarks b JOIN places p ON p.id = b.place_id WHERE p.url = ?1",
+            )?;
+            st.query_map([url], |r| r.get(0))?
+                .collect::<rusqlite::Result<_>>()?
+        };
+        for id in &ids {
+            self.remove_bookmark(*id)?;
+        }
+        Ok(ids.len())
+    }
+
     // --------------------------------------------------------------- top sites
 
     /// Speed-dial tiles: pinned tiles at their positions, the rest filled with the best page per

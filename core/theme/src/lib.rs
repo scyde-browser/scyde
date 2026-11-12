@@ -7,6 +7,7 @@
 use std::fmt;
 
 pub mod accent;
+pub mod aura;
 pub mod contrast;
 pub mod tokens;
 

@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SCYDE",
   "mainBinaryName": "scyde",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "identifier": "dev.scyde.browser",
   "build": {
     "frontendDist": "../../web/apps/desktop-chrome/dist"
@@ -27,6 +27,7 @@
       "../../web/apps/settings/dist/": "pages/settings/",
       "../../web/apps/shields/dist/": "pages/shields/",
       "../../web/apps/library/dist/": "pages/library/",
+      "../../web/apps/welcome/dist/": "pages/welcome/",
       "../extensions/": "extensions/"
     },
     "windows": {

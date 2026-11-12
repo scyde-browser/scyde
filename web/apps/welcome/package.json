@@ -1,0 +1,18 @@
+{
+  "name": "@scyde/app-welcome",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Internal page scyde://welcome (first run)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@scyde/bridge": "workspace:*",
+    "@scyde/i18n": "workspace:*",
+    "@scyde/ui": "workspace:*"
+  }
+}

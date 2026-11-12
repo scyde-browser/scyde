@@ -5,7 +5,7 @@ import WebKit
 /// Android; the bridge decides what they may do (CLAUDE.md rule 6).
 final class InternalPages: NSObject, WKURLSchemeHandler {
     static let scheme = "scyde"
-    static let pages = ["newtab", "settings", "shields", "library"]
+    static let pages = ["newtab", "settings", "shields", "library", "welcome"]
     static let newTab = URL(string: "scyde://newtab/")!
 
     private static let csp =

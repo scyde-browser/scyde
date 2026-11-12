@@ -112,10 +112,10 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm tokens
-          for a in newtab settings shields library; do pnpm --filter "@scyde/app-$a" build; done
+          for a in newtab settings shields library welcome; do pnpm --filter "@scyde/app-$a" build; done
           R=ios/SCYDE
           mkdir -p $R/Resources/pages $R/Sources/Generated
-          for a in newtab settings shields library; do cp -R web/apps/$a/dist $R/Resources/pages/$a; done
+          for a in newtab settings shields library welcome; do cp -R web/apps/$a/dist $R/Resources/pages/$a; done
           cp web/packages/tokens/dist/swift/ScydeTokens.swift $R/Sources/Generated/
           node tools/i18n-native/build.mjs --ios $R/Sources/Generated/Localizable.xcstrings
           node tools/icon-export/export.mjs --out dist/icons
@@ -140,8 +140,11 @@ jobs:
         working-directory: ios/SCYDE
         run: |
           set -o pipefail
+          # The full log goes to a file; on failure the compiler errors are printed (tail hid them).
           xcodebuild build -project SCYDE.xcodeproj -scheme SCYDE -sdk iphonesimulator -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO | tail -30
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/xcodebuild.log" 2>&1 \
+            || { grep -E "error:" -A4 "$RUNNER_TEMP/xcodebuild.log" | head -120; exit 1; }
+          tail -5 "$RUNNER_TEMP/xcodebuild.log"
           APP=$(find build/sim -name SCYDE.app -type d | head -1)
           UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
           xcrun simctl boot "$UDID" || true
@@ -151,7 +154,7 @@ jobs:
           (cd ../.. && node qa/serve.mjs 8787 > /dev/null 2>&1 &)
           for mode in light dark; do
             xcrun simctl ui "$UDID" appearance $mode
-            xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser
+            xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -skipWelcome
             sleep 12
             xcrun simctl io "$UDID" screenshot ../../shots/newtab-$mode.png
           done
@@ -165,6 +168,9 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -page settings
           sleep 8
           xcrun simctl io "$UDID" screenshot ../../shots/settings-sheet.png
+          xcrun simctl launch --terminate-running-process "$UDID" dev.scyde.browser -page welcome
+          sleep 8
+          xcrun simctl io "$UDID" screenshot ../../shots/welcome-sheet.png
       - name: Unsigned .ipa (Feather signs it)
         working-directory: ios/SCYDE
         run: |

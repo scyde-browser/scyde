@@ -6,8 +6,19 @@
   import { t, type MessageKey } from '@scyde/i18n';
   import { BrandMark, Card, Segmented, Toast, Toggle, applyAppearance } from '@scyde/ui';
 
-  type Node = { type: string; enum?: string[]; minimum?: number; maximum?: number; properties?: Record<string, Node> };
-  const sections = Object.entries((schema as { properties: Record<string, Node> }).properties).filter(([k]) => k !== 'version');
+  type Node = {
+    type: string;
+    enum?: string[];
+    minimum?: number;
+    maximum?: number;
+    properties?: Record<string, Node>;
+    'x-scyde-hidden'?: boolean;
+  };
+  // Hidden nodes (per-site lists, onboarding state) are managed elsewhere, not on this page.
+  const shown = (n: Node) => !n['x-scyde-hidden'];
+  const sections = Object.entries((schema as unknown as { properties: Record<string, Node> }).properties)
+    .filter(([k, n]) => k !== 'version' && shown(n))
+    .map(([k, n]) => [k, { ...n, properties: Object.fromEntries(Object.entries(n.properties ?? {}).filter(([, f]) => shown(f))) }] as const);
 
   let values = $state<Record<string, Record<string, unknown>>>({});
   let ready = $state(false);

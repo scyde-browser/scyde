@@ -38,16 +38,44 @@
     }
   }
 
-  ask({ type: 'scyde.cosmetics', host }).then((r) => inject(r?.hide));
+  // The page's top host decides per-site Shield; an iframe uses its embedder from the referrer.
+  let top = host;
+  if (window.top !== window) {
+    try {
+      top = new URL(document.referrer).hostname || host;
+    } catch {}
+  }
+
+  ask({ type: 'scyde.cosmetics', host, top }).then((r) => inject(r?.hide));
 
   let pending = false;
   const generic = async (root) => {
     const { classes, ids } = collect(root);
     if (!classes.length && !ids.length) return;
-    const r = await ask({ type: 'scyde.generic', host, classes, ids });
+    const r = await ask({ type: 'scyde.generic', host, top, classes, ids });
     inject(r?.hide);
   };
+  // Aura tint (DESIGN.md §9): the top page's theme-color, as #RRGGBB, for the island (GeckoView only).
+  function themeColor() {
+    if (window.top !== window || !api.runtime.sendNativeMessage) return;
+    const metas = [...document.querySelectorAll('meta[name="theme-color" i]')];
+    const meta = metas.find((m) => !m.media || matchMedia(m.media).matches);
+    let hex = null;
+    if (meta?.content) {
+      const probe = document.createElement('i');
+      probe.style.color = meta.content;
+      document.documentElement.append(probe);
+      const rgb = getComputedStyle(probe).color.match(/[\d.]+/g);
+      probe.remove();
+      if (rgb && rgb.length >= 3 && !(rgb.length > 3 && Number(rgb[3]) === 0)) {
+        hex = '#' + rgb.slice(0, 3).map((x) => Math.round(Number(x)).toString(16).padStart(2, '0')).join('');
+      }
+    }
+    api.runtime.sendNativeMessage('scyde', { type: 'theme', color: hex }).catch(() => {});
+  }
+
   const start = () => {
+    themeColor();
     generic(document);
     new MutationObserver(() => {
       if (pending) return;

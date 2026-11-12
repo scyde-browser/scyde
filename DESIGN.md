@@ -14,7 +14,7 @@
 - **Ember is energy.** The orange-red Ember appears only where there is action: the caret, the active tab, the primary button, the mark.
 - **Words instead of tiles.** New Tab does not start with a grid of icons but with the question "Where to today?", which you type into directly.
 - **Real numbers.** Shield statistics come from the engine and sit next to the island, in the mono font.
-- **Quiet while you read.** When you scroll, the island shrinks into a tiny "pebble" and comes back when you scroll up or when the cursor approaches it.
+- **Quiet while you read.** When you scroll down, the island steps aside and the page fills the whole screen, edge to edge (on phones the status bar hides too). It comes back when you scroll up, reach the end of the page, swipe up from the bottom edge, or (desktop) when the cursor approaches it.
 
 ### How it differs from other browsers
 | Usual | SCYDE Island |
@@ -134,7 +134,7 @@ Durations (`instant 90`, `fast 140`, `base 200`, `slow 300`, `choreo-max 420`) a
 | **Press** | scale 0.97, 90 ms, snappy return |
 | **Rise** | entrance: opacity 0→1, y 8→0, `ease.out`, 200 ms |
 | **Swell** | the island expands (720→760) and a panel grows upward out of it: smooth spring |
-| **Pebble** | scroll down: the island collapses into a pebble (mark + Shield dot), 200 ms; it comes back on scroll up or when the cursor approaches |
+| **Hide** | scroll down (or swipe down on the island): the island slides away and the page goes full screen, 200 ms; it comes back on scroll up, at the end of the page, with a tap or swipe up at the bottom edge, or when the cursor approaches (owner, 2026-11-12; replaces the pebble) |
 | **Fan** | the tab circles fan out into a shelf of cards above the island, stagger 24 ms, at most 8 |
 | **Caret** | the Ember caret in "Where to today?" blinks at 1.1 s; with reduced motion it is static |
 | **Morph** | Shield counter: digit roll; bouncy only when jumping from 0 |
@@ -199,6 +199,7 @@ Key variables: `--island-*`, `--accent-island`, `--accent-ink`, `--accent-fill`,
 Outputs: `web/packages/tokens/dist/{css,kotlin,swift,json}`. Generator: `pnpm tokens`. Gate: `pnpm contrast`.
 
 ### Changelog
+- **v2.1 (2026-11-12):** the owner asked for a full-screen page while reading: **Hide** replaces **Pebble** (the island no longer stays as a small pill, and on phones the status bar hides with it). On phones the page runs under the status bar with the page's `theme-color` behind it, so there is no band around the page.
 - **v2.0 (2026-11-11):** the owner rejected v1 "Aura" ("it must not look like every other browser") and, from three directions (Island, Spine, Keys; `design/prototypes/redesign/`), chose **Island** (ADR-0008).
   - New paper-and-ink palette, the island as an inverse surface, accent role `island`, default accent Ember.
   - Fonts Bricolage Grotesque and Geist Mono (OFL) instead of Geist/Aeonik.

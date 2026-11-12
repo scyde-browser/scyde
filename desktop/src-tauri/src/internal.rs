@@ -10,9 +10,9 @@ use serde_json::{Value, json};
 use tauri::http::{Request, Response};
 use tauri::{AppHandle, Manager, UriSchemeContext, Webview};
 
-use crate::{AppState, emit_state, go, lock, save_settings};
+use crate::{AppState, NEWTAB, emit_state, go, lock, save_settings};
 
-pub const PAGES: &[&str] = &["newtab", "settings", "shields", "library"];
+pub const PAGES: &[&str] = &["newtab", "settings", "shields", "library", "welcome"];
 const ORIGIN: &str = "http://scyde.localhost/";
 
 /// The path of an internal page URL (`/settings/`), or `None` for anything else.
@@ -157,11 +157,28 @@ fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
             Ok(json!({ "settings": serde_json::from_str::<Value>(&json).unwrap_or(Value::Null), "issues": [] }))
         }
         "settings.set" => {
-            let r = lock(&state.settings).set(&s(p, "path"), p.get("value").cloned().unwrap_or(Value::Null));
+            let path = s(p, "path");
+            let value = p.get("value").cloned().unwrap_or(Value::Null);
+            let done = path == "onboarding.completed" && value == Value::Bool(true);
+            let r = lock(&state.settings).set(&path, value);
             match r {
                 Ok(()) => {
                     save_settings(app);
                     emit_state(app);
+                    // The welcome page is finished: its tab becomes a New Tab.
+                    if done {
+                        let welcome: Vec<_> = lock(&state.tabs)
+                            .list
+                            .iter()
+                            .filter(|t| page_path(&t.url).is_some_and(|p| p.starts_with("/welcome")))
+                            .map(|t| t.webview.clone())
+                            .collect();
+                        if let Ok(url) = NEWTAB.parse::<tauri::Url>() {
+                            for wv in welcome {
+                                let _ = wv.navigate(url.clone());
+                            }
+                        }
+                    }
                     Ok(json!({ "ok": true }))
                 }
                 Err(e) => Ok(json!({ "ok": false, "error": e.to_string() })),

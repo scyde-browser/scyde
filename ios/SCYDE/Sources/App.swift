@@ -20,7 +20,11 @@ struct ScydeApp: App {
                             browser.newTab()
                         }
                         // `-page settings` opens an internal page as a sheet (CI screenshots).
-                        if let i = args.firstIndex(of: "-page"), i + 1 < args.count { browser.open(page: args[i + 1]) }
+                        if let i = args.firstIndex(of: "-page"), i + 1 < args.count {
+                            browser.open(page: args[i + 1])
+                        } else if browser.needsOnboarding && !args.contains("-open") && !args.contains("-skipWelcome") {
+                            browser.open(page: "welcome")
+                        }
                     }
                 }
                 .onOpenURL { url in browser.newTab(url) }
@@ -32,9 +36,11 @@ struct ScydeApp: App {
 struct Palette {
     let colors: ScydeColors
     let accent: ScydeAccent
+    let dark: Bool
 
     init(scheme: ColorScheme, accent name: String?) {
         let dark = scheme == .dark
+        self.dark = dark
         colors = dark ? .dark : .light
         switch name {
         case "sky": accent = dark ? ScydeAccents.skyDark : ScydeAccents.skyLight
@@ -51,6 +57,8 @@ struct RootView: View {
     @EnvironmentObject var browser: Browser
     @Environment(\.colorScheme) private var system
     @State private var showTabs = false
+    @State private var panel: Panel = .none
+    @State private var text = ""
 
     private var scheme: ColorScheme {
         switch browser.appearance["theme"] {
@@ -65,14 +73,35 @@ struct RootView: View {
         ZStack(alignment: .bottom) {
             palette.colors.surfaceCanvas.ignoresSafeArea()
             if let tab = browser.active {
+                // Edge to edge: the page runs under the status bar and the home indicator (WebKit insets
+                // its content for the safe area), so there is no band around it.
                 WebContainer(webView: tab.webView)
                     .id(tab.id)
-                    .ignoresSafeArea(.container, edges: .bottom)
+                    .ignoresSafeArea()
             }
-            IslandView(showTabs: $showTabs)
-                .padding(.horizontal, ScydeSize.islandMobileInset)
-                .padding(.bottom, ScydeSpace.s4)
+            if panel != .none {
+                palette.colors.scrim.ignoresSafeArea()
+                    .onTapGesture { withAnimation(ScydeMotion.springSmooth.animation) { panel = .none } }
+                    .transition(.opacity)
+            }
+            VStack(spacing: ScydeSpace.s8) {
+                if let message = browser.toast, panel == .none {
+                    ToastView(message: message)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                if panel != .none {
+                    PanelView(panel: $panel, text: $text)
+                        .transition(.scale(scale: ScydeMotion.bloomScale, anchor: .bottom).combined(with: .opacity))
+                }
+                IslandView(panel: $panel, showTabs: $showTabs, text: $text)
+            }
+            .padding(.horizontal, ScydeSize.islandMobileInset)
+            .padding(.bottom, ScydeSpace.s4)
+            .animation(ScydeMotion.springSmooth.animation, value: browser.toast)
+            .animation(ScydeMotion.springSmooth.animation, value: browser.active?.immersive)
         }
+        .statusBarHidden(browser.active?.immersive == true && panel == .none)
+        .persistentSystemOverlays(browser.active?.immersive == true ? .hidden : .automatic)
         .environment(\.palette, palette)
         .preferredColorScheme(browser.appearance["theme"] == "system" || browser.appearance["theme"] == nil ? nil : scheme)
         .sheet(isPresented: $showTabs) { TabGrid(isPresented: $showTabs).environment(\.palette, palette) }
@@ -94,9 +123,10 @@ struct PageSheet: View {
     @StateObject private var web = SheetWeb()
 
     private var title: String {
-        switch page {
+        switch page.split(separator: "#").first.map(String.init) ?? page {
         case "library": return String(localized: "library.title")
         case "shields": return String(localized: "shield.label")
+        case "welcome": return String(localized: "welcome.title")
         default: return String(localized: "rail.settings")
         }
     }
@@ -130,7 +160,10 @@ final class SheetWeb: NSObject, ObservableObject, WKNavigationDelegate {
         let v = WKWebView(frame: .zero, configuration: browser.makeConfiguration())
         v.navigationDelegate = self
         v.isOpaque = false
-        v.load(URLRequest(url: URL(string: "scyde://\(page)/")!))
+        // "library#bookmarks" → scyde://library/#bookmarks
+        let parts = page.split(separator: "#", maxSplits: 1).map(String.init)
+        let fragment = parts.count > 1 ? "#\(parts[1])" : ""
+        v.load(URLRequest(url: URL(string: "scyde://\(parts.first ?? page)/\(fragment)")!))
         view = v
         return v
     }
