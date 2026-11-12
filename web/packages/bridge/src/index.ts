@@ -37,7 +37,10 @@ export function detectTransport(w: AnyWindow = window as AnyWindow): Transport |
   const wk = w.webkit?.messageHandlers?.scyde;
   if (wk) return { name: 'webkit', call: (m) => wk.postMessage(m) };
   const rt = w.browser?.runtime;
-  if (rt?.sendNativeMessage) return { name: 'gecko', call: (m) => rt.sendNativeMessage('scyde', m) };
+  // GeckoView replies with JSON text (it cannot pass an object back through its event callback).
+  if (rt?.sendNativeMessage) {
+    return { name: 'gecko', call: (m) => rt.sendNativeMessage('scyde', m).then((r) => (typeof r === 'string' ? JSON.parse(r) : r)) };
+  }
   return null;
 }
 

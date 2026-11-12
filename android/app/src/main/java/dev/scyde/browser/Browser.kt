@@ -781,7 +781,7 @@ class Browser(appContext: Context) {
             when (json.optString("type")) {
                 "ready" -> {
                     main.post { shieldReady = true; flushPending() }
-                    return GeckoResult.fromValue(JSONObject().put("ok", true))
+                    return GeckoResult.fromValue(true)
                 }
                 "shield.count" -> {
                     val hosts = json.optJSONObject("hosts")
@@ -810,19 +810,19 @@ class Browser(appContext: Context) {
             val reply = JSONObject().put("id", json.opt("id"))
             if (!trusted) {
                 Log.w(TAG, "bridge: untrusted sender url=${sender.url} env=${sender.environmentType} base=$base")
-                return GeckoResult.fromValue(reply.put("ok", false).put("error", "untrusted origin"))
+                return GeckoResult.fromValue(reply.put("ok", false).put("error", "untrusted origin").toString())
             }
             if (method !in METHODS) {
                 Log.w(TAG, "bridge: method not allowed: $method")
-                return GeckoResult.fromValue(reply.put("ok", false).put("error", "method not allowed"))
+                return GeckoResult.fromValue(reply.put("ok", false).put("error", "method not allowed").toString())
             }
             val result = GeckoResult<Any>()
             main.post {
                 try {
-                    result.complete(reply.put("ok", true).put("result", handle(method, json.optJSONObject("params") ?: JSONObject())))
+                    result.complete(reply.put("ok", true).put("result", handle(method, json.optJSONObject("params") ?: JSONObject())).toString())
                 } catch (e: Exception) {
                     Log.e(TAG, "bridge: $method failed", e)
-                    result.complete(reply.put("ok", false).put("error", e.message ?: "error"))
+                    result.complete(reply.put("ok", false).put("error", e.message ?: "error").toString())
                 }
             }
             return result
