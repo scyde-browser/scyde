@@ -83,9 +83,12 @@
       <div class="menu" role="menu" aria-label={t('menu.label')}>
         <button role="menuitem" onclick={() => ((menu = false), action('new'))}>{t('island.new_tab')}</button>
         <button role="menuitem" onclick={() => open('library')}>{t('library.tab.history')}</button>
-        <button role="menuitem" onclick={() => open('library')}>{t('library.tab.bookmarks')}</button>
+        <button role="menuitem" onclick={() => open('library#bookmarks')}>{t('library.tab.bookmarks')}</button>
         <button role="menuitem" onclick={() => open('shields')}>{t('shield.label')}</button>
         <button role="menuitem" onclick={() => open('settings')}>{t('rail.settings')}</button>
+        {#if chrome.active !== null}
+          <button role="menuitem" onclick={() => ((menu = false), action('close', { id: chrome.active ?? undefined }))}>{t('tab.close')}</button>
+        {/if}
       </div>
     {:else}
       <button class="ib" aria-label={t('nav.back')} title={t('nav.back')} onclick={() => action('back')}><Icon name="back" /></button>
@@ -125,7 +128,8 @@
 
       <button class="pebble" title={t('island.shield', { n: active?.popups_blocked ?? 0 })} aria-label={t('island.shield', { n: active?.popups_blocked ?? 0 })} onclick={() => open('shields')}>
         <span class="lamp" aria-hidden="true"></span>
-        <span class="num">{active?.popups_blocked ?? 0}</span>
+        <!-- DNR does not report matches (ADR-0003): only blocked popups are counted, so 0 is not shown. -->
+        {#if active?.popups_blocked}<span class="num">{active.popups_blocked}</span>{/if}
       </button>
       <span class="sep" aria-hidden="true"></span>
 

@@ -623,9 +623,23 @@ fn chrome_action(
         "go-new" => go(&app, input.as_deref().unwrap_or_default(), true),
         "back" | "forward" | "reload" | "stop" => nav(&app, &action),
         "open" => {
+            // "library#bookmarks" → http://scyde.localhost/library/#bookmarks
             let page = input.unwrap_or_else(|| "newtab".into());
-            if internal::PAGES.contains(&page.as_str()) {
-                let _ = new_tab(&app, Some(&format!("http://scyde.localhost/{page}/")), true);
+            let (name, fragment) = page
+                .split_once('#')
+                .map_or((page.as_str(), String::new()), |(n, f)| {
+                    (n, format!("#{f}"))
+                });
+            if internal::PAGES.contains(&name)
+                && fragment
+                    .chars()
+                    .all(|c| c == '#' || c.is_ascii_alphanumeric())
+            {
+                let _ = new_tab(
+                    &app,
+                    Some(&format!("http://scyde.localhost/{name}/{fragment}")),
+                    true,
+                );
             }
         }
         "focus-page" => {
