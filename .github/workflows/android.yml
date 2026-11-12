@@ -96,6 +96,7 @@ jobs:
           (cd core && cargo run --release -p shield-compiler -- --lists ../lists --out ../bundle --version "$(date -u +%Y%m%d)")
           core/shield-wasm/build.sh "$PWD/core/target/shield-wasm"
           node shield-extension/build.mjs --target gecko-mv2 --bundle bundle --wasm core/target/shield-wasm/no-modules \
+            --lists lists --wasm-node core/target/shield-wasm/node \
             --pages pages --out android/app/src/main/assets/extension
       - name: libscyde_core per ABI + Kotlin bindings
         run: |
@@ -151,6 +152,7 @@ jobs:
           script: |
             mkdir -p shots
             adb install -r apk/scyde-*-x86_64.apk
+            adb shell setprop log.tag.SCYDE DEBUG
             adb shell am start -n dev.scyde.browser/.MainActivity --ez skipWelcome true
             sleep 25
             adb exec-out screencap -p > shots/newtab.png
@@ -160,7 +162,7 @@ jobs:
             adb exec-out screencap -p > shots/qa-adblock.png
             adb shell pidof dev.scyde.browser || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; echo "::error::SCYDE crashed on the qa page"; exit 1; }
             bash android/ci/smoke-gestures.sh || { adb logcat -d | grep -E "AndroidRuntime|SCYDE|FATAL" | tail -80; exit 1; }
-            adb logcat -d | grep -E "SCYDE|GeckoView" | tail -80 > shots/logcat.txt || true
+            adb logcat -d | grep -E "SCYDE|GeckoConsole|JavaScript|console\.|AndroidRuntime" | tail -400 > shots/logcat.txt || true
       - name: Publish screenshots to ci-shots-android (pull requests)
         if: always() && github.event_name == 'pull_request'
         shell: bash

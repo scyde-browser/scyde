@@ -154,10 +154,13 @@ class Browser(appContext: Context) {
     private var extension: WebExtension? = null
     private var port: WebExtension.Port? = null
     private val pending = mutableListOf<() -> Unit>()
+    private val afterExtension = mutableListOf<() -> Unit>()
 
     val runtime: GeckoRuntime = shared ?: GeckoRuntime.create(
         context.applicationContext,
         GeckoRuntimeSettings.Builder()
+            // Page console in logcat only when asked for: `adb shell setprop log.tag.SCYDE DEBUG` (CI).
+            .consoleOutput(Log.isLoggable(TAG, Log.DEBUG))
             .contentBlocking(
                 ContentBlocking.Settings.Builder()
                     .antiTracking(ContentBlocking.AntiTracking.STRICT)
@@ -188,6 +191,7 @@ class Browser(appContext: Context) {
                 filtersVersion = ext.metaData.description?.substringAfter("filters ", "")?.removeSuffix(")") ?: ""
                 ext.setMessageDelegate(messages, NATIVE_APP)
                 for (t in tabs) t.session.webExtensionController.setMessageDelegate(ext, messages, NATIVE_APP)
+                afterExtension.toList().also { afterExtension.clear() }.forEach { it() }
                 // Shield must also run in private tabs.
                 // Only when needed: the call reloads the extension (and its engine).
                 if (!ext.metaData.allowedInPrivateBrowsing) runtime.webExtensionController.setAllowedInPrivateBrowsing(ext, true)
@@ -235,7 +239,12 @@ class Browser(appContext: Context) {
         tabs += tab
         if (activate) activeId = tab.id else saveSession()
         if (session == null) {
-            whenReady { s.loadUri(url ?: internalUrl("newtab") ?: "about:blank") }
+            whenReady {
+                // New Tab lives in the extension: if it is not installed yet (slow first start), wait
+                // for it instead of showing about:blank.
+                val target = url ?: internalUrl("newtab")
+                if (target != null) s.loadUri(target) else afterExtension += { s.loadUri(internalUrl("newtab") ?: "about:blank") }
+            }
         }
         return tab
     }

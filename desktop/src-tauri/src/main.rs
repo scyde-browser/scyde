@@ -701,6 +701,8 @@ fn build_window(app: &AppHandle) -> tauri::Result<()> {
         .title("SCYDE")
         .inner_size(START_W, START_H)
         .min_inner_size(560.0, 420.0)
+        // CI screens are small: maximized, the island is inside the screenshot.
+        .maximized(SMOKE.get().is_some_and(Option::is_some))
         .build()?;
     // The island floats over the page (ADR-0014): a transparent, borderless window owned by the
     // main window, so it stays above it, hides with it when minimized and closes with it.
