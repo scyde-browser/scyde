@@ -277,5 +277,9 @@
   "loaderror.title": "This page did not open",
   "loaderror.body": "{site} could not be reached. Check the address and your connection.",
   "loaderror.retry": "Try again",
-  "external.none": "No app on this device can open that link"
+  "external.none": "No app on this device can open that link",
+  "window.minimize": "Minimize",
+  "window.maximize": "Maximize",
+  "window.restore": "Restore",
+  "window.close": "Close"
 }

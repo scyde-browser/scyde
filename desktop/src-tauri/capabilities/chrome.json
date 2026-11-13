@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "chrome",
-  "description": "The island (local app content). Every command also checks the calling webview's label.",
+  "description": "The island and the tab strip (local app content). Every command also checks the calling webview's label.",
   "windows": ["chrome"],
-  "webviews": ["chrome"],
+  "webviews": ["chrome", "strip"],
   "permissions": ["core:event:default"]
 }

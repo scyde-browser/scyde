@@ -199,6 +199,7 @@ Key variables: `--island-*`, `--accent-island`, `--accent-ink`, `--accent-fill`,
 Outputs: `web/packages/tokens/dist/{css,kotlin,swift,json}`. Generator: `pnpm tokens`. Gate: `pnpm contrast`.
 
 ### Changelog
+- **v2.2 (2026-11-13):** on Windows a **tab strip** runs across the top (ADR-0015, owner): every tab with its icon, title and ×, then + and the caption buttons. The window has no native title bar. This replaces "no tab strip at the top" (§1, §11) on Windows; the island keeps navigation, address and Shield.
 - **v2.1 (2026-11-12):** the owner asked for a full-screen page while reading: **Hide** replaces **Pebble** (the island no longer stays as a small pill, and on phones the status bar hides with it). On phones the page runs under the status bar with the page's `theme-color` behind it, so there is no band around the page.
 - **v2.0 (2026-11-11):** the owner rejected v1 "Aura" ("it must not look like every other browser") and, from three directions (Island, Spine, Keys; `design/prototypes/redesign/`), chose **Island** (ADR-0008).
   - New paper-and-ink palette, the island as an inverse surface, accent role `island`, default accent Ember.

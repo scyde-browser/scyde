@@ -1,7 +1,7 @@
 //! SCYDE for Windows: Tauri 2 multiwebview on one WebView2 environment (PLAN §9.1, ADR-0007, ADR-0012).
 //!
-//! Layout: native window frame (Snap Layouts for free) · tab webviews fill the window above the
-//! island band · the `chrome` webview (web/apps/desktop-chrome) is the island band at the bottom.
+//! Layout: a frameless window · the `strip` webview (tabs + caption buttons, ADR-0015) at the top ·
+//! tab webviews fill the rest · the island floats over the bottom in its own window (ADR-0014).
 //! Internal pages are served by the `scyde` protocol (`http://scyde.localhost/<page>/` in WebView2)
 //! and reach the host only through `bridge`, which checks the origin and a method allowlist.
 //! Shield = the bundled MV3 extension (DNR + cosmetics, ADR-0003) on every webview; popups that the
@@ -27,6 +27,8 @@ use tauri::{
     Webview, WebviewBuilder, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
 };
 
+/// The tab strip at the top (`size.chrome-tabstrip`, ADR-0015).
+pub const STRIP_H: f64 = 44.0;
 /// Island band height: island 60 + 22 inset below + 22 above (DESIGN §4).
 pub const CHROME_H: f64 = 104.0;
 /// The island window's width: `size.island-width-expanded` (760) plus room for its shadow.
@@ -174,11 +176,14 @@ pub fn emit_state(app: &AppHandle) {
         .get("appearance")
         .cloned()
         .unwrap_or(Value::Null);
-    let _ = app.emit_to(
-        "chrome",
-        "scyde://state",
-        json!({ "tabs": list, "active": tabs.active, "appearance": appearance, "filters": state.filters_version }),
-    );
+    let maximized = app
+        .get_window("main")
+        .and_then(|w| w.is_maximized().ok())
+        .unwrap_or(false);
+    let payload = json!({ "tabs": list, "active": tabs.active, "appearance": appearance, "filters": state.filters_version, "maximized": maximized });
+    for target in ["chrome", "strip"] {
+        let _ = app.emit_to(target, "scyde://state", payload.clone());
+    }
 }
 
 // ------------------------------------------------------------------------------------- tabs
@@ -189,8 +194,12 @@ fn content_bounds(window: &Window) -> (LogicalPosition<f64>, LogicalSize<f64>) {
         .inner_size()
         .map(|s| s.to_logical::<f64>(scale))
         .unwrap_or(LogicalSize::new(START_W, START_H));
-    // The page fills the whole window; the island floats over it in its own window (ADR-0014).
-    (LogicalPosition::new(0.0, 0.0), size)
+    // The page fills the window below the tab strip; the island floats over it in its own window
+    // (ADR-0014).
+    (
+        LogicalPosition::new(0.0, STRIP_H),
+        LogicalSize::new(size.width, (size.height - STRIP_H).max(0.0)),
+    )
 }
 
 pub fn relayout(app: &AppHandle) {
@@ -198,6 +207,9 @@ pub fn relayout(app: &AppHandle) {
         return;
     };
     let (pos, content) = content_bounds(&window);
+    if let Some(strip) = app.get_webview("strip") {
+        let _ = strip.set_size(LogicalSize::new(content.width, STRIP_H));
+    }
     let state = app.state::<AppState>();
     for t in &lock(&state.tabs).list {
         let _ = t.webview.set_position(pos);
@@ -591,7 +603,7 @@ pub fn focus_address(app: &AppHandle) {
 // ----------------------------------------------------------------------------- chrome commands
 
 fn from_chrome(wv: &Webview) -> Result<(), String> {
-    if wv.label() == "chrome" {
+    if matches!(wv.label(), "chrome" | "strip") {
         Ok(())
     } else {
         Err("not allowed".into())
@@ -647,6 +659,18 @@ fn chrome_action(
                     Some(&format!("http://scyde.localhost/{name}/{fragment}")),
                     true,
                 );
+            }
+        }
+        // Caption buttons and the drag area of the tab strip (the window has no native frame).
+        "win-min" | "win-max" | "win-close" | "win-drag" => {
+            if let Some(w) = app.get_window("main") {
+                let _ = match action.as_str() {
+                    "win-min" => w.minimize(),
+                    "win-max" if w.is_maximized().unwrap_or(false) => w.unmaximize(),
+                    "win-max" => w.maximize(),
+                    "win-close" => w.close(),
+                    _ => w.start_dragging(),
+                };
             }
         }
         "focus-page" => {
@@ -708,9 +732,27 @@ fn build_window(app: &AppHandle) -> tauri::Result<()> {
         .title("SCYDE")
         .inner_size(START_W, START_H)
         .min_inner_size(560.0, 420.0)
+        // Frameless: the tab strip draws the caption buttons (ADR-0015). Windows keeps the shadow
+        // and the resize borders.
+        .decorations(false)
+        .shadow(true)
         // CI screens are small: maximized, the island is inside the screenshot.
         .maximized(SMOKE.get().is_some_and(Option::is_some))
         .build()?;
+    // The tab strip: same WebView2 environment options as every tab (ADR-0003, ADR-0007).
+    let (_, content) = content_bounds(&window);
+    let strip = env_opts(
+        WebviewBuilder::new("strip", WebviewUrl::App("strip.html".into())),
+        &app.state::<AppState>(),
+    );
+    let strip = window.add_child(
+        strip,
+        LogicalPosition::new(0.0, 0.0),
+        LogicalSize::new(content.width, STRIP_H),
+    )?;
+    // Resizing a frameless window needs Tauri's border handler, attached on this call; after the
+    // strip, so the handler's border window sits above it.
+    let _ = window.set_resizable(true);
     // The island floats over the page (ADR-0014): a transparent, borderless window owned by the
     // main window, so it stays above it, hides with it when minimized and closes with it.
     let island = WebviewWindowBuilder::new(app, "chrome", WebviewUrl::App("index.html".into()))
@@ -749,7 +791,10 @@ fn build_window(app: &AppHandle) -> tauri::Result<()> {
     watch_island(app.clone());
     let app_ev = app.clone();
     window.on_window_event(move |e| match e {
-        WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => relayout(&app_ev),
+        WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
+            relayout(&app_ev);
+            emit_state(&app_ev); // maximized ↔ restored changes the caption button
+        }
         WindowEvent::Moved(_) => place_island(&app_ev),
         _ => {}
     });
@@ -757,6 +802,10 @@ fn build_window(app: &AppHandle) -> tauri::Result<()> {
     if let Some(c) = app.get_webview("chrome") {
         win::install_keys(app, &c);
     }
+    #[cfg(windows)]
+    win::install_keys(app, &strip);
+    #[cfg(not(windows))]
+    let _ = strip;
     Ok(())
 }
 
@@ -883,12 +932,16 @@ fn smoke(app: &AppHandle, out: &PathBuf) {
             "hidden_for_reading": *lock(&state.island_hidden),
         })
     });
+    let strip = app.get_webview("strip").map(|w| {
+        json!({ "position": w.position().ok().map(|p| [p.x, p.y]), "size": w.size().ok().map(|s| [s.width, s.height]) })
+    });
     let main = app.get_window("main").map(|w| {
         json!({ "position": w.inner_position().ok().map(|p| [p.x, p.y]), "size": w.inner_size().ok().map(|s| [s.width, s.height]) })
     });
     let report = json!({
         "island": island,
         "main": main,
+        "strip": strip,
         "elapsed_ms": started.elapsed().as_millis(),
         "shield_extension": state.extensions.is_some(),
         "shield_installed_now": state.install_extension,

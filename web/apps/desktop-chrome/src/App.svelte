@@ -1,8 +1,9 @@
 <script lang="ts">
-  // The island (DESIGN.md §8): mark (menu) · back · forward · reload | address · Shield pebble | tab stack · +
+  // The island (DESIGN.md §8): mark (menu) · back · forward · reload | address · Shield pebble | +
+  // (Windows tabs are in the strip at the top, ADR-0015.)
   import { t } from '@scyde/i18n';
-  import { BrandMark, Favicon, Icon, applyAppearance } from '@scyde/ui';
-  import { action, connect, suggest, type ChromeState, type TabView } from './host';
+  import { BrandMark, Icon, applyAppearance } from '@scyde/ui';
+  import { action, connect, suggest, type ChromeState } from './host';
 
   let chrome = $state<ChromeState>({ tabs: [], active: null, appearance: null, filters: '' });
   let editing = $state(false);
@@ -11,8 +12,6 @@
   let input: HTMLInputElement | undefined = $state();
 
   const active = $derived(chrome.tabs.find((tab) => tab.id === chrome.active) ?? null);
-  const shown = $derived(chrome.tabs.slice(-6));
-  const hidden = $derived(Math.max(0, chrome.tabs.length - shown.length));
 
   connect(
     (s) => {
@@ -66,9 +65,6 @@
     action('open', { input: page });
   }
 
-  function tabLabel(tab: TabView) {
-    return tab.title || tab.display.domain || t('tab.new');
-  }
 </script>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && menu && (menu = false)} />
@@ -133,23 +129,6 @@
       </button>
       <span class="sep" aria-hidden="true"></span>
 
-      <div class="stack" role="tablist" aria-label={t('tabs.shelf')}>
-        {#each shown as tab (tab.id)}
-          <button
-            role="tab"
-            class="dot"
-            class:on={tab.id === chrome.active}
-            aria-selected={tab.id === chrome.active}
-            aria-label={tabLabel(tab)}
-            title={tabLabel(tab)}
-            onclick={() => action('switch', { id: tab.id })}
-            onauxclick={(e) => e.button === 1 && action('close', { id: tab.id })}
-          >
-            <Favicon url={tab.display.internal ? 'https://scyde' : tab.url} size="var(--size-island-tab-dot)" />
-          </button>
-        {/each}
-        {#if hidden}<span class="more">{t('island.more_tabs', { n: hidden })}</span>{/if}
-      </div>
       <button class="ib" aria-label={t('island.new_tab')} title={t('island.new_tab')} onclick={() => action('new')}><Icon name="plus" /></button>
     {/if}
   </nav>
@@ -196,12 +175,6 @@
     font-family: var(--font-family-mono); font-size: var(--type-data-size);
   }
   .lamp { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-full); background: var(--island-shield); box-shadow: 0 0 0 var(--space-4) color-mix(in oklab, var(--island-shield) 22%, transparent); }
-  .stack { flex: none; display: flex; align-items: center; padding: 0 var(--space-6); }
-  .dot { display: grid; padding: 0; margin-left: calc(var(--space-8) * -1); border: 0; border-radius: var(--radius-full); background: transparent; box-shadow: 0 0 0 var(--space-2) var(--island-bg); }
-  .dot:first-child { margin-left: 0; }
-  .dot :global(.fav) { border-radius: var(--radius-full); }
-  .dot.on { box-shadow: 0 0 0 var(--space-2) var(--island-bg), 0 0 0 var(--space-4) var(--accent-island); position: relative; z-index: 1; }
-  .more { margin-left: var(--space-8); font-family: var(--font-family-mono); font-size: var(--type-caption-size); color: var(--island-text-secondary); }
   .menu { flex: 1; display: flex; gap: var(--space-4); overflow-x: auto; scrollbar-width: none; }
   .menu button {
     flex: none; height: calc(var(--size-island-button) - var(--space-4)); padding: 0 var(--space-16); border: 0; border-radius: var(--radius-full);

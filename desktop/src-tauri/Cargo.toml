@@ -1,6 +1,6 @@
 [package]
 name = "scyde"
-version = "0.7.0"
+version = "0.7.1"
 description = "SCYDE Browser for Windows (Tauri 2 + WebView2, ADR-0007)"
 edition = "2024"
 rust-version = "1.97"
