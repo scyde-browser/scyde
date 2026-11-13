@@ -20,6 +20,8 @@ export interface ChromeState {
   active: number | null;
   appearance: Record<string, string> | null;
   filters: string;
+  /** The main window is maximized (the strip shows "Restore"). */
+  maximized?: boolean;
 }
 
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;

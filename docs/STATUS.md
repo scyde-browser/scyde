@@ -186,6 +186,8 @@ Branch: the session's designated branch (agent sessions may only push there), on
   - Android: full-screen video (island and system bars hide, back leaves full screen); downloads saved from the page's own response to Downloads (MediaStore; Android 8–9: the app's Downloads folder); `tel:`/`mailto:`/`intent:` links open the right app after a tap (`intent:` limited to browsable, no explicit component); a page that does not open shows an error page (tokens, light/dark, never a TLS bypass).
   - iOS: JavaScript `alert`/`confirm`/`prompt` (titled with the asking site), downloads (`WKDownload` into Files › SCYDE › Downloads), links for other apps after a tap, error page; camera/microphone/location usage descriptions (without them a page asking for the camera ended the app).
   - Closing the welcome sheet any way finishes onboarding on iOS and Android (it came back on the next launch).
+- [x] **v0.7.1, tabs on Windows (owner, 2026-11-13):** a tab strip across the top of the frameless window (icon, title, ×, +, caption buttons, drag area), ADR-0015. The island's favicon stack is removed.
+- `[OWNER]` Phones: should they also show the tabs (a strip at the top, or tabs above the island), or are the tab button and the tab grid enough?
 - [ ] v0.8.0:
   - Windows: island v2 (control center, command omnibox), Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
   - Zen mode (annoyance lists, `[OWNER]` licences)
