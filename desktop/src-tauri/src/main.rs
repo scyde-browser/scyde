@@ -158,6 +158,13 @@ pub fn user_url(url: &str) -> String {
 }
 
 pub fn emit_state(app: &AppHandle) {
+    // Asked before any lock is taken: off the main thread this waits for the main thread, which
+    // may itself be waiting for the tabs lock (relayout on resize). Holding the lock here hung the
+    // app (CI smoke, 2026-11-13).
+    let maximized = app
+        .get_window("main")
+        .and_then(|w| w.is_maximized().ok())
+        .unwrap_or(false);
     let state = app.state::<AppState>();
     let tabs = lock(&state.tabs);
     let list: Vec<TabView> = tabs
@@ -176,10 +183,6 @@ pub fn emit_state(app: &AppHandle) {
         .get("appearance")
         .cloned()
         .unwrap_or(Value::Null);
-    let maximized = app
-        .get_window("main")
-        .and_then(|w| w.is_maximized().ok())
-        .unwrap_or(false);
     let payload = json!({ "tabs": list, "active": tabs.active, "appearance": appearance, "filters": state.filters_version, "maximized": maximized });
     for target in ["chrome", "strip"] {
         let _ = app.emit_to(target, "scyde://state", payload.clone());
