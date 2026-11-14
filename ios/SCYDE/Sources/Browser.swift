@@ -689,10 +689,19 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         let newTab = webView.url?.scheme == InternalPages.scheme && webView.url?.host == "newtab"
         webView.scrollView.isScrollEnabled = !newTab
         webView.scrollView.bounces = !newTab
+        if newTab { pinToTop(webView) }
         tab(for: webView)?.title = webView.title ?? ""
     }
 
+    /// A scroll view that cannot scroll never moves its content below the status bar band by
+    /// itself: put the page's top at the top of the safe area.
+    private func pinToTop(_ webView: WKWebView) {
+        let sv = webView.scrollView
+        sv.setContentOffset(CGPoint(x: 0, y: -sv.adjustedContentInset.top), animated: false)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if webView.url?.scheme == InternalPages.scheme, webView.url?.host == "newtab" { pinToTop(webView) }
         guard let tab = tab(for: webView), let url = webView.url else { return }
         if !tab.isPrivate { saveSession() }
         tab.bookmarked = tab.isWeb && ((try? places?.isBookmarked(url: url.absoluteString)) ?? false)
