@@ -685,6 +685,10 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     /// A new page starts without the previous page's title (PDFs and images never set one).
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        // New Tab is one screen: no scrolling and no rubber band (owner, 2026-11-15).
+        let newTab = webView.url?.scheme == InternalPages.scheme && webView.url?.host == "newtab"
+        webView.scrollView.isScrollEnabled = !newTab
+        webView.scrollView.bounces = !newTab
         tab(for: webView)?.title = webView.title ?? ""
     }
 

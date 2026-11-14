@@ -40,6 +40,13 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         ITSAppUsesNonExemptEncryption: false
+        # A browser must declare that it opens web links. iOS lists an app under "Default Browser
+        # App" only when it is also signed with Apple's com.apple.developer.web-browser entitlement,
+        # which Apple grants per developer account ([OWNER], docs/STATUS.md).
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.scyde.browser.web
+            CFBundleTypeRole: Viewer
+            CFBundleURLSchemes: [http, https]
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
         # Asked only when a site the user allowed wants them (PRIVACY.md); without these keys a

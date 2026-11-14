@@ -102,8 +102,12 @@
 </main>
 
 <style>
+  /* New Tab is one screen: it never scrolls (owner, 2026-11-15). What does not fit is cut off. */
+  :global(html), :global(body) { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  :global(body) { position: fixed; inset: 0; }
+  :global(#app) { height: 100%; }
   .nt {
-    min-height: 100dvh; display: grid; grid-template-columns: 1fr var(--size-newtab-recent-width); gap: var(--space-80);
+    height: 100%; overflow: hidden; display: grid; grid-template-columns: 1fr var(--size-newtab-recent-width); gap: var(--space-80);
     padding: var(--space-64) var(--space-80) calc(var(--size-island-height) + var(--space-80));
   }
   .main { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
@@ -125,7 +129,7 @@
   .ask:focus-within { border-radius: var(--radius-md); box-shadow: 0 var(--space-4) 0 calc(var(--space-4) * -1) var(--accent-ring); }
   .hints { margin: var(--space-24) 0 0; display: flex; flex-wrap: wrap; gap: var(--space-24); font-family: var(--font-family-mono); font-size: var(--type-caption-size); color: var(--text-tertiary); }
   .error { color: var(--status-danger); }
-  .recent { align-self: center; }
+  .recent { align-self: center; min-height: 0; max-height: 100%; overflow: hidden; }
   .recent h2 { margin: 0 0 var(--space-12); font-family: var(--font-family-mono); font-size: var(--type-caption-size); font-weight: var(--font-weight-regular); color: var(--text-tertiary); }
   ol { list-style: none; margin: 0; padding: 0; }
   a {
@@ -145,7 +149,8 @@
     .nt { grid-template-columns: 1fr; gap: var(--space-40); padding: var(--space-48) var(--space-20) calc(var(--size-island-mobile-height) + var(--space-48)); }
     /* The question must fit one line on the narrowest phones. */
     .ask input { font-size: min(var(--type-display-size), 10.5vw); line-height: var(--type-display-line-height); }
-    .recent { align-self: start; }
+    .nt { grid-template-rows: auto minmax(0, 1fr); }
+    .recent { align-self: start; min-height: 0; max-height: 100%; overflow: hidden; }
     a { font-size: var(--type-body-lg-size); }
   }
   /* Keyboard hints make no sense without a keyboard. */
