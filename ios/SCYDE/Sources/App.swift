@@ -88,12 +88,13 @@ struct RootView: View {
                     .id(ObjectIdentifier(tab.webView))
                     .ignoresSafeArea()
             }
-            if let tab = browser.active, !tab.immersive {
-                // Behind the status bar: the page's own colour, so text never runs under the clock.
-                // The band covers only the top safe area (zero height plus the ignored safe area).
-                // The status-bar text follows the app's scheme, so the page colour is used only when the
-                // clock stays readable on it; otherwise the band is the app's canvas.
-                bandColor(tab, palette)
+            if browser.active != nil {
+                // Behind the status bar: the island's colour, always (owner, 2026-11-15: "the top must
+                // be the navbar's colour, not transparent"), also while the island is hidden for
+                // reading. The band covers only the top safe area (zero height plus the ignored safe
+                // area). The island is dark in both themes, so the status bar text is always light
+                // (Info.plist: UIStatusBarStyleLightContent).
+                palette.colors.islandBg
                     .ignoresSafeArea(edges: .top)
                     .frame(height: 0)
                     .frame(maxHeight: .infinity, alignment: .top)
@@ -136,7 +137,6 @@ struct RootView: View {
                 }
             }
         }
-        .statusBarHidden(browser.active?.immersive == true && panel == .none)
         .persistentSystemOverlays(browser.active?.immersive == true ? .hidden : .automatic)
         .environment(\.palette, palette)
         .preferredColorScheme(browser.appearance["theme"] == "system" || browser.appearance["theme"] == nil ? nil : scheme)
@@ -216,12 +216,6 @@ final class SheetWeb: NSObject, ObservableObject, WKNavigationDelegate {
 }
 
 @MainActor
-private func bandColor(_ tab: Tab, _ palette: Palette) -> Color {
-    let page: UIColor? = tab.themeColor ?? tab.webView.underPageBackgroundColor
-    if let page, page.isLight != palette.dark { return Color(uiColor: page) }
-    return palette.colors.surfaceCanvas
-}
-
 struct WebContainer: UIViewRepresentable {
     let webView: WKWebView
     func makeUIView(context: Context) -> WKWebView { webView }

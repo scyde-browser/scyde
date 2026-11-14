@@ -19,6 +19,9 @@
     download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
     moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z',
     external: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
+    pin: 'M9 4h6l-1 6 3 3H7l3-3-1-6ZM12 13v7',
+    split: 'M4 5h16v14H4zM12 5v14',
+    sidebar: 'M4 5h16v14H4zM9 5v14',
   } as const;
   export type IconName = keyof typeof ICONS;
 </script>

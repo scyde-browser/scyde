@@ -2,7 +2,7 @@
 //! - popup blocker: `NewWindowRequested` without a user gesture is cancelled (PLAN §5.5); a
 //!   user-initiated popup keeps the default behaviour, so `window.opener` flows (OAuth) work.
 //! - shortcuts: `AcceleratorKeyPressed` (Ctrl+T/W/L/Tab, Ctrl+Shift+T/Tab, Ctrl+R, F5, Alt+←/→),
-//!   so they work while a page has focus.
+//!   Ctrl+K, Ctrl+S, Ctrl+1…9), so they work while a page has focus.
 
 use tauri::{AppHandle, Manager, Webview};
 use webview2_com::Microsoft::Web::WebView2::Win32::{
@@ -10,14 +10,12 @@ use webview2_com::Microsoft::Web::WebView2::Win32::{
     COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_DOWN, ICoreWebView2,
     ICoreWebView2AcceleratorKeyPressedEventArgs, ICoreWebView2NewWindowRequestedEventArgs,
 };
-use webview2_com::{
-    AcceleratorKeyPressedEventHandler, ExecuteScriptCompletedHandler,
-    NewWindowRequestedEventHandler,
-};
+use webview2_com::{AcceleratorKeyPressedEventHandler, NewWindowRequestedEventHandler};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_SHIFT};
 
 use crate::{
     AppState, close_tab, cycle_tab, emit_state, focus_address, lock, nav, new_tab, reopen_closed,
+    switch_nth, toggle_sidebar,
 };
 
 fn down(vk: u16) -> bool {
@@ -49,13 +47,21 @@ fn shortcut(app: &AppHandle, vk: u32, kind: COREWEBVIEW2_KEY_EVENT_KIND) -> bool
                 close_tab(a, id);
             }
         }), // Ctrl+W
-        (0x4C, true, false, false) | (0x44, false, false, true) => later(app, focus_address), // Ctrl+L, Alt+D
-        (0x09, true, false, false) => later(app, |a| cycle_tab(a, 1)), // Ctrl+Tab
-        (0x09, true, true, false) => later(app, |a| cycle_tab(a, -1)), // Ctrl+Shift+Tab
+        // Ctrl+L, Ctrl+K, Alt+D: the address and command bar
+        (0x4C | 0x4B, true, false, false) | (0x44, false, false, true) => {
+            later(app, focus_address);
+        }
+        (0x53 | 0x42, true, false, false) => later(app, toggle_sidebar), // Ctrl+S, Ctrl+B
+        (0x31..=0x39, true, false, false) => {
+            let n = (vk - 0x31) as usize;
+            later(app, move |a| switch_nth(a, n));
+        } // Ctrl+1…9
+        (0x09, true, false, false) => later(app, |a| cycle_tab(a, 1)),   // Ctrl+Tab
+        (0x09, true, true, false) => later(app, |a| cycle_tab(a, -1)),   // Ctrl+Shift+Tab
         (0x52, true, false, false) | (0x74, false, false, false) => {
             later(app, |a| nav(a, "reload"))
         } // Ctrl+R, F5
-        (0x25, false, false, true) => later(app, |a| nav(a, "back")),  // Alt+Left
+        (0x25, false, false, true) => later(app, |a| nav(a, "back")),    // Alt+Left
         (0x27, false, false, true) => later(app, |a| nav(a, "forward")), // Alt+Right
         _ => return false,
     }
@@ -130,36 +136,6 @@ pub fn install(app: &AppHandle, webview: &Webview, tab_id: u32) {
         // SAFETY: as above.
         unsafe {
             let _ = core.add_NewWindowRequested(&handler, &mut token);
-        }
-    });
-}
-
-/// Reads a page's scroll position and whether it is at its end, for hiding the island while
-/// reading (DESIGN v2.1 "Hide"). `ExecuteScript` runs in the page but exposes nothing to it: there
-/// is no message channel a page could use or spoof.
-pub fn read_scroll(webview: &Webview, done: impl FnOnce(f64, bool) + Send + 'static) {
-    const SCRIPT: &str = "Math.round(scrollY)+','+(innerHeight+scrollY>=document.documentElement.scrollHeight-8?1:0)";
-    let _ = webview.with_webview(move |pw| {
-        let controller = pw.controller();
-        // SAFETY: CoreWebView2 is available once the controller exists.
-        let Ok(core): Result<ICoreWebView2, _> = (unsafe { controller.CoreWebView2() }) else {
-            return;
-        };
-        let handler =
-            ExecuteScriptCompletedHandler::create(Box::new(move |result, json: String| {
-                // The result is a JSON string: "\"1234,0\"".
-                if result.is_ok()
-                    && let Some((y, end)) = json.trim_matches('"').split_once(',')
-                    && let Ok(y) = y.parse::<f64>()
-                {
-                    done(y, end == "1");
-                }
-                Ok(())
-            }));
-        let script = windows_core::HSTRING::from(SCRIPT);
-        // SAFETY: `core` is a live CoreWebView2; the handler is kept alive by WebView2 until it runs.
-        unsafe {
-            let _ = core.ExecuteScript(&script, &handler);
         }
     });
 }

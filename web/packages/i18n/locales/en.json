@@ -281,5 +281,13 @@
   "window.minimize": "Minimize",
   "window.maximize": "Maximize",
   "window.restore": "Restore",
-  "window.close": "Close"
+  "window.close": "Close",
+  "sidebar.label": "Tabs and controls",
+  "sidebar.hide": "Hide sidebar",
+  "sidebar.pinned": "Pinned tabs",
+  "tab.split": "Open beside the current tab",
+  "tab.unsplit": "Close split view",
+  "tab.reopen": "Reopen closed tab",
+  "spaces.label": "Spaces",
+  "command.hint": "Type a command, an address or a search"
 }

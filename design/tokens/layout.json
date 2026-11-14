@@ -86,6 +86,14 @@
       "tabstrip": {
         "$value": "44px"
       },
+      "sidebar": {
+        "$value": "280px",
+        "$description": "Windows sidebar width (ADR-0016); the host sizes the sidebar webview to it."
+      },
+      "pinned-tile": {
+        "$value": "44px",
+        "$description": "A pinned tab's tile in the sidebar."
+      },
       "tab-height": {
         "$value": "34px"
       },

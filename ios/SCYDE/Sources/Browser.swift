@@ -685,6 +685,15 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     /// A new page starts without the previous page's title (PDFs and images never set one).
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        // New Tab is one screen: nothing to scroll and no rubber band (owner, 2026-11-15).
+        let newTab = webView.url?.scheme == InternalPages.scheme && webView.url?.host == "newtab"
+        // Scrolling stays enabled: a scroll view that cannot scroll never moves the page below the
+        // status bar band (seen on CI screenshots). The page itself is one screen high and hides its
+        // overflow; without the extra room below (for the island) and without bounce, nothing moves.
+        webView.scrollView.bounces = !newTab
+        let room = newTab ? 0 : ScydeSize.islandMobileHeight + ScydeSpace.s8
+        webView.scrollView.contentInset.bottom = room
+        webView.scrollView.verticalScrollIndicatorInsets.bottom = room
         tab(for: webView)?.title = webView.title ?? ""
     }
 

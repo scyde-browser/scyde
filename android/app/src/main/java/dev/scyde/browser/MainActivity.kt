@@ -239,14 +239,23 @@ fun ScydeApp(browser: Browser, initialPanel: MutableState<String?> = mutableStat
     // A video in full screen: nothing of SCYDE stays on the screen.
     val fullscreen = active?.fullscreen == true && sheet == null
     val view = LocalView.current
-    val pageColor = active?.themeColor?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
-    val topColor = if (sheet == null) pageColor ?: c.surfaceCanvas else c.surfaceRaised
+    // Behind the status bar: the island's colour, always (owner, 2026-11-15), also while the island
+    // is hidden for reading. Sheets keep their own surface.
+    val topColor = if (sheet == null) c.islandBg else c.surfaceRaised
     LaunchedEffect(immersive, fullscreen, topColor) {
         val window = (view.context as? android.app.Activity)?.window ?: return@LaunchedEffect
         val bars = WindowCompat.getInsetsController(window, view)
         bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         bars.isAppearanceLightStatusBars = topColor.luminance() > 0.5f
-        if (immersive || fullscreen) bars.hide(WindowInsetsCompat.Type.systemBars()) else bars.show(WindowInsetsCompat.Type.systemBars())
+        when {
+            fullscreen -> bars.hide(WindowInsetsCompat.Type.systemBars())
+            // Reading: the navigation bar hides with the island; the status bar and its band stay.
+            immersive -> {
+                bars.show(WindowInsetsCompat.Type.statusBars())
+                bars.hide(WindowInsetsCompat.Type.navigationBars())
+            }
+            else -> bars.show(WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     LaunchedEffect(initialPanel.value) {

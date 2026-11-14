@@ -188,8 +188,12 @@ Branch: the session's designated branch (agent sessions may only push there), on
   - Closing the welcome sheet any way finishes onboarding on iOS and Android (it came back on the next launch).
 - [x] **v0.7.1, tabs on Windows (owner, 2026-11-13):** a tab strip across the top of the frameless window (icon, title, ×, +, caption buttons, drag area), ADR-0015. The island's favicon stack is removed.
 - `[OWNER]` Phones: should they also show the tabs (a strip at the top, or tabs above the island), or are the tab button and the tab grid enough?
-- [ ] v0.8.0:
-  - Windows: island v2 (control center, command omnibox), Shield per site (dynamic DNR allow rules), Ctrl+K palette, split view, web panels
+- [x] **v0.8.0, Windows laid out like Arc/Zen (owner, 2026-11-14), ADR-0016:** the island window did not show on the owner's PC, so Windows now has a sidebar inside the main window: caption buttons, navigation, address + command bar (Ctrl+L/Ctrl+K: commands, open tabs, history), pinned tabs, Spaces, vertical tabs, split view, hide sidebar (Ctrl+S), Ctrl+1…9, session restore with sleeping tabs. The island window, its scroll watcher and the tab strip are removed.
+- [x] **v0.8.0, owner 2026-11-15:** phones: the status bar band is always the island's colour and stays while reading (no page showing behind the clock). App icon in iOS system green `#34C759` on all platforms (`brand.json`, `tools/icon-export`).
+- [x] **v0.8.0, owner 2026-11-15 (2):** New Tab never scrolls (one screen; iOS also turns off the rubber band). iOS declares the `http`/`https` URL types.
+- `[OWNER]` **iOS default browser:** iOS lists an app under Settings › Default Browser App only when it is signed with the managed entitlement `com.apple.developer.web-browser`. Apple grants it per developer account on request (developer.apple.com › "Default browser entitlement" form); it must then be in the provisioning profile. An unsigned .ipa signed through Feather cannot carry it, so SCYDE cannot be the default browser on iOS until the owner has a paid Apple Developer account with that entitlement. The URL types are already declared.
+- [ ] v0.9.0:
+  - Windows: Shield per site (dynamic DNR allow rules), Peek, web panels, private tabs, downloads list, find in page
   - Zen mode (annoyance lists, `[OWNER]` licences)
 - Known: the Windows smoke test once scored `qa/adblock` 10/11 (`allow:exception`) and 11/11 on rerun. On first launch the DNR rulesets do not all load at the same moment, so for a few hundred ms a block rule can win over its exception.
 - Skills `animate`, `break-ui` and others from PLAN §12 are not installed; DESIGN §6 was followed directly

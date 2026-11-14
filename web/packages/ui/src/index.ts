@@ -3,6 +3,7 @@ export { default as Button } from './Button.svelte';
 export { default as Card } from './Card.svelte';
 export { default as Favicon } from './Favicon.svelte';
 export { default as Icon } from './Icon.svelte';
+export type { IconName } from './Icon.svelte';
 export { default as IconButton } from './IconButton.svelte';
 export { default as Kbd } from './Kbd.svelte';
 export { default as Segmented } from './Segmented.svelte';
