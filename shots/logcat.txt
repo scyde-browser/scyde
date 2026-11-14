@@ -1,0 +1,47 @@
+11-14 23:51:37.115     0     0 I init    : Loading module /lib/modules/virtio_console.ko with args ''
+11-14 23:51:37.117     0     0 I init    : Loaded kernel module /lib/modules/virtio_console.ko
+11-14 23:52:08.318   966   966 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+11-14 23:52:46.990  4319  4370 I GeckoConsole: No chrome package registered for chrome://browser/content/built_in_addons.json
+11-14 23:53:08.936  4603  4624 W Isolated Web Content: [JavaScript Warning: "Loading failed for the <script> with source “http://10.0.2.2:8787/adblock/ad-network/ad.js”." {file: "http://10.0.2.2:8787/adblock/index.html" line: 15}]
+11-14 23:53:08.948  4603  4624 W Isolated Web Content: [JavaScript Warning: "Loading failed for the <script> with source “http://10.0.2.2:8787/adblock/analytics/collect.js”." {file: "http://10.0.2.2:8787/adblock/index.html" line: 18}]
+11-14 23:53:08.950  4603  4624 W Isolated Web Content: [JavaScript Warning: "Loading failed for the <script> with source “http://10.0.2.2:8787/adblock/cdn/prebid-v8.js”." {file: "http://10.0.2.2:8787/adblock/index.html" line: 19}]
+11-14 23:54:37.421  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: MozAfterPaint." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:37.421  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:37.421  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:37.421  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:37.478  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: MozAfterPaint." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:37.478  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:37.478  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:37.478  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:37.586  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: DOMContentLoaded." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:37.586  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:37.586  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:37.586  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:37.587  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: MozAfterPaint." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:37.587  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:37.587  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:37.587  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:37.587  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: MozAfterPaint." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:37.587  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:37.587  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:37.587  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:37.587  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: pageshow." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:37.587  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:37.587  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:37.587  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:39.926  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: MozAfterPaint." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:39.926  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:39.926  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:39.926  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:39.927  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: MozAfterPaint." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:39.927  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:39.927  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:39.927  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:40.034  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: MozAfterPaint." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:40.034  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:40.034  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:40.034  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
+11-14 23:54:40.314  4319  4370 E GeckoConsole: [JavaScript Error: "Error: No impl for message: MozAfterPaint." {file: "chrome://geckoview/content/geckoview.js" line: 414}]
+11-14 23:54:40.314  4319  4370 E GeckoConsole: receiveMessage@chrome://geckoview/content/geckoview.js:414:13
+11-14 23:54:40.314  4319  4370 E GeckoConsole: onMessageFromActor@chrome://geckoview/content/geckoview.js:229:41
+11-14 23:54:40.314  4319  4370 E GeckoConsole: receiveMessage@resource://gre/modules/GeckoViewActorParent.sys.mjs:40:38
