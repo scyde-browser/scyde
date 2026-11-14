@@ -685,23 +685,19 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     /// A new page starts without the previous page's title (PDFs and images never set one).
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-        // New Tab is one screen: no scrolling and no rubber band (owner, 2026-11-15).
+        // New Tab is one screen: nothing to scroll and no rubber band (owner, 2026-11-15).
         let newTab = webView.url?.scheme == InternalPages.scheme && webView.url?.host == "newtab"
-        webView.scrollView.isScrollEnabled = !newTab
+        // Scrolling stays enabled: a scroll view that cannot scroll never moves the page below the
+        // status bar band (seen on CI screenshots). The page itself is one screen high and hides its
+        // overflow; without the extra room below (for the island) and without bounce, nothing moves.
         webView.scrollView.bounces = !newTab
-        if newTab { pinToTop(webView) }
+        let room = newTab ? 0 : ScydeSize.islandMobileHeight + ScydeSpace.s8
+        webView.scrollView.contentInset.bottom = room
+        webView.scrollView.verticalScrollIndicatorInsets.bottom = room
         tab(for: webView)?.title = webView.title ?? ""
     }
 
-    /// A scroll view that cannot scroll never moves its content below the status bar band by
-    /// itself: put the page's top at the top of the safe area.
-    private func pinToTop(_ webView: WKWebView) {
-        let sv = webView.scrollView
-        sv.setContentOffset(CGPoint(x: 0, y: -sv.adjustedContentInset.top), animated: false)
-    }
-
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        if webView.url?.scheme == InternalPages.scheme, webView.url?.host == "newtab" { pinToTop(webView) }
         guard let tab = tab(for: webView), let url = webView.url else { return }
         if !tab.isPrivate { saveSession() }
         tab.bookmarked = tab.isWeb && ((try? places?.isBookmarked(url: url.absoluteString)) ?? false)
