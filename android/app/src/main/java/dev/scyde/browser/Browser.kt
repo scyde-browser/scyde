@@ -387,7 +387,22 @@ class Browser(appContext: Context) {
 
     // ----------------------------------------------------- sleeping tabs
 
+    /**
+     * Arc-style tidy-up (`tabs.archive_after_days`, off by default): tabs not opened for that many
+     * days close on their own. Pinned and private tabs stay; the pages remain in History.
+     */
+    private fun archiveOldTabs() {
+        val days = settings.get("tabs.archive_after_days")?.toIntOrNull() ?: 0
+        if (days <= 0) return
+        val limit = System.currentTimeMillis() - days * 86_400_000L
+        val old = tabs.filter { it.id != activeId && !it.pinned && !it.isPrivate && it.lastActive < limit }
+        if (old.isEmpty()) return
+        old.forEach { close(it) }
+        show(str(R.string.toast_archived, "${old.size}"))
+    }
+
     private fun sleepIdleTabs() {
+        archiveOldTabs()
         val minutes = settings.get("tabs.sleep_after_minutes")?.toIntOrNull() ?: 15
         if (minutes <= 0) return
         val limit = System.currentTimeMillis() - minutes * 60_000L
@@ -437,7 +452,7 @@ class Browser(appContext: Context) {
                 "tabs",
                 JSONArray().apply {
                     tabs.filter { !it.isPrivate }.forEach {
-                        put(JSONObject().put("url", it.url.ifEmpty { it.pendingUrl ?: "" }).put("title", it.title).put("pinned", it.pinned).put("space", it.spaceId))
+                        put(JSONObject().put("url", it.url.ifEmpty { it.pendingUrl ?: "" }).put("title", it.title).put("pinned", it.pinned).put("space", it.spaceId).put("lastActive", it.lastActive))
                     }
                 },
             )
@@ -473,6 +488,7 @@ class Browser(appContext: Context) {
             tab.pinned = pinned
             tab.pendingUrl = url
             tab.sleeping = true
+            o.optLong("lastActive").takeIf { it > 0 }?.let { tab.lastActive = it }
             tabs += tab
             if (i == activeIndex) activeTab = tab
         }
@@ -634,6 +650,34 @@ class Browser(appContext: Context) {
     }
 
     private val hideToast = Runnable { toast = null }
+
+    // ------------------------------------------------------- reader and text size
+
+    /** Reader: the article as clean text over the page (reader.js in the extension); again closes it. */
+    fun toggleReader() {
+        if (active?.isWeb != true) return
+        val dark = when (appearance["theme"]) {
+            "dark" -> true
+            "light" -> false
+            else -> (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        val c = if (dark) dev.scyde.browser.theme.ScydeColorsDark else dev.scyde.browser.theme.ScydeColorsLight
+        val opts = JSONObject().put("bg", hex(c.surfaceCanvas)).put("fg", hex(c.textPrimary)).put("muted", hex(c.textSecondary))
+            .put("accent", hex((if (dark) dev.scyde.browser.theme.ScydeAccents.emberDark else dev.scyde.browser.theme.ScydeAccents.emberLight).fill)).put("close", str(R.string.sheet_close))
+        port?.postMessage(JSONObject().put("type", "reader").put("opts", opts))
+    }
+
+    /** Text size of pages, 50–200 % in steps of 10 (GeckoView applies it to every tab). */
+    var textSize by mutableIntStateOf(100)
+        private set
+
+    fun zoom(step: Int) {
+        textSize = (textSize + step * 10).coerceIn(50, 200)
+        runtime.settings.automaticFontSizeAdjustment = false
+        runtime.settings.fontSizeFactor = textSize / 100f
+        show(str(R.string.menu_text_size, "$textSize"))
+    }
 
     // ------------------------------------------------- downloads, external apps, errors
 
@@ -913,7 +957,9 @@ button{align-self:flex-start;min-height:${space.s48.value.toInt()}px;padding:0 $
         override fun onConnect(port: WebExtension.Port) {
             this@Browser.port = port
             port.setDelegate(object : WebExtension.PortDelegate {
-                override fun onPortMessage(message: Any, port: WebExtension.Port) {}
+                override fun onPortMessage(message: Any, port: WebExtension.Port) {
+                    if ((message as? JSONObject)?.optString("type") == "reader.none") main.post { show(str(R.string.menu_reader_none)) }
+                }
 
                 override fun onDisconnect(port: WebExtension.Port) {
                     if (this@Browser.port === port) this@Browser.port = null

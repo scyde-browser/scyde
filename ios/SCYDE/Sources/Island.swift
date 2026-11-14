@@ -292,6 +292,9 @@ struct ControlCenter: View {
                 tile("clock", "library.tab.history") { browser.open(page: "library#history") }
                 tile("book", "library.tab.bookmarks") { browser.open(page: "library#bookmarks") }
                 tile("slider.horizontal.3", "rail.settings") { browser.open(page: "settings") }
+                tile("doc.plaintext", "menu.reader", enabled: tab?.isWeb == true) { browser.toggleReader() }
+                tile("textformat.size.smaller", "menu.zoom.smaller", enabled: tab?.isWeb == true, closes: false) { browser.zoom(by: -1) }
+                tile("textformat.size.larger", "menu.zoom.larger", enabled: tab?.isWeb == true, closes: false) { browser.zoom(by: 1) }
             }
         }
         .padding(ScydeSpace.s12)
@@ -312,11 +315,13 @@ struct ControlCenter: View {
         .accessibilityLabel(String(localized: String.LocalizationValue(key)))
     }
 
-    private func tile(_ icon: String, _ key: String, on: Bool = false, enabled: Bool = true, action: @escaping () -> Void) -> some View {
+    private func tile(
+        _ icon: String, _ key: String, on: Bool = false, enabled: Bool = true, closes: Bool = true, action: @escaping () -> Void
+    ) -> some View {
         let c = palette.colors
         return Button {
             action()
-            close()
+            if closes { close() }
         } label: {
             VStack(alignment: .leading, spacing: ScydeSpace.s8) {
                 Image(systemName: icon).font(.title3).foregroundStyle(on ? palette.accent.onFill : c.textSecondary)
@@ -537,15 +542,21 @@ struct TabGrid: View {
     @State private var naming: Space?
     @State private var creating = false
     @State private var name = ""
+    @State private var query = ""
 
     var body: some View {
         let c = palette.colors
-        let list = browser.visibleTabs(isPrivate: showPrivate)
+        let q = query.trimmingCharacters(in: .whitespaces)
+        // Searching looks through every tab of this mode, in all Spaces.
+        let list = q.isEmpty ? browser.visibleTabs(isPrivate: showPrivate) : browser.tabs.filter {
+            $0.isPrivate == showPrivate
+                && ($0.title.localizedCaseInsensitiveContains(q) || ($0.url?.absoluteString.localizedCaseInsensitiveContains(q) ?? false))
+        }
         NavigationStack {
             ScrollView {
-                if !showPrivate { spaceBar }
+                if !showPrivate && q.isEmpty { spaceBar }
                 if list.isEmpty {
-                    Text(String(localized: "private.hint")).font(.footnote).foregroundStyle(c.textSecondary)
+                    Text(String(localized: q.isEmpty ? "private.hint" : "tabs.search.empty")).font(.footnote).foregroundStyle(c.textSecondary)
                         .multilineTextAlignment(.center).padding(ScydeSpace.s40)
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: ScydeSpace.s12)], spacing: ScydeSpace.s12) {
@@ -555,6 +566,7 @@ struct TabGrid: View {
             }
             .background(c.surfaceCanvas)
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: String(localized: "tabs.search"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(String(localized: "mobile.tabs.close_all"), role: .destructive) { browser.closeAll(isPrivate: showPrivate) }

@@ -44,7 +44,7 @@ if (target === 'gecko-mv2') {
   if (probe && !JSON.parse(ShieldEngine.fromDat(dat).hiddenSelectors(JSON.stringify([probe]), '[]', '[]')).includes('.' + probe)) {
     throw new Error(`engine.dat lost generic cosmetics (probe .${probe})`);
   }
-  for (const f of ['content.js', 'gecko-background.js', 'scroll-guard.js']) copyFileSync(path.join(here, 'src', f), path.join(out, f));
+  for (const f of ['content.js', 'gecko-background.js', 'scroll-guard.js', 'reader.js']) copyFileSync(path.join(here, 'src', f), path.join(out, f));
   if (pages) cpSync(path.resolve(pages), path.join(out, 'pages'), { recursive: true });
   rmSync(path.join(out, 'dnr'), { recursive: true, force: true });
   rmSync(path.join(out, 'cosmetic'), { recursive: true, force: true });
@@ -62,6 +62,7 @@ if (target === 'gecko-mv2') {
         content_scripts: [
           { matches: ['http://*/*', 'https://*/*'], js: ['content.js'], run_at: 'document_start', all_frames: true },
           { matches: ['http://*/*', 'https://*/*'], js: ['scroll-guard.js'], run_at: 'document_end' },
+          { matches: ['http://*/*', 'https://*/*'], js: ['reader.js'], run_at: 'document_idle' },
         ],
         content_security_policy: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
       },

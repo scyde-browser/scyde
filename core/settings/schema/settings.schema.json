@@ -103,7 +103,8 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "sleep_after_minutes": { "type": "integer", "minimum": 0, "maximum": 1440, "default": 15, "x-scyde-options": [0, 5, 15, 30, 60, 120] }
+        "sleep_after_minutes": { "type": "integer", "minimum": 0, "maximum": 1440, "default": 15, "x-scyde-options": [0, 5, 15, 30, 60, 120] },
+        "archive_after_days": { "type": "integer", "minimum": 0, "maximum": 365, "default": 0, "x-scyde-options": [0, 1, 7, 30, 90] }
       }
     },
     "onboarding": {

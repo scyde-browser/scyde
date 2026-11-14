@@ -3,6 +3,13 @@ import SwiftUI
 import UIKit
 import WebKit
 
+/// A token colour as `#RRGGBB`, for pages we build ourselves (error page, reader).
+func hexString(_ c: Color) -> String {
+    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+    UIColor(c).getRed(&r, green: &g, blue: &b, alpha: &a)
+    return String(format: "#%02X%02X%02X", Int((r * 255).rounded()), Int((g * 255).rounded()), Int((b * 255).rounded()))
+}
+
 /// What a page asks of the browser beyond showing itself: JavaScript dialogs, downloads, links for
 /// other apps (`tel:`, `mailto:`…) and an error page when a page does not open.
 extension Browser: WKDownloadDelegate {
@@ -131,11 +138,7 @@ extension Browser: WKDownloadDelegate {
                 .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
                 .replacingOccurrences(of: "'", with: "&#39;")
         }
-        func hex(_ c: Color) -> String {
-            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-            UIColor(c).getRed(&r, green: &g, blue: &b, alpha: &a)
-            return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
-        }
+        let hex = hexString
         let l = ScydeColors.light, d = ScydeColors.dark
         let host = url.host ?? url.absoluteString
         let target = (try? JSONSerialization.data(withJSONObject: [url.absoluteString]))

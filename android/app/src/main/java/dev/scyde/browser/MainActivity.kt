@@ -640,6 +640,9 @@ private fun ControlCenter(browser: Browser, c: ScydeColors, accent: ScydeAccent,
             { m -> ActionTile(ScydeIcons.history, stringResource(R.string.library_tab_history), c, accent, m) { browser.openPage("library#history"); close() } },
             { m -> ActionTile(ScydeIcons.book, stringResource(R.string.library_tab_bookmarks), c, accent, m) { browser.openPage("library#bookmarks"); close() } },
             { m -> ActionTile(ScydeIcons.settings, stringResource(R.string.rail_settings), c, accent, m) { browser.openPage("settings"); close() } },
+            { m -> ActionTile(ScydeIcons.reader, stringResource(R.string.menu_reader), c, accent, m, enabled = web) { browser.toggleReader(); close() } },
+            { m -> ActionTile(ScydeIcons.textSmaller, stringResource(R.string.menu_zoom_smaller), c, accent, m, enabled = web) { browser.zoom(-1) } },
+            { m -> ActionTile(ScydeIcons.textLarger, stringResource(R.string.menu_zoom_larger), c, accent, m, enabled = web) { browser.zoom(1) } },
         )
         tiles.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s8)) { row.forEach { it(Modifier.weight(1f)) } }
@@ -980,7 +983,12 @@ private fun TabGrid(browser: Browser, c: ScydeColors, accent: ScydeAccent, onDon
     var editing by remember { mutableStateOf<Space?>(null) }
     var creating by remember { mutableStateOf(false) }
     val dark = isSystemInDarkTheme().let { sys -> when (browser.appearance["theme"]) { "dark" -> true; "light" -> false; else -> sys } }
-    val list = browser.visibleTabs(showPrivate)
+    var query by remember { mutableStateOf("") }
+    val q = query.trim()
+    // Searching looks through every tab of this mode, in all Spaces.
+    val list = if (q.isEmpty()) browser.visibleTabs(showPrivate) else browser.tabs.filter {
+        it.isPrivate == showPrivate && (it.title.contains(q, ignoreCase = true) || it.url.contains(q, ignoreCase = true))
+    }
     Dialog(onDismissRequest = onDone, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Column(Modifier.fillMaxSize().background(c.surfaceCanvas).windowInsetsPadding(WindowInsets.safeDrawing)) {
             Row(Modifier.fillMaxWidth().padding(ScydeSpace.s8), verticalAlignment = Alignment.CenterVertically) {
@@ -995,7 +1003,27 @@ private fun TabGrid(browser: Browser, c: ScydeColors, accent: ScydeAccent, onDon
                 }
                 Text(stringResource(R.string.mobile_tabs_done), color = accent.ink, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onDone).padding(ScydeSpace.s12))
             }
-            if (!showPrivate) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = ScydeSpace.s16, vertical = ScydeSpace.s4).height(ScydeSize.hitAndroid)
+                    .background(c.surfaceSunken, CircleShape).padding(horizontal = ScydeSpace.s16),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s8),
+            ) {
+                Icon(ScydeIcons.search, null, tint = c.textTertiary, modifier = Modifier.size(ScydeSpace.s20))
+                val label = stringResource(R.string.tabs_search)
+                Box(Modifier.weight(1f)) {
+                    if (query.isEmpty()) Text(label, color = c.textTertiary, fontSize = 15.sp)
+                    BasicTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        singleLine = true,
+                        textStyle = TextStyle(color = c.textPrimary, fontSize = 15.sp),
+                        cursorBrush = SolidColor(accent.fill),
+                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = label },
+                    )
+                }
+            }
+            if (!showPrivate && q.isEmpty()) {
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = ScydeSpace.s16, vertical = ScydeSpace.s4),
                     horizontalArrangement = Arrangement.spacedBy(ScydeSpace.s8),
@@ -1025,7 +1053,7 @@ private fun TabGrid(browser: Browser, c: ScydeColors, accent: ScydeAccent, onDon
                 }
             }
             if (list.isEmpty()) {
-                Text(stringResource(R.string.private_hint), color = c.textSecondary, fontSize = 14.sp, modifier = Modifier.padding(ScydeSpace.s40))
+                Text(stringResource(if (q.isEmpty()) R.string.private_hint else R.string.tabs_search_empty), color = c.textSecondary, fontSize = 14.sp, modifier = Modifier.padding(ScydeSpace.s40))
             }
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(ScydeSpace.s80 * 2), modifier = Modifier.weight(1f),
