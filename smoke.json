@@ -1,0 +1,68 @@
+{
+  "elapsed_ms": 12889,
+  "filters": "20261114",
+  "main": {
+    "position": [
+      0,
+      0
+    ],
+    "size": [
+      1024,
+      720
+    ]
+  },
+  "page": {
+    "position": [
+      280,
+      0
+    ],
+    "size": [
+      744,
+      720
+    ]
+  },
+  "shield_extension": true,
+  "shield_installed_now": true,
+  "sidebar": {
+    "position": [
+      0,
+      0
+    ],
+    "size": [
+      280,
+      720
+    ]
+  },
+  "tabs": [
+    {
+      "popups_blocked": 0,
+      "title": "New Tab",
+      "url": "scyde://newtab"
+    },
+    {
+      "popups_blocked": 0,
+      "title": "Settings",
+      "url": "scyde://settings"
+    },
+    {
+      "popups_blocked": 0,
+      "title": "Shield",
+      "url": "scyde://shields"
+    },
+    {
+      "popups_blocked": 0,
+      "title": "Library",
+      "url": "scyde://library/#history"
+    },
+    {
+      "popups_blocked": 1,
+      "title": "SCYDE QA · popup fixture",
+      "url": "http://127.0.0.1:8787/popup/index.html"
+    },
+    {
+      "popups_blocked": 0,
+      "title": "QA 11/11",
+      "url": "http://127.0.0.1:8787/adblock/index.html"
+    }
+  ]
+}
