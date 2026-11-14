@@ -242,8 +242,8 @@ const concepts = {
   'owner-s': {
     round: 4,
     name: 'SCYDE S',
-    blurb: "Owner's mark: an S from two mirrored halves split by a diagonal cut (a lightning bolt). The letter only, in Ember, no plate or background.",
-    palette: { tileLight: '#F2603F', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#F2603F', radius: 230, unplated: true, iosLightBg: '#FFFFFF' },
+    blurb: "Owner's mark: an S from two mirrored halves split by a diagonal cut (a lightning bolt). The letter only, in call green (iOS system green #34C759, owner 2026-11-15), no plate or background.",
+    palette: { tileLight: '#34C759', markOnLight: '#0A0A0A', tileDark: '#0A0A0A', markOnDark: '#34C759', radius: 230, unplated: true, iosLightBg: '#FFFFFF' },
     draw() {
       // Points read from the owner's construction drawing (539 x 584 artboard). The lower half is the upper
       // half rotated 180 degrees about the centre of the mark, so the S is exactly point-symmetric.

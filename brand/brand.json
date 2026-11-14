@@ -10,14 +10,15 @@
   "website": "https://github.com/scyde-browser/scyde",
   "colors": {
     "brand": "#F2603F",
-    "iconTileLight": "#F2603F",
+    "iconTileLight": "#34C759",
     "iconTileDark": "#0A0A0A",
-    "brandInk": "#0A0A0A"
+    "brandInk": "#0A0A0A",
+    "icon": "#34C759"
   },
   "icon": {
     "concept": "owner-s",
     "master": "brand/icon/scyde.svg",
-    "chosen": "2026-11-11",
-    "note": "Owner's mark (shape rebuilt from the owner's construction drawing) in Ember (#F2603F + ink #0A0A0A), letter only, no plate or background (owner, 2026-11-11). Replaces Aura S."
+    "chosen": "2026-11-15",
+    "note": "Owner's mark (shape rebuilt from the owner's construction drawing), letter only, no plate or background. Colour: iOS system green #34C759, the green of the Phone and call buttons (owner, 2026-11-15); the in-app accent stays Ember."
   }
 }
