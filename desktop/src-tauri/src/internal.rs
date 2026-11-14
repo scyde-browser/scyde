@@ -213,7 +213,7 @@ fn call(app: &AppHandle, method: &str, p: &Value) -> Result<Value, String> {
                             .filter(|t| {
                                 page_path(&t.url).is_some_and(|p| p.starts_with("/welcome"))
                             })
-                            .map(|t| t.webview.clone())
+                            .filter_map(|t| t.webview.clone())
                             .collect();
                         if let Ok(url) = NEWTAB.parse::<tauri::Url>() {
                             for wv in welcome {

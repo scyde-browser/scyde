@@ -1,7 +1,8 @@
-//! SCYDE for Windows: Tauri 2 multiwebview on one WebView2 environment (PLAN §9.1, ADR-0007, ADR-0012).
+//! SCYDE for Windows: Tauri 2 multiwebview on one WebView2 environment (PLAN §9.1, ADR-0007, ADR-0016).
 //!
-//! Layout: a frameless window · the `strip` webview (tabs + caption buttons, ADR-0015) at the top ·
-//! tab webviews fill the rest · the island floats over the bottom in its own window (ADR-0014).
+//! Layout: a frameless window · the `sidebar` webview (web/apps/desktop-chrome) on the left holds
+//! the caption buttons, navigation, the address, pinned tabs, the tabs of the current Space and the
+//! Spaces · tab webviews fill the rest (two side by side in split view).
 //! Internal pages are served by the `scyde` protocol (`http://scyde.localhost/<page>/` in WebView2)
 //! and reach the host only through `bridge`, which checks the origin and a method allowlist.
 //! Shield = the bundled MV3 extension (DNR + cosmetics, ADR-0003) on every webview; popups that the
@@ -13,31 +14,32 @@ mod internal;
 #[cfg(windows)]
 mod win;
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use omnibox::frecency::VisitKind;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tauri::webview::PageLoadEvent;
 use tauri::window::WindowBuilder;
 use tauri::{
-    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize, Url,
-    Webview, WebviewBuilder, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Url, Webview, WebviewBuilder,
+    WebviewUrl, Window, WindowEvent,
 };
 
-/// The tab strip at the top (`size.chrome-tabstrip`, ADR-0015).
-pub const STRIP_H: f64 = 44.0;
-/// Island band height: island 60 + 22 inset below + 22 above (DESIGN §4).
-pub const CHROME_H: f64 = 104.0;
-/// The island window's width: `size.island-width-expanded` (760) plus room for its shadow.
-const ISLAND_W: f64 = 784.0;
-/// Where the island window waits while it is hidden.
-const OFFSCREEN: f64 = -32000.0;
+/// The sidebar's width (`size.sidebar-width`, ADR-0016).
+pub const SIDEBAR_W: f64 = 280.0;
+/// The line between the two pages of a split view.
+const SPLIT_GAP: f64 = 1.0;
+/// With the sidebar hidden, the mouse within this distance of the left edge brings it back.
+const EDGE: f64 = 6.0;
 const START_W: f64 = 1280.0;
 const START_H: f64 = 820.0;
 pub const NEWTAB: &str = "http://scyde.localhost/newtab/";
+const SPACE_COLORS: [&str; 6] = ["ember", "sky", "mint", "lavender", "periwinkle", "onyx"];
+const DEFAULT_SPACE: &str = "personal";
 
 fn now() -> i64 {
     SystemTime::now()
@@ -51,23 +53,105 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 
 // ------------------------------------------------------------------------------------ state
 
+/// A Space: a named group of tabs with its own Aura colour (ADR-0013 on phones, ADR-0016 here).
+/// An empty name is the default Space; the sidebar shows its localized name.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Space {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+}
+
 pub struct Tab {
     pub id: u32,
-    pub webview: Webview,
+    /// None while the tab sleeps: restored tabs get their webview when they are first opened.
+    pub webview: Option<Webview>,
     pub url: String,
     pub title: String,
     pub loading: bool,
     pub popups_blocked: u32,
     /// The next committed navigation came from the omnibox (frecency: typed).
     pub typed: bool,
+    /// Pinned tabs show as tiles at the top of the sidebar, in every Space.
+    pub pinned: bool,
+    pub space: String,
 }
 
-#[derive(Default)]
 pub struct Tabs {
     pub list: Vec<Tab>,
     pub active: Option<u32>,
     pub next_id: u32,
     pub closed: Vec<String>,
+    pub spaces: Vec<Space>,
+    /// The current Space.
+    pub space: String,
+    /// The tab each Space showed last.
+    pub last: HashMap<String, u32>,
+    /// Split view: these two tabs show side by side while either is active.
+    pub split: Option<(u32, u32)>,
+    pub next_space: u32,
+}
+
+impl Default for Tabs {
+    fn default() -> Self {
+        Self {
+            list: Vec::new(),
+            active: None,
+            next_id: 0,
+            closed: Vec::new(),
+            spaces: vec![Space {
+                id: DEFAULT_SPACE.into(),
+                name: String::new(),
+                color: SPACE_COLORS[0].into(),
+            }],
+            space: DEFAULT_SPACE.into(),
+            last: HashMap::new(),
+            split: None,
+            next_space: 0,
+        }
+    }
+}
+
+impl Tabs {
+    /// The tabs on screen: the active one, or both halves of its split view.
+    fn shown(&self) -> Vec<u32> {
+        match (self.active, self.split) {
+            (Some(a), Some((l, r))) if a == l || a == r => vec![l, r],
+            (Some(a), _) => vec![a],
+            (None, _) => Vec::new(),
+        }
+    }
+
+    /// The tabs the sidebar lists, in its order: pinned tabs, then the current Space's tabs.
+    fn visible(&self) -> Vec<u32> {
+        let pinned = self.list.iter().filter(|t| t.pinned);
+        let own = self
+            .list
+            .iter()
+            .filter(|t| !t.pinned && t.space == self.space);
+        pinned.chain(own).map(|t| t.id).collect()
+    }
+
+    fn drop_split(&mut self, id: u32) {
+        if self.split.is_some_and(|(l, r)| l == id || r == id) {
+            self.split = None;
+        }
+    }
+}
+
+/// The sidebar is on screen when it is not collapsed, or while the mouse (peek) or the keyboard
+/// (hold: the address is being edited) needs it.
+#[derive(Default, Clone, Copy)]
+pub struct Sidebar {
+    pub collapsed: bool,
+    pub peek: bool,
+    pub hold: bool,
+}
+
+impl Sidebar {
+    fn visible(self) -> bool {
+        !self.collapsed || self.peek || self.hold
+    }
 }
 
 pub struct AppState {
@@ -80,17 +164,18 @@ pub struct AppState {
     /// run, or a new app or filter version. Otherwise the profile already has it.
     pub install_extension: bool,
     pub filters_version: String,
-    /// The island is hidden while the page scrolls down (DESIGN v2.1 "Hide").
-    pub island_hidden: Mutex<bool>,
-    /// The latest scroll sample of a tab: (tab id, scrollY, at the end of the page).
-    pub scroll: Mutex<Option<(u32, f64, bool)>>,
+    pub sidebar: Mutex<Sidebar>,
+    /// Where tabs, Spaces and the sidebar state are kept between runs (None in smoke mode).
+    pub session_path: Option<PathBuf>,
+    /// The session as last written, so unchanged state is not written again.
+    pub session_saved: Mutex<String>,
 }
 
 static SMOKE: OnceLock<Option<PathBuf>> = OnceLock::new();
 
 /// Every webview must share the same environment options (ADR-0003, ADR-0007).
 fn env_opts(b: WebviewBuilder<tauri::Wry>, state: &AppState) -> WebviewBuilder<tauri::Wry> {
-    // Tabs only enable extensions. The extension itself is installed once, by the island window
+    // Tabs only enable extensions. The extension itself is installed once, by the sidebar webview
     // (build_window): installing it again with every tab reloads its rulesets, and pages that load
     // meanwhile are not blocked (seen in CI: qa/adblock 3/11).
     if state.extensions.is_some() {
@@ -111,6 +196,9 @@ struct TabView {
     display: Display,
     loading: bool,
     popups_blocked: u32,
+    pinned: bool,
+    space: String,
+    asleep: bool,
 }
 
 #[derive(Serialize, Clone, Default)]
@@ -166,88 +254,117 @@ pub fn emit_state(app: &AppHandle) {
         .and_then(|w| w.is_maximized().ok())
         .unwrap_or(false);
     let state = app.state::<AppState>();
-    let tabs = lock(&state.tabs);
-    let list: Vec<TabView> = tabs
-        .list
-        .iter()
-        .map(|t| TabView {
-            id: t.id,
-            title: t.title.clone(),
-            url: user_url(&t.url),
-            display: display_for(&t.url),
-            loading: t.loading,
-            popups_blocked: t.popups_blocked,
-        })
-        .collect();
+    let sidebar = *lock(&state.sidebar);
     let appearance = lock(&state.settings)
         .get("appearance")
         .cloned()
         .unwrap_or(Value::Null);
-    let payload = json!({ "tabs": list, "active": tabs.active, "appearance": appearance, "filters": state.filters_version, "maximized": maximized });
-    for target in ["chrome", "strip"] {
-        let _ = app.emit_to(target, "scyde://state", payload.clone());
+    let (payload, session) = {
+        let tabs = lock(&state.tabs);
+        let list: Vec<TabView> = tabs
+            .list
+            .iter()
+            .map(|t| TabView {
+                id: t.id,
+                title: t.title.clone(),
+                url: user_url(&t.url),
+                display: display_for(&t.url),
+                loading: t.loading,
+                popups_blocked: t.popups_blocked,
+                pinned: t.pinned,
+                space: t.space.clone(),
+                asleep: t.webview.is_none(),
+            })
+            .collect();
+        let payload = json!({
+            "tabs": list,
+            "active": tabs.active,
+            "split": tabs.split.map(|(l, r)| [l, r]),
+            "spaces": tabs.spaces,
+            "space": tabs.space,
+            "appearance": appearance,
+            "filters": state.filters_version,
+            "maximized": maximized,
+            "collapsed": sidebar.collapsed,
+        });
+        let session = json!({
+            "spaces": tabs.spaces,
+            "space": tabs.space,
+            "collapsed": sidebar.collapsed,
+            "active": tabs.active.and_then(|a| tabs.list.iter().position(|t| t.id == a)),
+            "tabs": tabs.list.iter().map(|t| json!({
+                "url": t.url, "title": t.title, "pinned": t.pinned, "space": t.space,
+            })).collect::<Vec<_>>(),
+        });
+        (payload, session.to_string())
+    };
+    let _ = app.emit_to("sidebar", "scyde://state", payload);
+    if let Some(path) = &state.session_path {
+        let mut saved = lock(&state.session_saved);
+        if *saved != session && std::fs::write(path, &session).is_ok() {
+            *saved = session;
+        }
     }
 }
 
-// ------------------------------------------------------------------------------------- tabs
+// ----------------------------------------------------------------------------------- layout
 
-fn content_bounds(window: &Window) -> (LogicalPosition<f64>, LogicalSize<f64>) {
+/// The window's client size and the sidebar's width right now (logical pixels). Asks the window,
+/// so it must not be called with the tabs lock held.
+fn frame(app: &AppHandle, window: &Window) -> (LogicalSize<f64>, f64) {
     let scale = window.scale_factor().unwrap_or(1.0);
     let size = window
         .inner_size()
         .map(|s| s.to_logical::<f64>(scale))
         .unwrap_or(LogicalSize::new(START_W, START_H));
-    // The page fills the window below the tab strip; the island floats over it in its own window
-    // (ADR-0014).
-    (
-        LogicalPosition::new(0.0, STRIP_H),
-        LogicalSize::new(size.width, (size.height - STRIP_H).max(0.0)),
-    )
+    let side = if lock(&app.state::<AppState>().sidebar).visible() {
+        SIDEBAR_W.min(size.width)
+    } else {
+        0.0
+    };
+    (size, side)
 }
 
+/// Places the sidebar and the tabs on screen: one tab fills the area beside the sidebar, a split
+/// view shares it; every other tab is hidden.
 pub fn relayout(app: &AppHandle) {
     let Some(window) = app.get_window("main") else {
         return;
     };
-    let (pos, content) = content_bounds(&window);
-    if let Some(strip) = app.get_webview("strip") {
-        let _ = strip.set_size(LogicalSize::new(content.width, STRIP_H));
+    let (size, side) = frame(app, &window);
+    if let Some(sidebar) = app.get_webview("sidebar") {
+        if side > 0.0 {
+            let _ = sidebar.set_position(LogicalPosition::new(0.0, 0.0));
+            let _ = sidebar.set_size(LogicalSize::new(side, size.height));
+            let _ = sidebar.show();
+        } else {
+            let _ = sidebar.hide();
+        }
     }
     let state = app.state::<AppState>();
-    for t in &lock(&state.tabs).list {
-        let _ = t.webview.set_position(pos);
-        let _ = t.webview.set_size(content);
+    let tabs = lock(&state.tabs);
+    let shown = tabs.shown();
+    #[allow(clippy::cast_precision_loss)]
+    let n = shown.len().max(1) as f64;
+    let width = ((size.width - side - SPLIT_GAP * (n - 1.0)) / n).max(0.0);
+    for t in &tabs.list {
+        let Some(wv) = &t.webview else { continue };
+        match shown.iter().position(|id| *id == t.id) {
+            Some(i) => {
+                #[allow(clippy::cast_precision_loss)]
+                let x = side + (width + SPLIT_GAP) * i as f64;
+                let _ = wv.set_position(LogicalPosition::new(x, 0.0));
+                let _ = wv.set_size(LogicalSize::new(width, size.height));
+                let _ = wv.show();
+            }
+            None => {
+                let _ = wv.hide();
+            }
+        }
     }
-    place_island(app);
 }
 
-/// Keeps the island window centred over the bottom of the main window's client area (screen
-/// coordinates, physical pixels). Its own window is transparent, so the page shows around it.
-fn place_island(app: &AppHandle) {
-    let (Some(main), Some(island)) = (app.get_window("main"), app.get_webview_window("chrome"))
-    else {
-        return;
-    };
-    let scale = main.scale_factor().unwrap_or(1.0);
-    let (Ok(pos), Ok(size)) = (main.inner_position(), main.inner_size()) else {
-        return;
-    };
-    let w = (ISLAND_W * scale).min(f64::from(size.width));
-    let h = (CHROME_H * scale).min(f64::from(size.height));
-    let x = f64::from(pos.x) + (f64::from(size.width) - w) / 2.0;
-    // Hidden = parked off-screen: unlike hide()/show(), moving it never takes focus from the page.
-    let hidden = *lock(&app.state::<AppState>().island_hidden);
-    let y = if hidden {
-        OFFSCREEN
-    } else {
-        f64::from(pos.y) + f64::from(size.height) - h
-    };
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    {
-        let _ = island.set_size(PhysicalSize::new(w.round() as u32, h.round() as u32));
-        let _ = island.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32));
-    }
-}
+// ------------------------------------------------------------------------------------- tabs
 
 fn record_visit(app: &AppHandle, id: u32, url: &str) {
     let state = app.state::<AppState>();
@@ -276,16 +393,11 @@ fn record_visit(app: &AppHandle, id: u32, url: &str) {
     }
 }
 
-pub fn new_tab(app: &AppHandle, url: Option<&str>, activate: bool) -> tauri::Result<u32> {
+/// Creates the webview of tab `id`, hidden behind the current page until `relayout` places it.
+fn spawn_webview(app: &AppHandle, id: u32, url: &str) -> tauri::Result<Webview> {
     let window = app.get_window("main").ok_or(tauri::Error::WindowNotFound)?;
     let state = app.state::<AppState>();
-    let id = {
-        let mut tabs = lock(&state.tabs);
-        tabs.next_id += 1;
-        tabs.next_id
-    };
-    let target = url.unwrap_or(NEWTAB);
-    let parsed: Url = target
+    let parsed: Url = url
         .parse()
         .unwrap_or_else(|_| NEWTAB.parse().expect("newtab url"));
     let (app_load, app_title, app_nav) = (app.clone(), app.clone(), app.clone());
@@ -306,17 +418,13 @@ pub fn new_tab(app: &AppHandle, url: Option<&str>, activate: bool) -> tauri::Res
         });
         false
     })
-    .on_page_load(move |wv, payload| {
+    .on_page_load(move |_wv, payload| {
         let url = payload.url().to_string();
         let started = matches!(payload.event(), PageLoadEvent::Started);
         {
             let st = app_load.state::<AppState>();
             let mut tabs = lock(&st.tabs);
-            if let Some(t) = tabs
-                .list
-                .iter_mut()
-                .find(|t| t.webview.label() == wv.label())
-            {
+            if let Some(t) = tabs.list.iter_mut().find(|t| t.id == id) {
                 t.url = url.clone();
                 t.loading = started;
             }
@@ -326,15 +434,11 @@ pub fn new_tab(app: &AppHandle, url: Option<&str>, activate: bool) -> tauri::Res
         }
         emit_state(&app_load);
     })
-    .on_document_title_changed(move |wv, title| {
+    .on_document_title_changed(move |_wv, title| {
         let st = app_title.state::<AppState>();
         let url = {
             let mut tabs = lock(&st.tabs);
-            let Some(t) = tabs
-                .list
-                .iter_mut()
-                .find(|t| t.webview.label() == wv.label())
-            else {
+            let Some(t) = tabs.list.iter_mut().find(|t| t.id == id) else {
                 return;
             };
             t.title = title.clone();
@@ -347,48 +451,102 @@ pub fn new_tab(app: &AppHandle, url: Option<&str>, activate: bool) -> tauri::Res
         }
         emit_state(&app_title);
     });
-    let (pos, size) = content_bounds(&window);
-    let webview = window.add_child(builder, pos, size)?;
+    let (size, side) = frame(app, &window);
+    let webview = window.add_child(
+        builder,
+        LogicalPosition::new(side, 0.0),
+        LogicalSize::new((size.width - side).max(0.0), size.height),
+    )?;
     #[cfg(windows)]
     win::install(app, &webview, id);
+    Ok(webview)
+}
+
+/// The tab's webview, created now if the tab was asleep.
+fn wake(app: &AppHandle, id: u32) -> Option<Webview> {
+    let state = app.state::<AppState>();
+    let (url, existing) = {
+        let tabs = lock(&state.tabs);
+        let t = tabs.list.iter().find(|t| t.id == id)?;
+        (t.url.clone(), t.webview.clone())
+    };
+    if existing.is_some() {
+        return existing;
+    }
+    let webview = spawn_webview(app, id, &url).ok()?;
+    let mut tabs = lock(&state.tabs);
+    let t = tabs.list.iter_mut().find(|t| t.id == id)?;
+    t.webview = Some(webview.clone());
+    t.loading = true;
+    Some(webview)
+}
+
+pub fn new_tab(app: &AppHandle, url: Option<&str>, activate: bool) -> tauri::Result<u32> {
+    let state = app.state::<AppState>();
+    let id = {
+        let mut tabs = lock(&state.tabs);
+        tabs.next_id += 1;
+        tabs.next_id
+    };
+    let target = url.unwrap_or(NEWTAB);
+    let webview = spawn_webview(app, id, target)?;
+    if !activate {
+        let _ = webview.hide();
+    }
     {
         let mut tabs = lock(&state.tabs);
+        let space = tabs.space.clone();
         tabs.list.push(Tab {
             id,
-            webview,
+            webview: Some(webview),
             url: target.to_owned(),
             title: String::new(),
             loading: true,
             popups_blocked: 0,
             typed: false,
+            pinned: false,
+            space,
         });
     }
     if activate {
         switch_tab(app, id);
-    } else if let Some(t) = lock(&state.tabs).list.iter().find(|t| t.id == id) {
-        let _ = t.webview.hide();
+    } else {
+        emit_state(app);
     }
-    emit_state(app);
     Ok(id)
 }
 
 pub fn switch_tab(app: &AppHandle, id: u32) {
+    let Some(webview) = wake(app, id) else {
+        return;
+    };
     let state = app.state::<AppState>();
-    {
+    let partner = {
         let mut tabs = lock(&state.tabs);
-        if !tabs.list.iter().any(|t| t.id == id) {
+        let Some((pinned, space)) = tabs
+            .list
+            .iter()
+            .find(|t| t.id == id)
+            .map(|t| (t.pinned, t.space.clone()))
+        else {
             return;
-        }
-        for t in &tabs.list {
-            if t.id == id {
-                let _ = t.webview.show();
-                let _ = t.webview.set_focus();
-            } else {
-                let _ = t.webview.hide();
-            }
-        }
+        };
         tabs.active = Some(id);
+        // A pinned tab shows in every Space; any other tab brings its own Space with it.
+        if !pinned {
+            tabs.space.clone_from(&space);
+        }
+        let current = tabs.space.clone();
+        tabs.last.insert(current, id);
+        tabs.split
+            .and_then(|(l, r)| (l == id).then_some(r).or((r == id).then_some(l)))
+    };
+    // The other half of a split view may still be asleep.
+    if let Some(p) = partner {
+        let _ = wake(app, p);
     }
+    relayout(app);
+    let _ = webview.set_focus();
     emit_state(app);
 }
 
@@ -396,6 +554,7 @@ pub fn close_tab(app: &AppHandle, id: u32) {
     let state = app.state::<AppState>();
     let next = {
         let mut tabs = lock(&state.tabs);
+        let before = tabs.visible();
         let Some(i) = tabs.list.iter().position(|t| t.id == id) else {
             return;
         };
@@ -403,42 +562,76 @@ pub fn close_tab(app: &AppHandle, id: u32) {
         if internal::page_path(&t.url).is_none() {
             tabs.closed.push(t.url.clone());
         }
-        let _ = t.webview.close();
+        if let Some(wv) = &t.webview {
+            let _ = wv.close();
+        }
+        tabs.drop_split(id);
+        tabs.last.retain(|_, v| *v != id);
         if tabs.active == Some(id) {
             tabs.active = None;
-            tabs.list.get(i).or_else(|| tabs.list.last()).map(|t| t.id)
+            // The neighbour in the sidebar's order: the next tab, else the previous one.
+            let at = before.iter().position(|v| *v == id).unwrap_or(0);
+            let after = tabs.visible();
+            after
+                .get(at)
+                .or_else(|| after.last())
+                .copied()
+                .map_or(Next::New, Next::Switch)
         } else {
-            tabs.active
+            Next::Keep
         }
     };
     match next {
-        Some(n) => switch_tab(app, n),
-        None => {
-            let _ = new_tab(app, None, true); // never leave the window without a tab
+        Next::Switch(n) => switch_tab(app, n),
+        // Never leave a Space without a tab.
+        Next::New => drop(new_tab(app, None, true)),
+        Next::Keep => {
+            relayout(app);
+            emit_state(app);
         }
     }
-    emit_state(app);
+}
+
+enum Next {
+    Switch(u32),
+    New,
+    Keep,
 }
 
 pub fn cycle_tab(app: &AppHandle, delta: i32) {
     let state = app.state::<AppState>();
     let target = {
         let tabs = lock(&state.tabs);
-        let n = tabs.list.len();
+        let ids = tabs.visible();
+        let n = ids.len();
         if n < 2 {
             return;
         }
-        let i = tabs
-            .list
+        let i = ids
             .iter()
-            .position(|t| Some(t.id) == tabs.active)
+            .position(|id| Some(*id) == tabs.active)
             .unwrap_or(0);
         let n_i = i32::try_from(n).unwrap_or(1);
         let j =
             usize::try_from((i32::try_from(i).unwrap_or(0) + delta).rem_euclid(n_i)).unwrap_or(0);
-        tabs.list[j].id
+        ids[j]
     };
     switch_tab(app, target);
+}
+
+/// Ctrl+1…8 opens that tab of the sidebar; Ctrl+9 the last one.
+pub fn switch_nth(app: &AppHandle, n: usize) {
+    let target = {
+        let ids = lock(&app.state::<AppState>().tabs).visible();
+        if n >= 8 {
+            ids.last().copied()
+        } else {
+            ids.get(n).copied()
+        }
+    };
+    if let Some(id) = target {
+        switch_tab(app, id);
+    }
 }
 
 pub fn reopen_closed(app: &AppHandle) {
@@ -454,7 +647,198 @@ fn active_webview(app: &AppHandle) -> Option<(u32, Webview)> {
     let tabs = lock(&state.tabs);
     tabs.active
         .and_then(|id| tabs.list.iter().find(|t| t.id == id))
-        .map(|t| (t.id, t.webview.clone()))
+        .and_then(|t| t.webview.clone().map(|w| (t.id, w)))
+}
+
+fn toggle_pin(app: &AppHandle, id: u32) {
+    {
+        let state = app.state::<AppState>();
+        let mut tabs = lock(&state.tabs);
+        let space = tabs.space.clone();
+        if let Some(t) = tabs.list.iter_mut().find(|t| t.id == id) {
+            t.pinned = !t.pinned;
+            // An unpinned tab lands in the Space the user is looking at.
+            if !t.pinned {
+                t.space = space;
+            }
+        }
+    }
+    emit_state(app);
+}
+
+/// Split view: `id` opens beside the active tab; asking again for a tab of the split closes it.
+fn toggle_split(app: &AppHandle, id: u32) {
+    let state = app.state::<AppState>();
+    let opened = {
+        let mut tabs = lock(&state.tabs);
+        match (tabs.active, tabs.split) {
+            (_, Some((l, r))) if l == id || r == id => {
+                tabs.split = None;
+                false
+            }
+            (Some(a), _) if a != id && tabs.list.iter().any(|t| t.id == id) => {
+                tabs.split = Some((a, id));
+                true
+            }
+            _ => return,
+        }
+    };
+    if opened {
+        let _ = wake(app, id);
+    }
+    relayout(app);
+    emit_state(app);
+}
+
+// ----------------------------------------------------------------------------------- spaces
+
+fn switch_space(app: &AppHandle, space: &str) {
+    let state = app.state::<AppState>();
+    let target = {
+        let mut tabs = lock(&state.tabs);
+        if !tabs.spaces.iter().any(|s| s.id == space) {
+            return;
+        }
+        tabs.space = space.to_owned();
+        let own = |t: &&Tab| !t.pinned && t.space == space;
+        tabs.last
+            .get(space)
+            .copied()
+            .filter(|id| tabs.list.iter().filter(own).any(|t| t.id == *id))
+            .or_else(|| tabs.list.iter().find(own).map(|t| t.id))
+    };
+    match target {
+        Some(id) => switch_tab(app, id),
+        None => drop(new_tab(app, None, true)), // a Space always has a tab
+    }
+}
+
+fn new_space(app: &AppHandle, name: &str) {
+    let id = {
+        let state = app.state::<AppState>();
+        let mut tabs = lock(&state.tabs);
+        tabs.next_space += 1;
+        let mut id = format!("space-{}", tabs.next_space);
+        while tabs.spaces.iter().any(|s| s.id == id) {
+            tabs.next_space += 1;
+            id = format!("space-{}", tabs.next_space);
+        }
+        let color = SPACE_COLORS[tabs.spaces.len() % SPACE_COLORS.len()];
+        tabs.spaces.push(Space {
+            id: id.clone(),
+            name: clean_name(name),
+            color: color.into(),
+        });
+        id
+    };
+    switch_space(app, &id);
+}
+
+fn clean_name(name: &str) -> String {
+    name.trim().chars().take(40).collect()
+}
+
+fn rename_space(app: &AppHandle, space: &str, name: &str) {
+    let name = clean_name(name);
+    if name.is_empty() {
+        return;
+    }
+    if let Some(s) = lock(&app.state::<AppState>().tabs)
+        .spaces
+        .iter_mut()
+        .find(|s| s.id == space)
+    {
+        s.name = name;
+    }
+    emit_state(app);
+}
+
+/// Deletes a Space; its tabs move to the first remaining one. The last Space cannot be deleted.
+fn delete_space(app: &AppHandle, space: &str) {
+    let state = app.state::<AppState>();
+    let go_to = {
+        let mut tabs = lock(&state.tabs);
+        if tabs.spaces.len() < 2 || !tabs.spaces.iter().any(|s| s.id == space) {
+            return;
+        }
+        tabs.spaces.retain(|s| s.id != space);
+        tabs.last.remove(space);
+        let home = tabs.spaces[0].id.clone();
+        for t in tabs.list.iter_mut().filter(|t| t.space == space) {
+            t.space.clone_from(&home);
+        }
+        (tabs.space == space).then_some(home)
+    };
+    match go_to {
+        Some(home) => switch_space(app, &home),
+        None => emit_state(app),
+    }
+}
+
+// ---------------------------------------------------------------------------------- sidebar
+
+fn update_sidebar(app: &AppHandle, f: impl FnOnce(&mut Sidebar)) {
+    let changed = {
+        let state = app.state::<AppState>();
+        let mut s = lock(&state.sidebar);
+        let before = (s.visible(), s.collapsed);
+        f(&mut s);
+        before != (s.visible(), s.collapsed)
+    };
+    if changed {
+        relayout(app);
+        emit_state(app);
+    }
+}
+
+/// Ctrl+S: hide or show the sidebar (the page then fills the window).
+pub fn toggle_sidebar(app: &AppHandle) {
+    update_sidebar(app, |s| {
+        s.collapsed = !s.collapsed;
+        s.peek = false;
+        s.hold = false;
+    });
+    if let Some((_, wv)) = active_webview(app) {
+        let _ = wv.set_focus();
+    }
+}
+
+/// With the sidebar hidden, the mouse at the left edge of the window brings it back for as long
+/// as the mouse stays over it.
+fn watch_sidebar(app: AppHandle) {
+    std::thread::spawn(move || {
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(120));
+            let sidebar = *lock(&app.state::<AppState>().sidebar);
+            if !sidebar.collapsed {
+                continue;
+            }
+            let (Some(main), Ok(cursor)) = (app.get_window("main"), app.cursor_position()) else {
+                continue;
+            };
+            let (Ok(pos), Ok(size)) = (main.inner_position(), main.inner_size()) else {
+                continue;
+            };
+            let scale = main.scale_factor().unwrap_or(1.0);
+            let x = cursor.x - f64::from(pos.x);
+            let y = cursor.y - f64::from(pos.y);
+            let inside = y >= 0.0 && y <= f64::from(size.height) && x >= 0.0;
+            if !sidebar.peek && inside && x <= EDGE * scale {
+                update_sidebar(&app, |s| s.peek = true);
+            } else if sidebar.peek && !(inside && x <= (SIDEBAR_W + 24.0) * scale) {
+                update_sidebar(&app, |s| s.peek = false);
+            }
+        }
+    });
+}
+
+/// Ctrl+L / Ctrl+K: the address (and command bar) in the sidebar takes the keyboard.
+pub fn focus_address(app: &AppHandle) {
+    update_sidebar(app, |s| s.hold = true);
+    if let Some(sidebar) = app.get_webview("sidebar") {
+        let _ = sidebar.set_focus();
+        let _ = app.emit_to("sidebar", "scyde://focus-address", ());
+    }
 }
 
 /// Omnibox input → URL (core/omnibox) or search (settings template), in the active tab.
@@ -496,117 +880,10 @@ pub fn nav(app: &AppHandle, action: &str) {
     }
 }
 
-fn set_island_hidden(app: &AppHandle, hidden: bool) {
-    let state = app.state::<AppState>();
-    let changed = {
-        let mut h = lock(&state.island_hidden);
-        let changed = *h != hidden;
-        *h = hidden;
-        changed
-    };
-    if changed {
-        place_island(app);
-    }
-}
-
-/// Is the mouse over the bottom strip of the main window (where the island lives)?
-fn cursor_near_island(app: &AppHandle) -> bool {
-    let (Some(main), Ok(cursor)) = (app.get_window("main"), app.cursor_position()) else {
-        return false;
-    };
-    let (Ok(pos), Ok(size)) = (main.inner_position(), main.inner_size()) else {
-        return false;
-    };
-    let scale = main.scale_factor().unwrap_or(1.0);
-    let (left, right) = (f64::from(pos.x), f64::from(pos.x) + f64::from(size.width));
-    let bottom = f64::from(pos.y) + f64::from(size.height);
-    cursor.x >= left
-        && cursor.x <= right
-        && cursor.y <= bottom
-        && cursor.y >= bottom - CHROME_H * scale
-}
-
-/// Hide while reading (DESIGN v2.1): four times a second, compare the active page's scroll position
-/// with the last one. Scrolling down hides the island; scrolling up, the top or end of the page,
-/// the mouse near the bottom edge, or focus in the island bring it back.
-#[cfg(windows)]
-fn watch_island(app: AppHandle) {
-    const STEP: f64 = 24.0;
-    std::thread::spawn(move || {
-        let mut prev: Option<(u32, f64)> = None;
-        loop {
-            std::thread::sleep(std::time::Duration::from_millis(250));
-            let state = app.state::<AppState>();
-            let active = {
-                let tabs = lock(&state.tabs);
-                tabs.active.and_then(|id| {
-                    tabs.list
-                        .iter()
-                        .find(|t| t.id == id)
-                        .map(|t| (id, t.webview.clone(), internal::page_path(&t.url).is_some()))
-                })
-            };
-            let Some((id, webview, internal)) = active else {
-                continue;
-            };
-            let sample = lock(&state.scroll).take();
-            let mut hidden = *lock(&state.island_hidden);
-            if internal {
-                hidden = false;
-                prev = None;
-            } else if let Some((sid, y, end)) = sample
-                && sid == id
-            {
-                match prev {
-                    Some((pid, py)) if pid == id => {
-                        let delta = y - py;
-                        if y <= 8.0 || end || delta < -STEP {
-                            hidden = false;
-                        } else if delta > STEP && y > 64.0 {
-                            hidden = true;
-                        }
-                        // Small moves keep the reference point, so slow scrolling still counts.
-                        if delta.abs() > STEP || y <= 8.0 {
-                            prev = Some((id, y));
-                        }
-                    }
-                    _ => {
-                        prev = Some((id, y));
-                        hidden = false;
-                    }
-                }
-            }
-            let focused = app
-                .get_webview_window("chrome")
-                .and_then(|w| w.is_focused().ok())
-                .unwrap_or(false);
-            if focused || cursor_near_island(&app) {
-                hidden = false;
-            }
-            set_island_hidden(&app, hidden);
-            let app_cb = app.clone();
-            win::read_scroll(&webview, move |y, end| {
-                *lock(&app_cb.state::<AppState>().scroll) = Some((id, y, end));
-            });
-        }
-    });
-}
-
-pub fn focus_address(app: &AppHandle) {
-    set_island_hidden(app, false);
-    if let Some(window) = app.get_webview_window("chrome") {
-        let _ = window.set_focus();
-    }
-    if let Some(chrome) = app.get_webview("chrome") {
-        let _ = chrome.set_focus();
-        let _ = app.emit_to("chrome", "scyde://focus-address", ());
-    }
-}
-
 // ----------------------------------------------------------------------------- chrome commands
 
 fn from_chrome(wv: &Webview) -> Result<(), String> {
-    if matches!(wv.label(), "chrome" | "strip") {
+    if wv.label() == "sidebar" {
         Ok(())
     } else {
         Err("not allowed".into())
@@ -630,60 +907,101 @@ fn chrome_action(
 ) -> Result<(), String> {
     from_chrome(&webview)?;
     // Run off the IPC thread: Tauri marshals webview calls to the main thread.
-    std::thread::spawn(move || match action.as_str() {
-        "new" => drop(new_tab(
-            &app,
-            input
-                .as_deref()
-                .and_then(internal::to_protocol_url)
-                .as_deref(),
-            true,
-        )),
-        "close" => id.into_iter().for_each(|i| close_tab(&app, i)),
-        "switch" => id.into_iter().for_each(|i| switch_tab(&app, i)),
-        "go" => go(&app, input.as_deref().unwrap_or_default(), false),
-        "go-new" => go(&app, input.as_deref().unwrap_or_default(), true),
-        "back" | "forward" | "reload" | "stop" => nav(&app, &action),
-        "open" => {
-            // "library#bookmarks" → http://scyde.localhost/library/#bookmarks
-            let page = input.unwrap_or_else(|| "newtab".into());
-            let (name, fragment) = page
-                .split_once('#')
-                .map_or((page.as_str(), String::new()), |(n, f)| {
-                    (n, format!("#{f}"))
-                });
-            if internal::PAGES.contains(&name)
-                && fragment
-                    .chars()
-                    .all(|c| c == '#' || c.is_ascii_alphanumeric())
-            {
-                let _ = new_tab(
-                    &app,
-                    Some(&format!("http://scyde.localhost/{name}/{fragment}")),
-                    true,
-                );
+    std::thread::spawn(move || {
+        let text = input.as_deref().unwrap_or_default();
+        match action.as_str() {
+            "new" => drop(new_tab(
+                &app,
+                input
+                    .as_deref()
+                    .and_then(internal::to_protocol_url)
+                    .as_deref(),
+                true,
+            )),
+            "close" => id.into_iter().for_each(|i| close_tab(&app, i)),
+            "switch" => id.into_iter().for_each(|i| switch_tab(&app, i)),
+            "pin" => id.into_iter().for_each(|i| toggle_pin(&app, i)),
+            "split" => id.into_iter().for_each(|i| toggle_split(&app, i)),
+            "reopen" => reopen_closed(&app),
+            "go" => go(&app, text, false),
+            "go-new" => go(&app, text, true),
+            "back" | "forward" | "reload" | "stop" => nav(&app, &action),
+            "space" => switch_space(&app, text),
+            "space-new" => new_space(&app, text),
+            "space-rename" => {
+                // "<space id>\n<new name>"
+                if let Some((space, name)) = text.split_once('\n') {
+                    rename_space(&app, space, name);
+                }
             }
-        }
-        // Caption buttons and the drag area of the tab strip (the window has no native frame).
-        "win-min" | "win-max" | "win-close" | "win-drag" => {
-            if let Some(w) = app.get_window("main") {
-                let _ = match action.as_str() {
-                    "win-min" => w.minimize(),
-                    "win-max" if w.is_maximized().unwrap_or(false) => w.unmaximize(),
-                    "win-max" => w.maximize(),
-                    "win-close" => w.close(),
-                    _ => w.start_dragging(),
-                };
+            "space-delete" => delete_space(&app, text),
+            "sidebar" => toggle_sidebar(&app),
+            // The address is being edited: keep a hidden sidebar on screen until it is done.
+            "hold" => update_sidebar(&app, |s| s.hold = true),
+            "release" => update_sidebar(&app, |s| s.hold = false),
+            "open" => {
+                // "library#bookmarks" → http://scyde.localhost/library/#bookmarks
+                let (name, fragment) = text
+                    .split_once('#')
+                    .map_or((text, String::new()), |(n, f)| (n, format!("#{f}")));
+                if internal::PAGES.contains(&name)
+                    && fragment
+                        .chars()
+                        .all(|c| c == '#' || c.is_ascii_alphanumeric())
+                {
+                    let _ = new_tab(
+                        &app,
+                        Some(&format!("http://scyde.localhost/{name}/{fragment}")),
+                        true,
+                    );
+                }
             }
-        }
-        "focus-page" => {
-            if let Some((_, wv)) = active_webview(&app) {
-                let _ = wv.set_focus();
+            // Caption buttons and the drag area of the sidebar (the window has no native frame).
+            "win-min" | "win-max" | "win-close" | "win-drag" => {
+                if let Some(w) = app.get_window("main") {
+                    let _ = match action.as_str() {
+                        "win-min" => w.minimize(),
+                        "win-max" if w.is_maximized().unwrap_or(false) => w.unmaximize(),
+                        "win-max" => w.maximize(),
+                        "win-close" => w.close(),
+                        _ => w.start_dragging(),
+                    };
+                }
             }
+            "focus-page" => {
+                if let Some((_, wv)) = active_webview(&app) {
+                    let _ = wv.set_focus();
+                }
+            }
+            _ => {}
         }
-        _ => {}
     });
     Ok(())
+}
+
+#[derive(Serialize)]
+struct Hit {
+    url: String,
+    title: String,
+}
+
+/// History matches for the command bar (core/places, local only: no network request).
+#[tauri::command]
+fn chrome_suggestions(webview: Webview, app: AppHandle, input: String) -> Result<Vec<Hit>, String> {
+    from_chrome(&webview)?;
+    let state = app.state::<AppState>();
+    let places = lock(&state.places);
+    let Some(p) = places.as_ref() else {
+        return Ok(Vec::new());
+    };
+    Ok(p.suggest(&input, 6)
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|s| Hit {
+            url: s.url,
+            title: s.title,
+        })
+        .collect())
 }
 
 /// Inline completion for the address (host prefix from history, core/places).
@@ -734,82 +1052,135 @@ fn build_window(app: &AppHandle) -> tauri::Result<()> {
     let window = WindowBuilder::new(app, "main")
         .title("SCYDE")
         .inner_size(START_W, START_H)
-        .min_inner_size(560.0, 420.0)
-        // Frameless: the tab strip draws the caption buttons (ADR-0015). Windows keeps the shadow
+        .min_inner_size(640.0, 420.0)
+        // Frameless: the sidebar draws the caption buttons (ADR-0016). Windows keeps the shadow
         // and the resize borders.
         .decorations(false)
         .shadow(true)
-        // CI screens are small: maximized, the island is inside the screenshot.
+        // CI screens are small: maximized, the whole window is inside the screenshot.
         .maximized(SMOKE.get().is_some_and(Option::is_some))
         .build()?;
-    // The tab strip: same WebView2 environment options as every tab (ADR-0003, ADR-0007).
-    let (_, content) = content_bounds(&window);
-    let strip = env_opts(
-        WebviewBuilder::new("strip", WebviewUrl::App("strip.html".into())),
-        &app.state::<AppState>(),
-    );
-    let strip = window.add_child(
-        strip,
-        LogicalPosition::new(0.0, 0.0),
-        LogicalSize::new(content.width, STRIP_H),
-    )?;
-    // Resizing a frameless window needs Tauri's border handler, attached on this call; after the
-    // strip, so the handler's border window sits above it.
-    let _ = window.set_resizable(true);
-    // The island floats over the page (ADR-0014): a transparent, borderless window owned by the
-    // main window, so it stays above it, hides with it when minimized and closes with it.
-    let island = WebviewWindowBuilder::new(app, "chrome", WebviewUrl::App("index.html".into()))
-        .title("SCYDE island")
-        .transparent(true)
-        .decorations(false)
-        .shadow(false)
-        .resizable(false)
-        .skip_taskbar(true)
-        .focused(false)
-        .inner_size(ISLAND_W.min(START_W), CHROME_H);
-    // Same WebView2 environment options as every tab (ADR-0003, ADR-0007).
+    // The sidebar is a child webview of the main window (ADR-0016): unlike the floating island
+    // window of ADR-0014 it cannot end up behind the window or off the screen. It is the first
+    // webview, so it also installs the Shield extension when that is due.
     let state = app.state::<AppState>();
-    let island = match &state.extensions {
-        Some(dir) if state.install_extension => {
-            island.browser_extensions_enabled(true).extensions_path(dir)
-        }
-        Some(_) => island.browser_extensions_enabled(true),
-        None => island,
+    let sidebar = WebviewBuilder::new("sidebar", WebviewUrl::App("index.html".into()));
+    let sidebar = match &state.extensions {
+        Some(dir) if state.install_extension => sidebar
+            .browser_extensions_enabled(true)
+            .extensions_path(dir),
+        Some(_) => sidebar.browser_extensions_enabled(true),
+        None => sidebar,
     };
-    #[cfg(windows)]
-    let island = island.owner_raw(window.hwnd()?);
-    let island = island.build()?;
-    // Alt+F4 on the island closes the browser, not just the island.
-    let app_close = app.clone();
-    island.on_window_event(move |e| {
-        if let WindowEvent::CloseRequested { api, .. } = e {
-            api.prevent_close();
-            if let Some(main) = app_close.get_window("main") {
-                let _ = main.close();
-            }
-        }
-    });
-    place_island(app);
-    #[cfg(windows)]
-    watch_island(app.clone());
+    let (size, _) = frame(app, &window);
+    let sidebar = window.add_child(
+        sidebar,
+        LogicalPosition::new(0.0, 0.0),
+        LogicalSize::new(SIDEBAR_W, size.height),
+    )?;
+    // Resizing a frameless window needs Tauri's border handler, attached on this call.
+    let _ = window.set_resizable(true);
+    relayout(app);
+    watch_sidebar(app.clone());
     let app_ev = app.clone();
-    window.on_window_event(move |e| match e {
-        WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
+    window.on_window_event(move |e| {
+        if matches!(
+            e,
+            WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
+        ) {
             relayout(&app_ev);
             emit_state(&app_ev); // maximized ↔ restored changes the caption button
         }
-        WindowEvent::Moved(_) => place_island(&app_ev),
-        _ => {}
     });
     #[cfg(windows)]
-    if let Some(c) = app.get_webview("chrome") {
-        win::install_keys(app, &c);
-    }
-    #[cfg(windows)]
-    win::install_keys(app, &strip);
+    win::install_keys(app, &sidebar);
     #[cfg(not(windows))]
-    let _ = strip;
+    let _ = sidebar;
     Ok(())
+}
+
+#[derive(Deserialize)]
+struct SavedTab {
+    url: String,
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    pinned: bool,
+    #[serde(default)]
+    space: String,
+}
+
+#[derive(Deserialize)]
+struct Session {
+    #[serde(default)]
+    spaces: Vec<Space>,
+    #[serde(default)]
+    space: String,
+    #[serde(default)]
+    collapsed: bool,
+    active: Option<usize>,
+    #[serde(default)]
+    tabs: Vec<SavedTab>,
+}
+
+/// Brings back the last session: Spaces, pinned tabs and tabs. Tabs come back asleep (no webview)
+/// and load when they are opened. Returns the tab to show, if there is one.
+fn restore_session(app: &AppHandle) -> Option<u32> {
+    let state = app.state::<AppState>();
+    let text = std::fs::read_to_string(state.session_path.as_ref()?).ok()?;
+    let session: Session = serde_json::from_str(&text).ok()?;
+    lock(&state.sidebar).collapsed = session.collapsed;
+    let mut tabs = lock(&state.tabs);
+    let known = |c: &str| SPACE_COLORS.contains(&c);
+    let spaces: Vec<Space> = session
+        .spaces
+        .into_iter()
+        .filter(|s| !s.id.is_empty() && known(&s.color))
+        .map(|s| Space {
+            name: clean_name(&s.name),
+            ..s
+        })
+        .collect();
+    if !spaces.is_empty() {
+        tabs.spaces = spaces;
+    }
+    let home = tabs.spaces[0].id.clone();
+    tabs.space = if tabs.spaces.iter().any(|s| s.id == session.space) {
+        session.space
+    } else {
+        home.clone()
+    };
+    let mut ids = Vec::new();
+    for saved in session.tabs {
+        // Only pages a tab may hold: the web and our own internal pages.
+        if !(saved.url.starts_with("https://") || saved.url.starts_with("http://")) {
+            continue;
+        }
+        tabs.next_id += 1;
+        let id = tabs.next_id;
+        let space = if tabs.spaces.iter().any(|s| s.id == saved.space) {
+            saved.space
+        } else {
+            home.clone()
+        };
+        tabs.list.push(Tab {
+            id,
+            webview: None,
+            url: saved.url,
+            title: saved.title,
+            loading: false,
+            popups_blocked: 0,
+            typed: false,
+            pinned: saved.pinned,
+            space,
+        });
+        ids.push(id);
+    }
+    session
+        .active
+        .and_then(|i| ids.get(i))
+        .or_else(|| ids.first())
+        .copied()
 }
 
 fn main() {
@@ -821,6 +1192,7 @@ fn main() {
             .cloned()
     };
     SMOKE.get_or_init(|| arg("--smoke").map(PathBuf::from));
+    let smoke_mode = SMOKE.get().is_some_and(Option::is_some);
     let open_urls: Vec<String> = args
         .iter()
         .skip(1)
@@ -834,6 +1206,7 @@ fn main() {
             chrome_ready,
             chrome_action,
             chrome_suggest,
+            chrome_suggestions,
             internal::bridge
         ])
         .setup(move |app| {
@@ -872,10 +1245,13 @@ fn main() {
                 extensions,
                 install_extension,
                 filters_version,
-                island_hidden: Mutex::new(false),
-                scroll: Mutex::new(None),
+                sidebar: Mutex::new(Sidebar::default()),
+                session_path: (!smoke_mode).then(|| data.join("session.json")),
+                session_saved: Mutex::new(String::new()),
             });
             let handle = app.handle().clone();
+            // Before the window: the session also says whether the sidebar is hidden.
+            let restored = restore_session(&handle);
             build_window(&handle)?;
             let urls = open_urls.clone();
             std::thread::spawn(move || {
@@ -885,19 +1261,23 @@ fn main() {
                     std::thread::sleep(std::time::Duration::from_millis(3000));
                     let _ = std::fs::write(&marker, &stamp);
                 }
-                if urls.is_empty() {
+                if let Some(id) = restored {
+                    switch_tab(&handle, id);
+                }
+                if !urls.is_empty() {
+                    // Links open on top of the restored session.
+                    for u in &urls {
+                        let _ = new_tab(&handle, Some(u), true);
+                    }
+                } else if restored.is_none() {
                     // First run: the welcome page (theme, search engine, Shield) instead of New Tab.
-                    let first_run = SMOKE.get().is_none_or(Option::is_none)
+                    let first_run = !smoke_mode
                         && !lock(&handle.state::<AppState>().settings)
                             .get("onboarding.completed")
                             .and_then(serde_json::Value::as_bool)
                             .unwrap_or(false);
                     let start = first_run.then_some("http://scyde.localhost/welcome/");
                     let _ = new_tab(&handle, start, true);
-                } else {
-                    for u in &urls {
-                        let _ = new_tab(&handle, Some(u), true);
-                    }
                 }
                 if let Some(Some(out)) = SMOKE.get() {
                     smoke(&handle, out);
@@ -920,31 +1300,25 @@ fn smoke(app: &AppHandle, out: &PathBuf) {
     let _ = new_tab(app, Some(&format!("{qa}/popup/index.html")), false);
     let _ = new_tab(app, Some(&format!("{qa}/adblock/index.html")), true);
     std::thread::sleep(std::time::Duration::from_secs(12));
+    // Where the sidebar and the page are, so CI can tell "not shown" from "not captured".
+    let bounds = |w: Option<Webview>| {
+        w.map(|w| json!({ "position": w.position().ok().map(|p| [p.x, p.y]), "size": w.size().ok().map(|s| [s.width, s.height]) }))
+    };
+    let sidebar = bounds(app.get_webview("sidebar"));
+    let page = bounds(active_webview(app).map(|(_, w)| w));
+    let main = app.get_window("main").map(|w| {
+        json!({ "position": w.inner_position().ok().map(|p| [p.x, p.y]), "size": w.inner_size().ok().map(|s| [s.width, s.height]) })
+    });
     let state = app.state::<AppState>();
     let tabs: Vec<Value> = lock(&state.tabs)
         .list
         .iter()
         .map(|t| json!({ "url": user_url(&t.url), "title": t.title, "popups_blocked": t.popups_blocked }))
         .collect();
-    // Where the island window is, so CI can tell "not shown" from "not captured".
-    let island = app.get_webview_window("chrome").map(|w| {
-        json!({
-            "visible": w.is_visible().ok(),
-            "position": w.outer_position().ok().map(|p| [p.x, p.y]),
-            "size": w.outer_size().ok().map(|s| [s.width, s.height]),
-            "hidden_for_reading": *lock(&state.island_hidden),
-        })
-    });
-    let strip = app.get_webview("strip").map(|w| {
-        json!({ "position": w.position().ok().map(|p| [p.x, p.y]), "size": w.size().ok().map(|s| [s.width, s.height]) })
-    });
-    let main = app.get_window("main").map(|w| {
-        json!({ "position": w.inner_position().ok().map(|p| [p.x, p.y]), "size": w.inner_size().ok().map(|s| [s.width, s.height]) })
-    });
     let report = json!({
-        "island": island,
+        "sidebar": sidebar,
+        "page": page,
         "main": main,
-        "strip": strip,
         "elapsed_ms": started.elapsed().as_millis(),
         "shield_extension": state.extensions.is_some(),
         "shield_installed_now": state.install_extension,
