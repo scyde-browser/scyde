@@ -102,9 +102,9 @@
 </main>
 
 <style>
-  /* New Tab is one screen: it never scrolls (owner, 2026-11-15). What does not fit is cut off. */
+  /* New Tab is one screen: it never scrolls (owner, 2026-11-15). What does not fit is cut off.
+     No position: fixed on body: on iOS that puts the page under the status bar band. */
   :global(html), :global(body) { height: 100%; overflow: hidden; overscroll-behavior: none; }
-  :global(body) { position: fixed; inset: 0; }
   :global(#app) { height: 100%; }
   .nt {
     height: 100%; overflow: hidden; display: grid; grid-template-columns: 1fr var(--size-newtab-recent-width); gap: var(--space-80);
