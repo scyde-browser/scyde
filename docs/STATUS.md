@@ -192,8 +192,10 @@ Branch: the session's designated branch (agent sessions may only push there), on
 - [x] **v0.8.0, owner 2026-11-15:** phones: the status bar band is always the island's colour and stays while reading (no page showing behind the clock). App icon in iOS system green `#34C759` on all platforms (`brand.json`, `tools/icon-export`).
 - [x] **v0.8.0, owner 2026-11-15 (2):** New Tab never scrolls (one screen; iOS also turns off the rubber band). iOS declares the `http`/`https` URL types.
 - `[OWNER]` **iOS default browser:** iOS lists an app under Settings › Default Browser App only when it is signed with the managed entitlement `com.apple.developer.web-browser`. Apple grants it per developer account on request (developer.apple.com › "Default browser entitlement" form); it must then be in the provisioning profile. An unsigned .ipa signed through Feather cannot carry it, so SCYDE cannot be the default browser on iOS until the owner has a paid Apple Developer account with that entitlement. The URL types are already declared.
-- [ ] v0.9.0:
-  - Windows: Shield per site (dynamic DNR allow rules), Peek, web panels, private tabs, downloads list, find in page
+- [x] **v0.9.0, phones like Safari/Arc/Zen (owner, 2026-11-15):** New Tab favourites (most visited tiles, all platforms; hero now fits its column); Reader (`shield-extension/src/reader.js`, own code: iOS in an isolated content world, GeckoView through a background port); text size (iOS per tab `pageZoom`, Android global `fontSizeFactor`); tab search in the tab grid; pull to reload (iOS); `tabs.archive_after_days` (off by default; phones only so far, `lastActive` is now saved in the session).
+- [ ] v0.10.0:
+  - Android: pull to reload
+  - Windows: Reader, text size, `tabs.archive_after_days`, Shield per site (dynamic DNR allow rules), Peek, web panels, private tabs, downloads list, find in page
   - Zen mode (annoyance lists, `[OWNER]` licences)
 - Known: the Windows smoke test once scored `qa/adblock` 10/11 (`allow:exception`) and 11/11 on rerun. On first launch the DNR rulesets do not all load at the same moment, so for a few hundred ms a block rule can win over its exception.
 - Skills `animate`, `break-ui` and others from PLAN §12 are not installed; DESIGN §6 was followed directly

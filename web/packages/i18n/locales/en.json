@@ -289,5 +289,14 @@
   "tab.unsplit": "Close split view",
   "tab.reopen": "Reopen closed tab",
   "spaces.label": "Spaces",
-  "command.hint": "Type a command, an address or a search"
+  "command.hint": "Type a command, an address or a search",
+  "newtab.top": "Most visited",
+  "settings.tabs.archive_after_days": "Close tabs you have not used for",
+  "settings.tabs.archive_after_days.hint": "Days. Old tabs close on their own (pinned tabs stay); you find them again in History. 0 keeps every tab.",
+  "menu.reader": "Reader",
+  "menu.reader.none": "No article found on this page",
+  "menu.text_size": "Text size {percent}%",
+  "tabs.search": "Search tabs",
+  "tabs.search.empty": "No tab matches",
+  "toast.archived": "{n, plural, one {# old tab closed} other {# old tabs closed}}"
 }

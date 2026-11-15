@@ -67,6 +67,13 @@ final class Tab: NSObject, ObservableObject, Identifiable {
         wv.allowsLinkPreview = true
         wv.isFindInteractionEnabled = true
         wv.scrollView.contentInsetAdjustmentBehavior = .always
+        // Pull down at the top of a page to reload it.
+        let refresh = UIRefreshControl()
+        refresh.addAction(UIAction { [weak wv, weak refresh] _ in
+            wv?.reload()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { refresh?.endRefreshing() }
+        }, for: .valueChanged)
+        wv.scrollView.refreshControl = refresh
         // Room below the page, so its last lines can scroll clear of the island.
         wv.scrollView.contentInset.bottom = ScydeSize.islandMobileHeight + ScydeSpace.s8
         wv.scrollView.verticalScrollIndicatorInsets.bottom = ScydeSize.islandMobileHeight + ScydeSpace.s8
@@ -399,6 +406,8 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             var title: String
             var pinned: Bool
             var space: String
+            /// Seconds since 1970; absent in sessions saved before v0.9.0.
+            var lastActive: Double?
         }
 
         var version = 1
@@ -413,7 +422,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
         guard !restoring else { return }
         let saved = tabs.filter { !$0.isPrivate }.compactMap { t -> SessionFile.SavedTab? in
             guard let url = t.url else { return nil }
-            return SessionFile.SavedTab(id: t.id, url: url.absoluteString, title: t.title, pinned: t.pinned, space: t.spaceID)
+            return SessionFile.SavedTab(id: t.id, url: url.absoluteString, title: t.title, pinned: t.pinned, space: t.spaceID, lastActive: t.lastActive.timeIntervalSince1970)
         }
         let file = SessionFile(active: active?.isPrivate == false ? activeID : nil, space: spaceID, spaces: spaces, tabs: saved)
         if let data = try? JSONEncoder().encode(file) { try? data.write(to: sessionURL, options: .atomic) }
@@ -436,6 +445,7 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             tab.webView.navigationDelegate = self
             tab.webView.uiDelegate = self
             tab.pinned = saved.pinned
+            if let at = saved.lastActive { tab.lastActive = Date(timeIntervalSince1970: at) }
             tab.restore(url: url, title: saved.title)
             tabs.append(tab)
             tabChanges[tab.id] = tab.objectWillChange.sink { [weak self, weak tab] _ in
@@ -450,7 +460,20 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
 
     // MARK: sleeping tabs
 
+    /// Arc-style tidy-up (`tabs.archive_after_days`, off by default): tabs not opened for that many
+    /// days close on their own. Pinned and private tabs stay; the pages remain in History.
+    private func archiveOldTabs() {
+        let days = settings.get(path: "tabs.archive_after_days").flatMap(Int.init) ?? 0
+        guard days > 0 else { return }
+        let limit = Date().addingTimeInterval(-Double(days) * 86_400)
+        let old = tabs.filter { $0.id != activeID && !$0.pinned && !$0.isPrivate && $0.lastActive < limit }
+        guard !old.isEmpty else { return }
+        old.forEach { close($0) }
+        show(String(format: String(localized: "toast.archived"), "\(old.count)"))
+    }
+
     private func sleepIdleTabs() {
+        archiveOldTabs()
         let minutes = settings.get(path: "tabs.sleep_after_minutes").flatMap(Int.init) ?? 15
         guard minutes > 0 else { return }
         let limit = Date().addingTimeInterval(-Double(minutes) * 60)
@@ -523,6 +546,41 @@ final class Browser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDeleg
             show(String(localized: "toast.bookmarked"))
         }
         tab.bookmarked = (try? places.isBookmarked(url: url)) ?? false
+    }
+
+    // MARK: reader and text size
+
+    private lazy var readerScript: String? = Bundle.main.url(forResource: "reader", withExtension: "js", subdirectory: "filters")
+        .flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+
+    /// Reader: the article as clean text over the page; asking again closes it. The script runs in
+    /// its own content world, so the page cannot see or call it.
+    func toggleReader() {
+        guard let tab = active, tab.isWeb, let script = readerScript else { return }
+        let dark: Bool
+        switch appearance["theme"] {
+        case "dark": dark = true
+        case "light": dark = false
+        default: dark = UITraitCollection.current.userInterfaceStyle == .dark
+        }
+        let c: ScydeColors = dark ? .dark : .light
+        let opts: [String: String] = [
+            "bg": hexString(c.surfaceCanvas), "fg": hexString(c.textPrimary), "muted": hexString(c.textSecondary),
+            "accent": hexString(Palette.accent(appearance["accent"], dark: dark).fill), "close": String(localized: "sheet.close"),
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: opts) else { return }
+        let call = script + "\n;globalThis.__scydeReader(" + String(decoding: data, as: UTF8.self) + ")"
+        tab.webView.evaluateJavaScript(call, in: nil, in: .world(name: "scyde-reader")) { [weak self] result in
+            if case .success(let value) = result, value as? Bool == false { self?.show(String(localized: "menu.reader.none")) }
+        }
+    }
+
+    /// Text size for this tab, 50–200 % in steps of 10.
+    func zoom(by step: Int) {
+        guard let tab = active else { return }
+        let percent = min(200, max(50, Int((tab.webView.pageZoom * 100).rounded()) + step * 10))
+        tab.webView.pageZoom = CGFloat(percent) / 100
+        show(String(format: String(localized: "menu.text_size"), "\(percent)"))
     }
 
     func toggleDesktop() {

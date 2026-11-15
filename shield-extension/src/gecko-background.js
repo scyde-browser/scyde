@@ -29,11 +29,25 @@ const off = (host) => {
   return false;
 };
 
+// Reader (reader.js): every page keeps a port open; the app's request goes to all of them and the
+// visible page answers.
+const readers = new Set();
+let native;
+browser.runtime.onConnect.addListener((p) => {
+  if (p.name !== 'scyde-reader') return;
+  readers.add(p);
+  p.onDisconnect.addListener(() => readers.delete(p));
+  p.onMessage.addListener((m) => {
+    if (m?.type === 'reader.none') native?.postMessage({ type: 'reader.none' });
+  });
+});
+
 try {
-  const port = browser.runtime.connectNative(NATIVE);
-  port.onMessage.addListener((m) => {
+  native = browser.runtime.connectNative(NATIVE);
+  native.onMessage.addListener((m) => {
     // The app sends display names (IDNs in Unicode); requests carry punycode hosts.
     if (m?.type === 'allowlist') disabled = new Set((m.sites ?? []).map((s) => hostOf(`https://${s}/`) || s));
+    if (m?.type === 'reader') for (const p of readers) p.postMessage({ type: 'reader', opts: m.opts });
   });
 } catch {}
 

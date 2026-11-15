@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { bridge, type RecentEntry, type ShieldToday } from '@scyde/bridge';
+  import { bridge, type RecentEntry, type ShieldToday, type TopSite } from '@scyde/bridge';
   import { t } from '@scyde/i18n';
   import { Favicon, Kbd, ago, applyAppearance, bytes, count, duration, hostOf } from '@scyde/ui';
 
   let shield = $state<ShieldToday | null>(null);
   let recent = $state<RecentEntry[]>([]);
+  let top = $state<TopSite[]>([]);
   let showStats = $state(true);
   let error = $state('');
   let query = $state('');
@@ -18,6 +19,7 @@
       showStats = (s.settings.newtab as { shield_stats?: boolean } | undefined)?.shield_stats !== false;
       shield = st.shield;
       recent = st.recent;
+      top = st.topSites.slice(0, 8);
     } catch {
       error = t('error.bridge');
     }
@@ -78,6 +80,18 @@
       <span><Kbd>/</Kbd> {t('newtab.ask.label')}</span>
     </p>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
+
+    {#if top.length}
+      <!-- Most visited (like a start page's favourites): from local history only. -->
+      <nav class="top rise" style:--i="3" aria-label={t('newtab.top')}>
+        {#each top as site (site.url)}
+          <a class="site" href={site.url} title={site.title || hostOf(site.url)}>
+            <Favicon url={site.url} size="var(--size-chrome-pinned-tile)" />
+            <span class="host">{hostOf(site.url).replace(/^www\./, '')}</span>
+          </a>
+        {/each}
+      </nav>
+    {/if}
   </section>
 
   <aside class="recent" aria-labelledby="recent-h">
@@ -103,14 +117,15 @@
 
 <style>
   /* New Tab is one screen: it never scrolls (owner, 2026-11-15). What does not fit is cut off.
-     No position: fixed on body: on iOS that puts the page under the status bar band. */
+     iOS pins a page that cannot scroll to the very top of the screen, under the status bar band,
+     so the top padding includes the safe area (0 elsewhere). */
   :global(html), :global(body) { height: 100%; overflow: hidden; overscroll-behavior: none; }
   :global(#app) { height: 100%; }
   .nt {
     height: 100%; overflow: hidden; display: grid; grid-template-columns: 1fr var(--size-newtab-recent-width); gap: var(--space-80);
-    padding: var(--space-64) var(--space-80) calc(var(--size-island-height) + var(--space-80));
+    padding: calc(var(--space-64) + env(safe-area-inset-top, 0px)) var(--space-80) calc(var(--size-island-height) + var(--space-80));
   }
-  .main { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .main { display: flex; flex-direction: column; justify-content: center; min-width: 0; container-type: inline-size; }
   .shield-line {
     margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8) var(--space-20);
     font-family: var(--font-family-mono); font-size: var(--type-data-size); line-height: var(--type-data-line-height); color: var(--text-secondary);
@@ -121,7 +136,7 @@
   .ask input {
     width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary);
     caret-color: var(--accent-ink);
-    font-family: var(--font-family-brand); font-size: var(--type-hero-size); line-height: var(--type-hero-line-height);
+    font-family: var(--font-family-brand); font-size: min(var(--type-hero-size), 12.5cqw); line-height: 1;
     letter-spacing: var(--type-hero-tracking); font-weight: var(--font-weight-display); font-variation-settings: 'opsz' 96;
   }
   .ask input::placeholder { color: var(--text-primary); opacity: 1; }
@@ -129,29 +144,39 @@
   .ask:focus-within { border-radius: var(--radius-md); box-shadow: 0 var(--space-4) 0 calc(var(--space-4) * -1) var(--accent-ring); }
   .hints { margin: var(--space-24) 0 0; display: flex; flex-wrap: wrap; gap: var(--space-24); font-family: var(--font-family-mono); font-size: var(--type-caption-size); color: var(--text-tertiary); }
   .error { color: var(--status-danger); }
+  .top { margin-top: var(--space-40); display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--space-64), 1fr)); gap: var(--space-16); max-width: calc(var(--space-80) * 9); }
+  .site {
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-8); text-decoration: none; min-width: 0;
+    transition: transform var(--motion-duration-fast) var(--motion-ease-out);
+    font-size: var(--type-caption-size); color: var(--text-secondary); text-align: center;
+  }
+  .site :global(.fav) { border-radius: var(--radius-md); font-size: var(--type-title-size); }
+  .site .host { max-width: 100%; }
+  .site:hover { transform: translateY(calc(var(--motion-lift-distance) * var(--motion-distance-scale))); color: var(--text-primary); }
   .recent { align-self: center; min-height: 0; max-height: 100%; overflow: hidden; }
   .recent h2 { margin: 0 0 var(--space-12); font-family: var(--font-family-mono); font-size: var(--type-caption-size); font-weight: var(--font-weight-regular); color: var(--text-tertiary); }
   ol { list-style: none; margin: 0; padding: 0; }
-  a {
+  ol a {
     display: grid; grid-template-columns: var(--space-32) 1fr auto; align-items: center; gap: var(--space-8);
     height: var(--size-newtab-recent-row); border-top: 1px solid var(--border-hairline); color: var(--text-primary); text-decoration: none;
     font-size: var(--type-title-size); letter-spacing: var(--type-title-tracking);
     transition: transform var(--motion-duration-fast) var(--motion-ease-out);
   }
   li:last-child a { border-bottom: 1px solid var(--border-hairline); }
-  a:hover { transform: translateX(calc(var(--space-4) * var(--motion-distance-scale))); }
+  ol a:hover { transform: translateX(calc(var(--space-4) * var(--motion-distance-scale))); }
   .host { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   time, .empty, .off { font-family: var(--font-family-mono); font-size: var(--type-caption-size); color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
   .off { margin-top: var(--space-16); }
 
   /* Phone (DESIGN §3: hero 54/56), island at the bottom */
   @media (max-width: 760px) {
-    .nt { grid-template-columns: 1fr; gap: var(--space-40); padding: var(--space-48) var(--space-20) calc(var(--size-island-mobile-height) + var(--space-48)); }
+    .nt { grid-template-columns: 1fr; gap: var(--space-40); padding: calc(var(--space-48) + env(safe-area-inset-top, 0px)) var(--space-20) calc(var(--size-island-mobile-height) + var(--space-48)); }
     /* The question must fit one line on the narrowest phones. */
-    .ask input { font-size: min(var(--type-display-size), 10.5vw); line-height: var(--type-display-line-height); }
+    .ask input { font-size: min(var(--type-display-size), 12.5cqw); }
     .nt { grid-template-rows: auto minmax(0, 1fr); }
     .recent { align-self: start; min-height: 0; max-height: 100%; overflow: hidden; }
-    a { font-size: var(--type-body-lg-size); }
+    .top { margin-top: var(--space-32); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    ol a { font-size: var(--type-body-lg-size); }
   }
   /* Keyboard hints make no sense without a keyboard. */
   @media (hover: none) { .hints { display: none; } }
